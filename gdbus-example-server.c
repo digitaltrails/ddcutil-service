@@ -29,7 +29,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
-    "    <method name='GetVcp'>"
+    "    <method name='GetFeatureValue'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
@@ -41,12 +41,28 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
-    "    <method name='SetVcp'>"
+    "    <method name='SetFeatureValue'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
     "      <arg name='vcp_new_value' type='q' direction='in'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
+    
+    "    <method name='GetFeatureMetadata'>"
+    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='vcp_code' type='y' direction='in'/>"
+    "      <arg name='feature_name' type='s' direction='out'/>"
+    "      <arg name='feature_description' type='s' direction='out'/>"
+    "      <arg name='is_read_only' type='b' direction='out'/>"
+    "      <arg name='is_write_only' type='b' direction='out'/>"
+    "      <arg name='is_rw' type='b' direction='out'/>"
+    "      <arg name='is_complex' type='b' direction='out'/>"
+    "      <arg name='is_continuous' type='b' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
@@ -131,17 +147,17 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
 
     for (int ndx = 0; ndx < dlist->ct; ndx++) {
       printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
-      GVariantBuilder *vdu_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
-      g_variant_builder_add(vdu_properties_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
+      GVariantBuilder *vdu_dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
+      g_variant_builder_add(vdu_dict_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
       g_variant_builder_add(
-        vdu_properties_builder, "{sv}", "edid_hex", g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));
-      g_variant_builder_add(vdu_array_builder, "a{sv}", vdu_properties_builder);
+        vdu_dict_builder, "{sv}", "edid_hex", g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));
+      g_variant_builder_add(vdu_array_builder, "a{sv}", vdu_dict_builder);
     }
 
     GVariant *result = g_variant_new("(iaa{sv}is)", dlist->ct, vdu_array_builder, status, message_text);
@@ -149,7 +165,7 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     g_dbus_method_invocation_return_value(invocation, result);
     // g_free (result);
     
-  } else if (g_strcmp0(method_name, "GetVcp") == 0) {  // =======================
+  } else if (g_strcmp0(method_name, "GetFeatureValue") == 0) {  // =======================
     int display_number;
     char *hex_edid;
     uint8_t vcp_code;
@@ -186,7 +202,7 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     g_dbus_method_invocation_return_value(invocation, result);
     // g_free (result);
     
-  } else if (g_strcmp0(method_name, "SetVcp") == 0) {  // =======================
+  } else if (g_strcmp0(method_name, "SetFeatureValue") == 0) {  // =======================
     int display_number;
     char *hex_edid;
     uint8_t vcp_code;
@@ -214,6 +230,54 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     }
     
     GVariant *result = g_variant_new("(is)", status, status == 0 ? "OK" : message_text);
+    g_dbus_method_invocation_return_value(invocation, result);
+    // g_free (result);
+  } else if (g_strcmp0(method_name, "GetFeatureMetadata") == 0) {  // =======================
+    int display_number;
+    char *hex_edid;
+    uint8_t vcp_code;
+    int status = 0;
+    char *message_text = "";
+    
+    g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
+    printf("get meta display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
+    
+    DDCA_Display_Ref *dref = NULL;
+    status = get_dref(display_number, hex_edid, &dref);
+    char *feature_name = "";
+    char *feature_description= "";
+    bool is_read_only = false;
+    bool is_write_only = false;
+    bool is_rw = false;
+    bool is_complex = false;
+    bool is_continuous = false;
+    if (status == 0) {
+      DDCA_Display_Handle disp_handle;
+      status = ddca_open_display2(dref, 1, &disp_handle);
+      DDCA_Feature_Metadata *meta_loc;
+      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 1, &meta_loc);
+      if (status == 0) {
+        if (meta_loc->feature_desc != NULL) {
+          feature_name = meta_loc->feature_name;
+        }
+        if (meta_loc->feature_desc != NULL) {
+          feature_description = meta_loc->feature_desc;
+        }
+        is_read_only = meta_loc->feature_flags & DDCA_RO;
+        is_write_only = meta_loc->feature_flags & DDCA_WO;
+        is_rw = meta_loc->feature_flags & DDCA_RW;
+        is_complex = meta_loc->feature_flags & (DDCA_COMPLEX_CONT | DDCA_COMPLEX_NC);
+        is_continuous = meta_loc->feature_flags & DDCA_CONT;
+        ddca_close_display(disp_handle);
+        printf("setvcp closed display %d\n", display_number);
+      }
+      message_text = get_status_message(status);
+    }
+    
+    GVariant *result = g_variant_new("(ssbbbbbis)", 
+                                     feature_name, feature_description,
+                                     is_read_only, is_write_only, is_rw, is_complex, is_continuous, 
+                                     status, status == 0 ? "OK" : message_text);
     g_dbus_method_invocation_return_value(invocation, result);
     // g_free (result);
   }
