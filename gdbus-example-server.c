@@ -3,12 +3,6 @@
 #include <glib/gprintf.h>
 #include <stdlib.h>
 
-#ifdef G_OS_UNIX
-#include <gio/gunixfdlist.h>
-/* For STDOUT_FILENO */
-#include <unistd.h>
-#endif
-
 #include "ddcutil_c_api.h"
 #include "ddcutil_status_codes.h"
 #include <assert.h>
@@ -28,19 +22,6 @@ static const gchar introspection_xml[] =
     "    <annotation name='org.gtk.GDBus.Annotation' value='AlsoOnInterface'/>"
 
     "    <method name='DdcDetect'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
-    "      <arg name='number_of_displays' type='i' direction='out'/>"
-    "      <arg name='display_numbers' type='ai' direction='out'/>"
-    "      <arg name='usb_bus' type='ai' direction='out'/>"
-    "      <arg name='usb_device' type='ai' direction='out'/>"
-    "      <arg name='manufacturer_id' type='as' direction='out'/>"
-    "      <arg name='model_name' type='as' direction='out'/>"
-    "      <arg name='serial_number' type='as' direction='out'/>"
-    "      <arg name='product_code' type='aq' direction='out'/>"
-    "      <arg name='edid_hex' type='as' direction='out'/>"
-    "    </method>"
-
-    "    <method name='DdcDetectProperties'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
     "      <arg name='display_properties' type='a{sv}' direction='out'/>"
@@ -138,41 +119,7 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
                                const gchar *interface_name, const gchar *method_name, GVariant *parameters,
                                GDBusMethodInvocation *invocation, gpointer user_data) {
 
-  if (g_strcmp0(method_name, "DdcDetect") == 0) { // =======================
-    DDCA_Display_Info_List *dlist = NULL;
-    ddca_get_display_info_list2(0, &dlist);
-    printf("   ddca_get_display_info_list2() done. dlist=%p\n", dlist);
-
-    GVariantBuilder *display_number_builder = g_variant_builder_new(G_VARIANT_TYPE("ai"));
-    GVariantBuilder *usb_bus_builder = g_variant_builder_new(G_VARIANT_TYPE("ai"));
-    GVariantBuilder *usb_device_builder = g_variant_builder_new(G_VARIANT_TYPE("ai"));
-    GVariantBuilder *manufacturer_id_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-    GVariantBuilder *model_name_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-    GVariantBuilder *serial_number_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-    GVariantBuilder *product_code_builder = g_variant_builder_new(G_VARIANT_TYPE("aq"));
-    GVariantBuilder *edid_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-
-    for (int ndx = 0; ndx < dlist->ct; ndx++) {
-      printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
-      g_variant_builder_add(display_number_builder, "i", GINT_TO_POINTER(dlist->info[ndx].dispno));
-      g_variant_builder_add(usb_bus_builder, "i", GINT_TO_POINTER(dlist->info[ndx].usb_bus));
-      g_variant_builder_add(usb_device_builder, "i", GINT_TO_POINTER(dlist->info[ndx].usb_device));
-      g_variant_builder_add(manufacturer_id_builder, "s", dlist->info[ndx].mfg_id);
-      g_variant_builder_add(model_name_builder, "s", dlist->info[ndx].model_name);
-      g_variant_builder_add(serial_number_builder, "s", dlist->info[ndx].sn);
-      g_variant_builder_add(product_code_builder, "q", dlist->info[ndx].product_code);
-      g_variant_builder_add(edid_builder, "s", edid_to_hex(dlist->info[ndx].edid_bytes));
-    }
-
-    GVariant *result = g_variant_new("(iaiaiaiasasasaqas)", dlist->ct, display_number_builder, usb_bus_builder,
-                                     usb_device_builder, manufacturer_id_builder, model_name_builder,
-                                     serial_number_builder, product_code_builder, edid_builder);
-
-    g_dbus_method_invocation_return_value(invocation, result);
-    // g_free (result);  // Causes a segfault - maybe the dlist memory needs to be copied?
- 
-    
-  } else if (g_strcmp0(method_name, "DdcDetectProperties") == 0) {  // =======================
+  if (g_strcmp0(method_name, "DdcDetect") == 0) {  // =======================
     
     DDCA_Display_Info_List *dlist = NULL;
     const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
