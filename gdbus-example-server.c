@@ -24,7 +24,7 @@ static const gchar introspection_xml[] =
     "    <method name='DdcDetect'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
-    "      <arg name='display_properties' type='a{sv}' direction='out'/>"
+    "      <arg name='display_properties' type='aa{sv}' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
@@ -126,28 +126,30 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     const char *message_text = get_status_message(status);
     printf("   ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
 
-    GVariantBuilder *array_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+    
+    GVariantBuilder *vdu_array_builder = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
 
     for (int ndx = 0; ndx < dlist->ct; ndx++) {
       printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
-      g_variant_builder_add(array_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
-      g_variant_builder_add(array_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
-      g_variant_builder_add(array_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
-      g_variant_builder_add(array_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
-      g_variant_builder_add(array_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
-      g_variant_builder_add(array_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
-      g_variant_builder_add(array_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
-      g_variant_builder_add(array_builder, "{sv}", "edid_hex",
-                            g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));
+      GVariantBuilder *vdu_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
+      g_variant_builder_add(vdu_properties_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
+      g_variant_builder_add(
+        vdu_properties_builder, "{sv}", "edid_hex", g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));
+      g_variant_builder_add(vdu_array_builder, "a{sv}", vdu_properties_builder);
     }
 
-    GVariant *result = g_variant_new("(ia{sv}is)", dlist->ct, array_builder, status, message_text);
+    GVariant *result = g_variant_new("(iaa{sv}is)", dlist->ct, vdu_array_builder, status, message_text);
 
     g_dbus_method_invocation_return_value(invocation, result);
     // g_free (result);
     
   } else if (g_strcmp0(method_name, "GetVcp") == 0) {  // =======================
-    
     int display_number;
     char *hex_edid;
     uint8_t vcp_code;
@@ -167,31 +169,12 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
       DDCA_Display_Handle disp_handle;
       ddca_open_display2(dref, 1, &disp_handle);
       printf("getvcp opened display %d\n", display_number);
-      static DDCA_Any_Vcp_Value *ddca_value;
-      status = ddca_get_any_vcp_value_using_implicit_type(disp_handle, vcp_code, &ddca_value);
+      static DDCA_Non_Table_Vcp_Value valrec;
+      status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
       if (status == 0) {
-        switch (ddca_value->value_type) {
-        case DDCA_NON_TABLE_VCP_VALUE: {
-          DDCA_Non_Table_Vcp_Value *valrec = (DDCA_Non_Table_Vcp_Value *)&(ddca_value->val.c_nc);
-          current_value = VALREC_CUR_VAL(ddca_value);
-          max_value = VALREC_MAX_VAL(ddca_value);
-          status = ddca_format_non_table_vcp_value_by_dref(vcp_code, dref, valrec, &formatted_value);
-          printf("non table\n");
-          break;
-        }
-        case DDCA_TABLE_VCP_VALUE: {
-          DDCA_Table_Vcp_Value *tabvalrec = (DDCA_Table_Vcp_Value *)&(ddca_value->val.t);
-          assert(tabvalrec->bytect <= 2);
-          current_value =
-              (tabvalrec->bytect == 1) ? tabvalrec->bytes[0] : ((tabvalrec->bytes[0] << 8) + tabvalrec->bytes[1]);
-          max_value = 0;
-          status = ddca_format_table_vcp_value_by_dref(vcp_code, dref, tabvalrec, &formatted_value);
-          break;
-        }
-        default:
-          assert(0);
-          break;
-        }
+        current_value = valrec.sh << 8 | valrec.sl;
+        max_value = valrec.mh << 8 | valrec.ml;
+        status = ddca_format_non_table_vcp_value_by_dref(vcp_code, dref, &valrec, &formatted_value);
       }
       message_text = get_status_message(status);
       ddca_close_display(disp_handle);
@@ -219,44 +202,11 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     if (status == 0) {
       DDCA_Display_Handle disp_handle;
       status = ddca_open_display2(dref, 1, &disp_handle);
-            
       if (status == 0) {
-        printf("setvcp opened display %d\n", display_number);
-        DDCA_Feature_Metadata *meta_loc;
-        ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 1, &meta_loc);
-
-        DDCA_Any_Vcp_Value ddca_value;
-        ddca_value.opcode = vcp_code;
-        
-        if (meta_loc->feature_flags & DDCA_NON_TABLE) {
-          ddca_value.value_type = DDCA_NON_TABLE_VCP_VALUE;
-          if (meta_loc->feature_flags & (DDCA_COMPLEX_CONT | DDCA_COMPLEX_NC)) {
-            ddca_value.val.c_nc.sl = new_value & 8;
-            ddca_value.val.c_nc.sh = new_value >> 8;
-          }
-          else {
-            ddca_value.val.c_nc.sl = new_value & 0xff;
-            ddca_value.val.c_nc.sh = 0;
-          }
-        }
-        else if (meta_loc->feature_flags & DDCA_TABLE) {
-          ddca_value.value_type = DDCA_TABLE_VCP_VALUE;
-          if (new_value > 255) {
-            ddca_value.val.t.bytes = g_malloc(2);
-            ddca_value.val.t.bytes[0] = new_value & 0xff;
-            ddca_value.val.t.bytes[1] = new_value >> 8;
-            ddca_value.val.t.bytect = 2;
-          }
-          else {
-            ddca_value.val.t.bytes = g_malloc(1);
-            ddca_value.val.t.bytes[0] = new_value & 0xff;
-            ddca_value.val.t.bytes[1] = 0;
-            ddca_value.val.t.bytect = 1;
-          }
-        }
-
-        status = ddca_set_any_vcp_value(disp_handle, vcp_code, &ddca_value);
-
+        printf("setvcp opened display %d\n", display_number);      
+        uint8_t low_byte = new_value & 0x00ff; 
+        uint8_t high_byte = new_value >> 8;
+        status = ddca_set_non_table_vcp_value(disp_handle, vcp_code, high_byte, low_byte);
         ddca_close_display(disp_handle);
         printf("setvcp closed display %d\n", display_number);
       }
