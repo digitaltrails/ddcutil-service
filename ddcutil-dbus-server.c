@@ -384,7 +384,7 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 }
 
 static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  g_print("Lost registration\n");
+  g_print("Lost registration - is another instance already registered?\n");
   exit(1);
 }
 

@@ -7,13 +7,13 @@ CFLAGS_GUNIX  = $(shell pkg-config --cflags --libs gio-unix-2.0)
 CFLAGS = -g -Wall -Werror -lddcutil -std=gnu11 #-I ddcutil-2.0.0/src/public
 
 
-all: gdbus-ddcutil-server.c # gdbus-example-client
+all: ddcutil-dbus-server
 
-gdbus-example-server: gdbus-ddcutil-server.c
+ddcutil-dbus-server: ddcutil-dbus-server.c
 	gcc $< -o $@ $(CFLAGS) $(CFLAGS_DBUS) $(CFLAGS_GIO) $(CFLAGS_GUNIX) # -I ddcutil-2.0.0/src/public
 	
 clean:
-	rm -f gdbus-ddcutil-server
+	rm -f ddcutil-dbus-server
 
 
 
