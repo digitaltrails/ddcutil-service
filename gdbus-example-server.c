@@ -3,12 +3,13 @@
 #include <glib/gprintf.h>
 #include <stdlib.h>
 
-#include "ddcutil_c_api.h"
-#include "ddcutil_status_codes.h"
+#include <ddcutil_c_api.h>
+#include <ddcutil_status_codes.h>
 #include <assert.h>
 #include <string.h>
 
 /* ----------------------------------------------------------------------------------------------------
+ * Code structure based on https://github.com/bratsche/glib/blob/master/gio/tests/gdbus-example-server.c
  */
 
 static GDBusNodeInfo *introspection_data = NULL;
@@ -17,7 +18,7 @@ static GDBusNodeInfo *introspection_data = NULL;
 static const gchar introspection_xml[] =
 
     "<node>"
-    "  <interface name='org.gtk.GDBus.TestInterface'>"
+    "  <interface name='com.ddcutil.libddcutil.DdcutilInterface'>"
     "    <annotation name='org.gtk.GDBus.Annotation' value='OnInterface'/>"
     "    <annotation name='org.gtk.GDBus.Annotation' value='AlsoOnInterface'/>"
 
@@ -66,20 +67,21 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
+    
+    "    <method name='GetCapabilities'>"
+    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='capabilities_text' type='s' direction='out'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
 
-    "    <property type='s' name='FluxCapicitorName' access='read'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnProperty'>"
-    "        <annotation name='org.gtk.GDBus.Annotation' "
-    "value='OnAnnotation_YesThisIsCrazy'/>"
-    "      </annotation>"
-    "    </property>"
-    "    <property type='s' name='Title' access='readwrite'/>"
-    "    <property type='s' name='ReadingAlwaysThrowsError' access='read'/>"
-    "    <property type='s' name='WritingAlwaysThrowsError' "
-    "access='readwrite'/>"
-    "    <property type='s' name='OnlyWritable' access='write'/>"
-    "    <property type='s' name='Foo' access='read'/>"
-    "    <property type='s' name='Bar' access='read'/>"
+
+    "    <property type='d' name='Verify' access='readwrite'/>"
+    "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
+    "    <property type='s' name='DdcutilVersionString' access='read'/>"
+    
     "  </interface>"
     "</node>";
 
@@ -87,7 +89,7 @@ static const gchar introspection_xml[] =
  */
 
 char *edid_to_hex(uint8_t *edid) {
-  static char hex_edid[512];
+  _Thread_local static char hex_edid[512];
   gchar *ptr = &hex_edid[0];
   for (int i = 0; i < 128; i++) {
     ptr += sprintf(ptr, "%02X", edid[i]);
@@ -96,29 +98,29 @@ char *edid_to_hex(uint8_t *edid) {
 }
 
 char *get_status_message(DDCA_Status status) {
-  char *message_text = "OK";
+  char *message_text = g_strdup("OK");
   if (status != 0) {
     const char *status_text = ddca_rc_name(status);
-    const char *detail_text = ddca_get_error_detail()->detail;
+    DDCA_Error_Detail *error_detail = ddca_get_error_detail();
+    const char *detail_text = error_detail->detail;
     message_text = g_malloc(strlen(status_text) + (detail_text == NULL ? 0 : strlen(detail_text)) + 3);
     strcat(message_text, status_text);
     strcat(message_text, ": ");
     strcat(message_text, detail_text);
+    ddca_free_error_detail(error_detail);
   }
   return message_text;
 }
 
-DDCA_Status get_dref(const int display_number, const char *hex_edid, DDCA_Display_Ref **dref) {
-    printf("display_num=%d, edid=%s\n", display_number, hex_edid);
-    DDCA_Display_Info_List *dlist = NULL;
-    DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
+DDCA_Status get_dref(const int display_number, const char *hex_edid, DDCA_Display_Info_List **dlist, DDCA_Display_Ref **dref) {
+    DDCA_Status status = ddca_get_display_info_list2(0, dlist);
     if (status == 0) {
-      for (int ndx = 0; ndx < dlist->ct; ndx++) {
-        if (display_number == dlist->info[ndx].dispno) {
-          *dref = dlist->info[ndx].dref;
+      for (int ndx = 0; ndx < (*dlist)->ct; ndx++) {
+        if (display_number == (*dlist)->info[ndx].dispno) {
+          *dref = (*dlist)->info[ndx].dref;
           break;
-        } else if (hex_edid != NULL && strcmp(hex_edid, edid_to_hex(dlist->info[ndx].edid_bytes)) == 0) {
-          *dref = dlist->info[ndx].dref;
+        } else if (hex_edid != NULL && strcmp(hex_edid, edid_to_hex((*dlist)->info[ndx].edid_bytes)) == 0) {
+          *dref = (*dlist)->info[ndx].dref;
           break;
         }
       }
@@ -138,11 +140,10 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
   if (g_strcmp0(method_name, "DdcDetect") == 0) {  // =======================
     
     DDCA_Display_Info_List *dlist = NULL;
-    const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
-    const char *message_text = get_status_message(status);
-    printf("   ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
+    DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
+    char *message_text = get_status_message(status);
+    printf("DdcDetect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
 
-    
     GVariantBuilder *vdu_array_builder = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
 
     for (int ndx = 0; ndx < dlist->ct; ndx++) {
@@ -156,35 +157,38 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
       g_variant_builder_add(vdu_dict_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
       g_variant_builder_add(vdu_dict_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
       g_variant_builder_add(
-        vdu_dict_builder, "{sv}", "edid_hex", g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));
+        vdu_dict_builder, "{sv}", "edid_hex", g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));  // might be dodgy
       g_variant_builder_add(vdu_array_builder, "a{sv}", vdu_dict_builder);
     }
 
     GVariant *result = g_variant_new("(iaa{sv}is)", dlist->ct, vdu_array_builder, status, message_text);
 
     g_dbus_method_invocation_return_value(invocation, result);
-    // g_free (result);
+    ddca_free_display_info_list(dlist);
+    g_free(message_text);
+    g_free(result);
     
   } else if (g_strcmp0(method_name, "GetFeatureValue") == 0) {  // =======================
     int display_number;
     char *hex_edid;
     uint8_t vcp_code;
     int status = 0;
-    char *message_text = "";
+    char *message_text = g_strdup("");
     
     g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-    printf("display_num=%d, edid=%s\n", display_number, hex_edid);
+    printf("GetFeatureValue display_num=%d, edid=%s\n", display_number, hex_edid);
 
     uint16_t current_value = 0;
     uint16_t max_value = 0;
     char *formatted_value = "";
     
+    DDCA_Display_Info_List *info_list = NULL;
     DDCA_Display_Ref *dref = NULL;
-    status = get_dref(display_number, hex_edid, &dref);
+    status = get_dref(display_number, hex_edid, &info_list, &dref);
     if (status == 0) {
       DDCA_Display_Handle disp_handle;
       ddca_open_display2(dref, 1, &disp_handle);
-      printf("getvcp opened display %d\n", display_number);
+      printf("GetFeatureValue opened display %d\n", display_number);
       static DDCA_Non_Table_Vcp_Value valrec;
       status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
       if (status == 0) {
@@ -194,13 +198,14 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
       }
       message_text = get_status_message(status);
       ddca_close_display(disp_handle);
-      printf("getvcp closed display %d\n", display_number);
     }
     
     printf("status=%d\n", status);
     GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
     g_dbus_method_invocation_return_value(invocation, result);
-    // g_free (result);
+    ddca_free_display_info_list(info_list);
+    g_free(message_text);
+    g_free(result);
     
   } else if (g_strcmp0(method_name, "SetFeatureValue") == 0) {  // =======================
     int display_number;
@@ -208,42 +213,45 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     uint8_t vcp_code;
     uint16_t new_value;
     int status = 0;
-    char *message_text = "";
+    char *message_text = g_strdup("");
     
     g_variant_get(parameters, "(isyq)", &display_number, &hex_edid, &vcp_code, &new_value);
-    printf("display_num=%d, edid=%s\nvcp_code=%d value=%d\n", display_number, hex_edid, vcp_code, new_value);
+    printf("SetFeatureValue display_num=%d, edid=%s\nvcp_code=%d value=%d\n", display_number, hex_edid, vcp_code, new_value);
     
+    DDCA_Display_Info_List *info_list = NULL;
     DDCA_Display_Ref *dref = NULL;
-    status = get_dref(display_number, hex_edid, &dref);
+    status = get_dref(display_number, hex_edid, &info_list, &dref);
     if (status == 0) {
       DDCA_Display_Handle disp_handle;
       status = ddca_open_display2(dref, 1, &disp_handle);
       if (status == 0) {
-        printf("setvcp opened display %d\n", display_number);      
+        printf("SetFeatureValue opened display %d\n", display_number);      
         uint8_t low_byte = new_value & 0x00ff; 
         uint8_t high_byte = new_value >> 8;
         status = ddca_set_non_table_vcp_value(disp_handle, vcp_code, high_byte, low_byte);
         ddca_close_display(disp_handle);
-        printf("setvcp closed display %d\n", display_number);
       }
       message_text = get_status_message(status);
     }
     
     GVariant *result = g_variant_new("(is)", status, status == 0 ? "OK" : message_text);
     g_dbus_method_invocation_return_value(invocation, result);
-    // g_free (result);
+    ddca_free_display_info_list(info_list);
+    g_free(message_text);
+    g_free (result);
   } else if (g_strcmp0(method_name, "GetFeatureMetadata") == 0) {  // =======================
     int display_number;
     char *hex_edid;
     uint8_t vcp_code;
     int status = 0;
-    char *message_text = "";
+    char *message_text = strdup("");
     
     g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-    printf("get meta display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
+    printf("GetFeatureMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
     
+    DDCA_Display_Info_List *info_list = NULL;
     DDCA_Display_Ref *dref = NULL;
-    status = get_dref(display_number, hex_edid, &dref);
+    status = get_dref(display_number, hex_edid, &info_list, &dref);
     char *feature_name = "";
     char *feature_description= "";
     bool is_read_only = false;
@@ -251,41 +259,70 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     bool is_rw = false;
     bool is_complex = false;
     bool is_continuous = false;
+    DDCA_Feature_Metadata *metadata_ptr = NULL;
     if (status == 0) {
       DDCA_Display_Handle disp_handle;
       status = ddca_open_display2(dref, 1, &disp_handle);
-      DDCA_Feature_Metadata *meta_loc;
-      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 1, &meta_loc);
+      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 0, &metadata_ptr);
       if (status == 0) {
-        if (meta_loc->feature_desc != NULL) {
-          feature_name = meta_loc->feature_name;
+        if (metadata_ptr->feature_desc != NULL) {
+          feature_name = metadata_ptr->feature_name;
         }
-        if (meta_loc->feature_desc != NULL) {
-          feature_description = meta_loc->feature_desc;
+        if (metadata_ptr->feature_desc != NULL) {
+          feature_description = metadata_ptr->feature_desc;
         }
-        is_read_only = meta_loc->feature_flags & DDCA_RO;
-        is_write_only = meta_loc->feature_flags & DDCA_WO;
-        is_rw = meta_loc->feature_flags & DDCA_RW;
-        is_complex = meta_loc->feature_flags & (DDCA_COMPLEX_CONT | DDCA_COMPLEX_NC);
-        is_continuous = meta_loc->feature_flags & DDCA_CONT;
+        is_read_only = metadata_ptr->feature_flags & DDCA_RO;
+        is_write_only = metadata_ptr->feature_flags & DDCA_WO;
+        is_rw = metadata_ptr->feature_flags & DDCA_RW;
+        is_complex = metadata_ptr->feature_flags & (DDCA_COMPLEX_CONT | DDCA_COMPLEX_NC);
+        is_continuous = metadata_ptr->feature_flags & DDCA_CONT;
         ddca_close_display(disp_handle);
-        printf("setvcp closed display %d\n", display_number);
       }
       message_text = get_status_message(status);
     }
-    
     GVariant *result = g_variant_new("(ssbbbbbis)", 
                                      feature_name, feature_description,
                                      is_read_only, is_write_only, is_rw, is_complex, is_continuous, 
                                      status, status == 0 ? "OK" : message_text);
     g_dbus_method_invocation_return_value(invocation, result);
-    // g_free (result);
+    ddca_free_display_info_list(info_list);
+    g_free(message_text);
+    g_free(result);
+  }
+  else if (g_strcmp0(method_name, "GetCapabilities") == 0) {  // =======================
+    int display_number;
+    char *hex_edid;
+    int status = 0;
+    char *caps_text = strdup("");
+    char *message_text = strdup("");
+    
+    g_variant_get(parameters, "(is)", &display_number, &hex_edid);
+    printf("GetCapabilities display_num=%d, edid=%s\n", display_number, hex_edid);
+    
+    DDCA_Display_Info_List *info_list = NULL;
+    DDCA_Display_Ref *dref = NULL;
+    DDCA_Display_Handle disp_handle;
+    status = get_dref(display_number, hex_edid, &info_list, &dref);
+    
+    if (status == 0) {
+      status = ddca_open_display2(dref, 1, &disp_handle);
+      if (status == 0) {
+        status = ddca_get_capabilities_string(disp_handle, &caps_text);
+      }
+      ddca_close_display(disp_handle);
+    }
+    message_text = get_status_message(status);
+    GVariant *result = g_variant_new("(sis)", 
+                                     caps_text, 
+                                     status, status == 0 ? "OK" : message_text);
+    g_dbus_method_invocation_return_value(invocation, result);
+    ddca_free_display_info_list(info_list);
+    free(caps_text);
+    g_free(message_text);
+    g_free(result);
   }
 }
 
-static gchar *_global_title = NULL;
-
-static gboolean swap_a_and_b = FALSE;
 
 static GVariant *handle_get_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                      const gchar *interface_name, const gchar *property_name, GError **error,
@@ -293,23 +330,14 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   GVariant *ret;
 
   ret = NULL;
-  if (g_strcmp0(property_name, "FluxCapicitorName") == 0) {
-    ret = g_variant_new_string("DeLorean");
-  } else if (g_strcmp0(property_name, "Title") == 0) {
-    if (_global_title == NULL)
-      _global_title = g_strdup("Back To C!");
-    ret = g_variant_new_string(_global_title);
-  } else if (g_strcmp0(property_name, "ReadingAlwaysThrowsError") == 0) {
-    g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                "Hello %s. I thought I said reading this property "
-                "always results in an error. kthxbye",
-                sender);
-  } else if (g_strcmp0(property_name, "WritingAlwaysThrowsError") == 0) {
-    ret = g_variant_new_string("There's no home like home");
-  } else if (g_strcmp0(property_name, "Foo") == 0) {
-    ret = g_variant_new_string(swap_a_and_b ? "Tock" : "Tick");
-  } else if (g_strcmp0(property_name, "Bar") == 0) {
-    ret = g_variant_new_string(swap_a_and_b ? "Tick" : "Tock");
+  if (g_strcmp0(property_name, "DdcutilVersionString") == 0) {
+    ret = g_variant_new_string(g_strdup(ddca_ddcutil_extended_version_string()));
+  }
+  else if (g_strcmp0(property_name, "Verify") == 0) {
+    ret = g_variant_new_boolean(ddca_is_verify_enabled());
+  } 
+  else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
+    ret = g_variant_new_double(ddca_get_sleep_multiplier());
   }
 
   return ret;
@@ -318,31 +346,12 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
 static gboolean handle_set_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                     const gchar *interface_name, const gchar *property_name, GVariant *value,
                                     GError **error, gpointer user_data) {
-  if (g_strcmp0(property_name, "Title") == 0) {
-    if (g_strcmp0(_global_title, g_variant_get_string(value, NULL)) != 0) {
-      GVariantBuilder *builder;
-      GError *local_error;
-
-      g_free(_global_title);
-      _global_title = g_variant_dup_string(value, NULL);
-
-      local_error = NULL;
-      builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
-      g_variant_builder_add(builder, "{sv}", "Title", g_variant_new_string(_global_title));
-      g_dbus_connection_emit_signal(connection, NULL, object_path, "org.freedesktop.DBus.Properties",
-                                    "PropertiesChanged", g_variant_new("(sa{sv}as)", interface_name, builder, NULL),
-                                    &local_error);
-      g_assert_no_error(local_error);
-    }
-  } else if (g_strcmp0(property_name, "ReadingAlwaysThrowsError") == 0) {
-    /* do nothing - they can't read it after all! */
-  } else if (g_strcmp0(property_name, "WritingAlwaysThrowsError") == 0) {
-    g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                "Hello AGAIN %s. I thought I said writing this property "
-                "always results in an error. kthxbye",
-                sender);
+  if (g_strcmp0(property_name, "Verify") == 0) {
+    ddca_enable_verify(g_variant_get_boolean(value));
   }
-
+  else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
+    ddca_set_sleep_multiplier(g_variant_get_double(value));
+  } 
   return *error == NULL;
 }
 
@@ -356,7 +365,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
   guint registration_id;
 
   registration_id =
-      g_dbus_connection_register_object(connection, "/org/gtk/GDBus/TestObject", introspection_data->interfaces[0],
+      g_dbus_connection_register_object(connection, "/com/ddcutil/libddcutil/DdcutilObject", introspection_data->interfaces[0],
                                         &interface_vtable, NULL, /* user_data */
                                         NULL,                    /* user_data_free_func */
                                         NULL);                   /* GError** */
@@ -381,7 +390,7 @@ int main(int argc, char *argv[]) {
   introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
   g_assert(introspection_data != NULL);
 
-  owner_id = g_bus_own_name(G_BUS_TYPE_SESSION, "org.gtk.GDBus.TestServer", G_BUS_NAME_OWNER_FLAGS_NONE,
+  owner_id = g_bus_own_name(G_BUS_TYPE_SESSION, "com.ddcutil.libddcutil.DdcutilServer", G_BUS_NAME_OWNER_FLAGS_NONE,
                             on_bus_acquired, on_name_acquired, on_name_lost, NULL, NULL);
 
   loop = g_main_loop_new(NULL, FALSE);
