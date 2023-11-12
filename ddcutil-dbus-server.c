@@ -76,6 +76,15 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
+    
+    "    <method name='GetVcpFeatureDefinitions'>"
+    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='capabilities_text' type='s' direction='out'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
 
 
     "    <property type='d' name='Verify' access='readwrite'/>"
@@ -88,7 +97,7 @@ static const gchar introspection_xml[] =
 /* ----------------------------------------------------------------------------------------------------
  */
 
-static char *edid_to_hex(uint8_t *edid) {
+static char *edid_to_hex(const uint8_t *edid) {
   _Thread_local static char hex_edid[512];
   gchar *ptr = &hex_edid[0];
   for (int i = 0; i < 128; i++) {
@@ -128,7 +137,7 @@ static DDCA_Status get_dref(const int display_number, const char *hex_edid,
         }
       }
       if (*dref == NULL) {
-        printf("Bad display ID?\n");
+        g_printf("Bad display ID %d %s?\n", display_number, hex_edid);
         status = DDCRC_INVALID_DISPLAY;
       }
     }
@@ -139,12 +148,12 @@ static void ddc_detect(GDBusMethodInvocation* invocation) {
   DDCA_Display_Info_List *dlist = NULL;
   const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
   char *message_text = get_status_message(status);
-  printf("DdcDetect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
+  g_printf("DdcDetect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
 
   GVariantBuilder *vdu_array_builder = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
 
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
-    printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
+    g_printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
     GVariantBuilder *vdu_dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
     g_variant_builder_add(vdu_dict_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
     g_variant_builder_add(vdu_dict_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
@@ -172,7 +181,7 @@ static void get_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
   uint8_t vcp_code;
 
   g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-  printf("GetFeatureValue display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetFeatureValue display_num=%d, edid=%s\n", display_number, hex_edid);
 
   uint16_t current_value = 0;
   uint16_t max_value = 0;
@@ -184,7 +193,7 @@ static void get_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     ddca_open_display2(dref, 1, &disp_handle);
-    printf("GetFeatureValue opened display %d\n", display_number);
+    g_printf("GetFeatureValue opened display %d\n", display_number);
     static DDCA_Non_Table_Vcp_Value valrec;
     status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
     if (status == 0) {
@@ -195,7 +204,7 @@ static void get_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
     ddca_close_display(disp_handle);
   }
   char *message_text = get_status_message(status);
-  printf("status=%d message=%s\n", status, message_text);
+  g_printf("status=%d message=%s\n", status, message_text);
   GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);
   ddca_free_display_info_list(info_list);
@@ -211,7 +220,7 @@ static void set_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
   uint16_t new_value;
 
   g_variant_get(parameters, "(isyq)", &display_number, &hex_edid, &vcp_code, &new_value);
-  printf("SetFeatureValue display_num=%d, edid=%s\nvcp_code=%d value=%d\n",
+  g_printf("SetFeatureValue display_num=%d, edid=%s\nvcp_code=%d value=%d\n",
          display_number, hex_edid, vcp_code, new_value);
 
   DDCA_Display_Info_List *info_list = NULL;
@@ -221,7 +230,6 @@ static void set_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(dref, 1, &disp_handle);
     if (status == 0) {
-      printf("SetFeatureValue opened display %d\n", display_number);
       const uint8_t low_byte = new_value & 0x00ff;
       const uint8_t high_byte = new_value >> 8;
       status = ddca_set_non_table_vcp_value(disp_handle, vcp_code, high_byte, low_byte);
@@ -242,7 +250,7 @@ static void get_capabilities(GVariant* parameters, GDBusMethodInvocation* invoca
   char *caps_text = NULL;
 
   g_variant_get(parameters, "(is)", &display_number, &hex_edid);
-  printf("GetCapabilities display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetCapabilities display_num=%d, edid=%s\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Ref *dref = NULL;
@@ -267,13 +275,74 @@ static void get_capabilities(GVariant* parameters, GDBusMethodInvocation* invoca
   g_free(result);
 }
 
+static void get_vcp_feature_definitions(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  int display_number;
+  char *hex_edid;
+  char *caps_text = NULL;
+
+  g_variant_get(parameters, "(is)", &display_number, &hex_edid);
+  g_printf("GetVcpFeatureDefinitions display_num=%d, edid=%s\n", display_number, hex_edid);
+
+  DDCA_Display_Info_List *info_list = NULL;
+  DDCA_Display_Ref *dref = NULL;
+  DDCA_Display_Handle disp_handle;
+  DDCA_Capabilities *parsed_capabilities_ptr;
+  DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
+
+  if (status == 0) {
+    status = ddca_open_display2(dref, 1, &disp_handle);
+    if (status == 0) {
+      status = ddca_get_capabilities_string(disp_handle, &caps_text);
+      if (status == 0) {
+        status = ddca_parse_capabilities_string(caps_text, &parsed_capabilities_ptr);
+        if (status == 0) {
+          DDCA_Cap_Vcp *vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
+          //DDCA_Feature_List feature_list = ddca_feature_list_from_capabilities(parsed_capabilities_ptr);
+          g_printf("vcp_code_ct=%d\n", parsed_capabilities_ptr->vcp_code_ct);
+          for (int feature_idx = 0; feature_idx < parsed_capabilities_ptr->vcp_code_ct; feature_idx++) {
+            const DDCA_Cap_Vcp feature_def = vcp_feature_array[feature_idx];
+            DDCA_Feature_Metadata *metadata_ptr;
+            status = ddca_get_feature_metadata_by_dh(feature_def.feature_code, disp_handle, 0, &metadata_ptr);
+            if (status == 0) {
+              g_printf("FeatureDef: %x %s %s\n", metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
+              for (int value_idx = 0; value_idx < feature_def.value_ct; value_idx++) {
+                for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
+                  if (sl_ptr->value_code == feature_def.values[value_idx]) {
+                  g_printf("  ValueDef feature %x value %d %s\n", feature_def.feature_code, sl_ptr->value_code, sl_ptr->value_name);
+                }
+              }
+            }
+            }
+            else {
+              g_printf("%x %s\n", feature_def.feature_code, get_status_message(status));
+            }
+          }
+        }
+      }
+    }
+    ddca_close_display(disp_handle);
+  }
+
+  /**** TODO FINISH ***/
+  char *message_text = get_status_message(status);
+  GVariant *result = g_variant_new("(sis)",
+                                   caps_text == NULL ? "" : caps_text,
+                                   status, message_text);
+  g_dbus_method_invocation_return_value(invocation, result);
+  ddca_free_display_info_list(info_list);
+  ddca_free_parsed_capabilities(parsed_capabilities_ptr);
+  free(caps_text);
+  free(message_text);
+  g_free(result);
+}
+
 static void get_feature_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
   uint8_t vcp_code;
 
   g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-  printf("GetFeatureMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
+  g_printf("GetFeatureMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Ref *dref = NULL;
@@ -292,11 +361,16 @@ static void get_feature_metadata(GVariant* parameters, GDBusMethodInvocation* in
     if (status == 0) {
       status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 0, &metadata_ptr);
       if (status == 0) {
-        if (metadata_ptr->feature_desc != NULL) {
+        if (metadata_ptr->feature_name != NULL) {
           feature_name = metadata_ptr->feature_name;
         }
         if (metadata_ptr->feature_desc != NULL) {
           feature_description = metadata_ptr->feature_desc;
+        }
+        if (metadata_ptr->sl_values != NULL) {
+          for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
+            g_printf("%d %s\n", sl_ptr->value_code, sl_ptr->value_name);
+          }
         }
         is_read_only = metadata_ptr->feature_flags & DDCA_RO;
         is_write_only = metadata_ptr->feature_flags & DDCA_WO;
@@ -332,6 +406,8 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     get_feature_metadata(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetCapabilities") == 0) {
     get_capabilities(parameters, invocation);
+  } else if (g_strcmp0(method_name, "GetVcpFeatureDefinitions") == 0) {
+    get_vcp_feature_definitions(parameters, invocation);
   }
 }
 
