@@ -149,22 +149,24 @@ static void ddc_detect(GDBusMethodInvocation* invocation) {
   const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
   char *message_text = get_status_message(status);
   g_printf("DdcDetect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
-
-  GVariantBuilder *vdu_array_builder = g_variant_builder_new(G_VARIANT_TYPE("aa{sv}"));
+  GVariantBuilder vdu_array_builder_instance;  // Allocate on the stack for easier memory management.
+  GVariantBuilder *vdu_array_builder = &vdu_array_builder_instance;
+  
+  g_variant_builder_init(vdu_array_builder, G_VARIANT_TYPE("aa{sv}"));
 
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
     g_printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
-    GVariantBuilder *vdu_dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
-    g_variant_builder_add(vdu_dict_builder, "{sv}", "edid_hex",
+    g_variant_builder_open(vdu_array_builder, G_VARIANT_TYPE("a{sv}"));  // Open sub-container
+    g_variant_builder_add(vdu_array_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
+    g_variant_builder_add(vdu_array_builder, "{sv}", "edid_hex",
                           g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));  // might be dodgy
-    g_variant_builder_add(vdu_array_builder, "a{sv}", vdu_dict_builder);
+    g_variant_builder_close(vdu_array_builder);  // Close sub-container
   }
 
   GVariant *result = g_variant_new("(iaa{sv}is)", dlist->ct, vdu_array_builder, status, message_text);
@@ -288,7 +290,9 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   DDCA_Display_Handle disp_handle;
   DDCA_Capabilities *parsed_capabilities_ptr;
   DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
-  GVariantBuilder *feature_dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{y(ssa{ys})}"));
+  GVariantBuilder feature_dict_builder_instance;  // Allocate on the stack for easier memory management.
+  GVariantBuilder *feature_dict_builder = &feature_dict_builder_instance;
+  g_variant_builder_init(feature_dict_builder, G_VARIANT_TYPE("a{y(ssa{ys})}"));
 
   if (status == 0) {
     status = ddca_open_display2(dref, 1, &disp_handle);
@@ -308,7 +312,9 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
             status = ddca_get_feature_metadata_by_dh(feature_def.feature_code, disp_handle, true, &metadata_ptr);
             if (status == 0) {
               g_printf("FeatureDef: %x %s %s\n", metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
-              GVariantBuilder *value_dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{ys}"));
+              GVariantBuilder value_dict_builder_instance;  // Allocate on the stack for easier memory management.
+              GVariantBuilder *value_dict_builder = &value_dict_builder_instance;
+              g_variant_builder_init(value_dict_builder, G_VARIANT_TYPE("a{ys}"));
               for (int value_idx = 0; value_idx < feature_def.value_ct; value_idx++) {
                 if (metadata_ptr->sl_values != NULL) {
                   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
@@ -469,7 +475,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 }
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  g_print("Name acquired %s", name);
+  g_print("Name acquired %s\n", name);
 }
 
 static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
