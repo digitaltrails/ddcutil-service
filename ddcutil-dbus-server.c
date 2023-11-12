@@ -149,6 +149,7 @@ static void ddc_detect(GDBusMethodInvocation* invocation) {
   const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
   char *message_text = get_status_message(status);
   g_printf("DdcDetect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
+  // see https://docs.gtk.org/glib/struct.VariantBuilder.html
   GVariantBuilder vdu_array_builder_instance;  // Allocate on the stack for easier memory management.
   GVariantBuilder *vdu_array_builder = &vdu_array_builder_instance;
   
@@ -311,7 +312,8 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
 
             status = ddca_get_feature_metadata_by_dh(feature_def.feature_code, disp_handle, true, &metadata_ptr);
             if (status == 0) {
-              g_printf("FeatureDef: %x %s %s\n", metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
+              g_printf("FeatureDef: %x %s %s\n",
+                       metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
               GVariantBuilder value_dict_builder_instance;  // Allocate on the stack for easier memory management.
               GVariantBuilder *value_dict_builder = &value_dict_builder_instance;
               g_variant_builder_init(value_dict_builder, G_VARIANT_TYPE("a{ys}"));
@@ -319,7 +321,8 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                 if (metadata_ptr->sl_values != NULL) {
                   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
                     if (sl_ptr->value_code == feature_def.values[value_idx]) {
-                      g_printf("  ValueDef feature %x value %d %s\n", feature_def.feature_code, sl_ptr->value_code, sl_ptr->value_name);
+                      g_printf("  ValueDef feature %x value %d %s\n",
+                               feature_def.feature_code, sl_ptr->value_code, sl_ptr->value_name);
                       g_variant_builder_add(value_dict_builder, "{ys}", sl_ptr->value_code, sl_ptr->value_name);
                     }
                   }
@@ -332,6 +335,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                 metadata_ptr->feature_name,
                 metadata_ptr->feature_desc == NULL ? "" : metadata_ptr->feature_desc,
                 value_dict_builder);
+              free(metadata_ptr);
             }
             else {
               g_printf("%x %s\n", feature_def.feature_code, get_status_message(status));
