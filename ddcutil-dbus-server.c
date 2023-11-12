@@ -320,7 +320,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                 }
               }
               g_variant_builder_add(
-                feature_dict_builder, \
+                feature_dict_builder,
                 "{y(ssa{ys})}",
                 metadata_ptr->feature_code,
                 metadata_ptr->feature_name,
@@ -337,7 +337,6 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
     ddca_close_display(disp_handle);
   }
 
-  /**** TODO FINISH ***/
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(a{y(ssa{ys})}is)",
                                    feature_dict_builder,
