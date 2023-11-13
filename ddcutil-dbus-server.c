@@ -19,19 +19,15 @@ static const gchar introspection_xml[] =
 
     "<node>"
     "  <interface name='com.ddcutil.libddcutil.DdcutilInterface'>"
-    "    <annotation name='org.gtk.GDBus.Annotation' value='OnInterface'/>"
-    "    <annotation name='org.gtk.GDBus.Annotation' value='AlsoOnInterface'/>"
 
-    "    <method name='DdcDetect'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
+    "    <method name='Detect'>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
     "      <arg name='display_properties' type='aa{sv}' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
-    "    <method name='GetFeatureValue'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
+    "    <method name='GetVcp'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
@@ -42,7 +38,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
-    "    <method name='SetFeatureValue'>"
+    "    <method name='SetVcp'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
@@ -52,7 +48,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
     
-    "    <method name='GetFeatureMetadata'>"
+    "    <method name='GetVcpMetadata'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
@@ -68,7 +64,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
     
-    "    <method name='GetCapabilities'>"
+    "    <method name='GetCapabilitiesString'>"
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
@@ -148,7 +144,7 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
     return status;
 }
 
-static void ddc_detect(GDBusMethodInvocation* invocation) {
+static void detect(GDBusMethodInvocation* invocation) {
   DDCA_Display_Info_List *dlist = NULL;
   const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
   char *message_text = get_status_message(status);
@@ -182,7 +178,7 @@ static void ddc_detect(GDBusMethodInvocation* invocation) {
   g_free(result);
 }
 
-static void get_feature_value(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
   uint8_t vcp_code;
@@ -220,7 +216,7 @@ static void get_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
   g_free(result);
 }
 
-static void set_feature_value(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
   uint8_t vcp_code;
@@ -251,7 +247,7 @@ static void set_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
   g_free (result);
 }
 
-static void get_capabilities(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
   char *caps_text = NULL;
@@ -385,7 +381,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   g_free(result);
 }
 
-static void get_feature_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
   uint8_t vcp_code;
@@ -445,16 +441,16 @@ static void get_feature_metadata(GVariant* parameters, GDBusMethodInvocation* in
 static void handle_method_call(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                const gchar *interface_name, const gchar *method_name, GVariant *parameters,
                                GDBusMethodInvocation *invocation, gpointer user_data) {
-  if (g_strcmp0(method_name, "DdcDetect") == 0) {
-    ddc_detect(invocation);
-  } else if (g_strcmp0(method_name, "GetFeatureValue") == 0) {
-    get_feature_value(parameters, invocation);
-  } else if (g_strcmp0(method_name, "SetFeatureValue") == 0) {
-    set_feature_value(parameters, invocation);
-  } else if (g_strcmp0(method_name, "GetFeatureMetadata") == 0) {
-    get_feature_metadata(parameters, invocation);
-  } else if (g_strcmp0(method_name, "GetCapabilities") == 0) {
-    get_capabilities(parameters, invocation);
+  if (g_strcmp0(method_name, "Detect") == 0) {
+    detect(invocation);
+  } else if (g_strcmp0(method_name, "GetVcp") == 0) {
+    get_vcp(parameters, invocation);
+  } else if (g_strcmp0(method_name, "SetVcp") == 0) {
+    set_vcp(parameters, invocation);
+  } else if (g_strcmp0(method_name, "GetVcpMetadata") == 0) {
+    get_vcp_metadata(parameters, invocation);
+  } else if (g_strcmp0(method_name, "GetCapabilitiesString") == 0) {
+    get_capabilities_string(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetCapabilitiesMetadata") == 0) {
     get_capabilities_metadata(parameters, invocation);
   }
