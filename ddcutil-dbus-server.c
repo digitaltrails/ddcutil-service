@@ -81,6 +81,10 @@ static const gchar introspection_xml[] =
     "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='model' type='s' direction='out'/>"
+    "      <arg name='mccs_major' type='y' direction='out'/>"
+    "      <arg name='mccs_minor' type='y' direction='out'/>"
+    "      <arg name='commands' type='a{ys}' direction='out'/>"
     "      <arg name='capabilities' type='a{y(ssa{ys})}' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
@@ -122,21 +126,21 @@ static char *get_status_message(const DDCA_Status status) {
   return message_text;
 }
 
-static DDCA_Status get_dref(const int display_number, const char *hex_edid,
-                            DDCA_Display_Info_List **dlist, DDCA_Display_Ref **dref) {
+static DDCA_Status get_display_info(const int display_number, const char *hex_edid,
+                            DDCA_Display_Info_List **dlist, DDCA_Display_Info **dinfo) {
     DDCA_Status status = ddca_get_display_info_list2(0, dlist);
     if (status == 0) {
       for (int ndx = 0; ndx < (*dlist)->ct; ndx++) {
         if (display_number == (*dlist)->info[ndx].dispno) {
-          *dref = (*dlist)->info[ndx].dref;
+          *dinfo = &((*dlist)->info[ndx]);
           break;
         }
         if (hex_edid != NULL && strcmp(hex_edid, edid_to_hex((*dlist)->info[ndx].edid_bytes)) == 0) {
-          *dref = (*dlist)->info[ndx].dref;
+          *dinfo = &((*dlist)->info[ndx]);
           break;
         }
       }
-      if (*dref == NULL) {
+      if (*dinfo == NULL) {
         g_printf("Bad display ID %d %s?\n", display_number, hex_edid);
         status = DDCRC_INVALID_DISPLAY;
       }
@@ -191,18 +195,18 @@ static void get_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
   char *formatted_value = NULL;
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Ref *dref = NULL;
-  DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
+  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
-    ddca_open_display2(dref, 1, &disp_handle);
+    ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     g_printf("GetFeatureValue opened display %d\n", display_number);
     static DDCA_Non_Table_Vcp_Value valrec;
     status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
     if (status == 0) {
       current_value = valrec.sh << 8 | valrec.sl;
       max_value = valrec.mh << 8 | valrec.ml;
-      status = ddca_format_non_table_vcp_value_by_dref(vcp_code, dref, &valrec, &formatted_value);
+      status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
     }
     ddca_close_display(disp_handle);
   }
@@ -227,11 +231,11 @@ static void set_feature_value(GVariant* parameters, GDBusMethodInvocation* invoc
          display_number, hex_edid, vcp_code, new_value);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Ref *dref = NULL;
-  DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
+  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
-    status = ddca_open_display2(dref, 1, &disp_handle);
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
       const uint8_t low_byte = new_value & 0x00ff;
       const uint8_t high_byte = new_value >> 8;
@@ -256,12 +260,12 @@ static void get_capabilities(GVariant* parameters, GDBusMethodInvocation* invoca
   g_printf("GetCapabilities display_num=%d, edid=%s\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Ref *dref = NULL;
+  DDCA_Display_Info *vdu_info = NULL;
   DDCA_Display_Handle disp_handle;
-  DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
 
   if (status == 0) {
-    status = ddca_open_display2(dref, 1, &disp_handle);
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
       status = ddca_get_capabilities_string(disp_handle, &caps_text);
     }
@@ -287,16 +291,25 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   g_printf("GetCapabilitiesMetadata display_num=%d, edid=%s\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Ref *dref = NULL;
+  DDCA_Display_Info *vdu_info = NULL;
   DDCA_Display_Handle disp_handle;
   DDCA_Capabilities *parsed_capabilities_ptr;
-  DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+
+  uint8_t mccs_version_major = 0, mccs_version_minor = 0;
+  char * vdu_model = "model";
+
+  GVariantBuilder command_dict_builder_instance;  // Allocate on the stack for easier memory management.
+  GVariantBuilder *command_dict_builder = &command_dict_builder_instance;
+  g_variant_builder_init(command_dict_builder, G_VARIANT_TYPE("a{ys}"));
+
   GVariantBuilder feature_dict_builder_instance;  // Allocate on the stack for easier memory management.
   GVariantBuilder *feature_dict_builder = &feature_dict_builder_instance;
   g_variant_builder_init(feature_dict_builder, G_VARIANT_TYPE("a{y(ssa{ys})}"));
 
   if (status == 0) {
-    status = ddca_open_display2(dref, 1, &disp_handle);
+    vdu_model = vdu_info->model_name;
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
       status = ddca_get_capabilities_string(disp_handle, &caps_text);
       if (status == 0) {
@@ -305,6 +318,14 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
         if (status == 0) {
           DDCA_Cap_Vcp *vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
           g_printf("vcp_code_ct=%d\n", parsed_capabilities_ptr->vcp_code_ct);
+
+          mccs_version_major = parsed_capabilities_ptr->version_spec.major;
+          mccs_version_minor = parsed_capabilities_ptr->version_spec.minor;
+          for (int command_idx = 0; command_idx < parsed_capabilities_ptr->cmd_ct; command_idx++) {
+            const char *command_desc = g_strdup("desc");
+            g_printf("CommandDef %x %s \n", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+            g_variant_builder_add(command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+          }
 
           for (int feature_idx = 0; feature_idx < parsed_capabilities_ptr->vcp_code_ct; feature_idx++) {
             const DDCA_Cap_Vcp feature_def = vcp_feature_array[feature_idx];
@@ -348,7 +369,11 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   }
 
   char *message_text = get_status_message(status);
-  GVariant *result = g_variant_new("(a{y(ssa{ys})}is)",
+  GVariant *result = g_variant_new("(syya{ys}a{y(ssa{ys})}is)",
+                                   vdu_model,
+                                   mccs_version_major,
+                                   mccs_version_minor,
+                                   command_dict_builder,
                                    feature_dict_builder,
                                    status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);
@@ -368,8 +393,8 @@ static void get_feature_metadata(GVariant* parameters, GDBusMethodInvocation* in
   g_printf("GetFeatureMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Ref *dref = NULL;
-  DDCA_Status status = get_dref(display_number, hex_edid, &info_list, &dref);
+  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   char *feature_name = "";
   char *feature_description= "";
   bool is_read_only = false;
@@ -380,7 +405,7 @@ static void get_feature_metadata(GVariant* parameters, GDBusMethodInvocation* in
   DDCA_Feature_Metadata *metadata_ptr = NULL;
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
-    status = ddca_open_display2(dref, 1, &disp_handle);
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
       status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 0, &metadata_ptr);
       if (status == 0) {
