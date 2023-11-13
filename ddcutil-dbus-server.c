@@ -39,7 +39,6 @@ static const gchar introspection_xml[] =
     "    </method>"
 
     "    <method name='SetVcp'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
@@ -49,7 +48,6 @@ static const gchar introspection_xml[] =
     "    </method>"
     
     "    <method name='GetVcpMetadata'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
@@ -65,7 +63,6 @@ static const gchar introspection_xml[] =
     "    </method>"
     
     "    <method name='GetCapabilitiesString'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='capabilities_text' type='s' direction='out'/>"
@@ -74,7 +71,6 @@ static const gchar introspection_xml[] =
     "    </method>"
     
     "    <method name='GetCapabilitiesMetadata'>"
-    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='model' type='s' direction='out'/>"
@@ -85,7 +81,6 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
-
 
     "    <property type='d' name='Verify' access='readwrite'/>"
     "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
