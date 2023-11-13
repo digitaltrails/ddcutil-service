@@ -38,6 +38,15 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
+    "    <method name='GetMultipleVcp'>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='vcp_code' type='ay' direction='in'/>"
+    "      <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
+
     "    <method name='SetVcp'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
@@ -143,7 +152,7 @@ static void detect(GDBusMethodInvocation* invocation) {
   DDCA_Display_Info_List *dlist = NULL;
   const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
   char *message_text = get_status_message(status);
-  g_printf("DdcDetect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
+  g_printf("Detect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
   // see https://docs.gtk.org/glib/struct.VariantBuilder.html
   GVariantBuilder vdu_array_builder_instance;  // Allocate on the stack for easier memory management.
   GVariantBuilder *vdu_array_builder = &vdu_array_builder_instance;
@@ -179,7 +188,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   uint8_t vcp_code;
 
   g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-  g_printf("GetFeatureValue display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetVcp vcp_code=%d display_num=%d, edid=%s\n", vcp_code, display_number, hex_edid);
 
   uint16_t current_value = 0;
   uint16_t max_value = 0;
@@ -191,7 +200,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    g_printf("GetFeatureValue opened display %d\n", display_number);
+    g_printf("GetVcp opened display %d\n", display_number);
     static DDCA_Non_Table_Vcp_Value valrec;
     status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
     if (status == 0) {
@@ -211,6 +220,60 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   g_free(result);
 }
 
+static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  int display_number;
+  char *hex_edid;
+
+  GVariantIter *vcp_code_iter;
+  g_variant_get(parameters, "(isay)", &display_number, &hex_edid, &vcp_code_iter);
+
+  g_printf("GetMultipleVcp display_num=%d, edid=%s\n", display_number, hex_edid);
+
+  const int number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
+  const u_int8_t vcp_codes[number_of_vcp_codes];
+  for (int i = 0; g_variant_iter_loop(vcp_code_iter, "y", &vcp_codes[i]); i++) {
+    g_printf(" vcp_code=%d\n", vcp_codes[i]);
+  }
+  g_variant_iter_free (vcp_code_iter);
+
+  GVariantBuilder value_array_builder_instance;
+  GVariantBuilder *value_array_builder = &value_array_builder_instance;
+  g_variant_builder_init(value_array_builder, G_VARIANT_TYPE("a(yqqs)"));
+
+  DDCA_Display_Info_List *info_list = NULL;
+  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  if (status == 0) {
+    DDCA_Display_Handle disp_handle;
+    ddca_open_display2(vdu_info->dref, 1, &disp_handle);
+    for (int i = 0; i < number_of_vcp_codes; i++) {
+      const u_int8_t vcp_code = vcp_codes[i];
+      static DDCA_Non_Table_Vcp_Value valrec;
+      status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
+      if (status == 0) {
+        const uint16_t current_value = valrec.sh << 8 | valrec.sl;
+        const uint16_t max_value = valrec.mh << 8 | valrec.ml;
+        char *formatted_value;
+        status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+        g_variant_builder_add(value_array_builder, "(yqqs)", vcp_code, current_value, max_value, formatted_value);
+        free(formatted_value);
+      }
+      else {
+        g_printf("GetFeatureValue failed to get value for display %d vcp_code %d\n", display_number, vcp_code);
+      }
+    }
+    ddca_close_display(disp_handle);
+  }
+  char *message_text = get_status_message(status);
+  g_printf("status=%d message=%s\n", status, message_text);
+  GVariant *result = g_variant_new("(a(yqqs)is)", value_array_builder, status, message_text);
+  g_dbus_method_invocation_return_value(invocation, result);
+  ddca_free_display_info_list(info_list);
+
+  free(message_text);
+  g_free(result);
+}
+
 static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -218,8 +281,8 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   uint16_t new_value;
 
   g_variant_get(parameters, "(isyq)", &display_number, &hex_edid, &vcp_code, &new_value);
-  g_printf("SetFeatureValue display_num=%d, edid=%s\nvcp_code=%d value=%d\n",
-         display_number, hex_edid, vcp_code, new_value);
+  g_printf("SetVcp vcp_code=%d value=%d display_num=%d edid=%s\n",
+           vcp_code, new_value, display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;
@@ -248,7 +311,7 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   char *caps_text = NULL;
 
   g_variant_get(parameters, "(is)", &display_number, &hex_edid);
-  g_printf("GetCapabilities display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetCapabilitiesString display_num=%d, edid=%s\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;
@@ -382,7 +445,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   uint8_t vcp_code;
 
   g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-  g_printf("GetFeatureMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
+  g_printf("GetVcpMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;
@@ -440,6 +503,8 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     detect(invocation);
   } else if (g_strcmp0(method_name, "GetVcp") == 0) {
     get_vcp(parameters, invocation);
+  } else if (g_strcmp0(method_name, "GetMultipleVcp") == 0) {
+    get_multiple_vcp(parameters, invocation);
   } else if (g_strcmp0(method_name, "SetVcp") == 0) {
     set_vcp(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetVcpMetadata") == 0) {
