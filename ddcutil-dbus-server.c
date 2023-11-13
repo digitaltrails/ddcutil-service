@@ -322,7 +322,8 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
           mccs_version_major = parsed_capabilities_ptr->version_spec.major;
           mccs_version_minor = parsed_capabilities_ptr->version_spec.minor;
           for (int command_idx = 0; command_idx < parsed_capabilities_ptr->cmd_ct; command_idx++) {
-            const char *command_desc = g_strdup("desc");
+            const char *command_desc = g_strdup_printf("desc of %d", parsed_capabilities_ptr->cmd_codes[command_idx]);
+            //ddca_cmd_code_name();
             g_printf("CommandDef %x %s \n", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
             g_variant_builder_add(command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
           }
