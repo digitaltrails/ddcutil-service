@@ -50,7 +50,7 @@ static const gchar introspection_xml[] =
 
     "    <method name='Detect'>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
-    "      <arg name='display_properties' type='aa{sv}' direction='out'/>"
+    "      <arg name='detected_displays' type='a(iiisssqs)' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
@@ -122,12 +122,18 @@ static const gchar introspection_xml[] =
     "    <property type='d' name='Verify' access='readwrite'/>"
     "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
     "    <property type='s' name='DdcutilVersionString' access='read'/>"
+    "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     
     "  </interface>"
     "</node>";
 
 /* ----------------------------------------------------------------------------------------------------
  */
+
+static const char *attributes_returned_from_detect[] = {
+  "display_number", "usb_bus", "usb_device",
+  "manufacturer_id", "model_name", "serial_number", "product_code", "edid_hex", NULL
+};
 
 static char *edid_to_hex(const uint8_t *edid) {
   _Thread_local static char hex_edid[512];
@@ -182,27 +188,23 @@ static void detect(GDBusMethodInvocation* invocation) {
   char *message_text = get_status_message(status);
   g_printf("Detect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
   // see https://docs.gtk.org/glib/struct.VariantBuilder.html
-  GVariantBuilder vdu_array_builder_instance;  // Allocate on the stack for easier memory management.
-  GVariantBuilder *vdu_array_builder = &vdu_array_builder_instance;
-  
-  g_variant_builder_init(vdu_array_builder, G_VARIANT_TYPE("aa{sv}"));
 
+  GVariantBuilder detected_displays_builder_instance;  // Allocate on the stack for easier memory management.
+  GVariantBuilder *detected_displays_builder = &detected_displays_builder_instance;
+
+  g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqs)"));
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
     g_printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
-    g_variant_builder_open(vdu_array_builder, G_VARIANT_TYPE("a{sv}"));  // Open sub-container
-    g_variant_builder_add(vdu_array_builder, "{sv}", "display_number", g_variant_new("i", dlist->info[ndx].dispno));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "usb_bus", g_variant_new("i", dlist->info[ndx].usb_bus));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "usb_device", g_variant_new("i", dlist->info[ndx].usb_device));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "manufacturer_id", g_variant_new("s", dlist->info[ndx].mfg_id));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "model_name", g_variant_new("s", dlist->info[ndx].model_name));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "serial_number", g_variant_new("s", dlist->info[ndx].sn));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "product_code", g_variant_new("q", dlist->info[ndx].product_code));
-    g_variant_builder_add(vdu_array_builder, "{sv}", "edid_hex",
-                          g_variant_new("s", edid_to_hex(dlist->info[ndx].edid_bytes)));  // might be dodgy
-    g_variant_builder_close(vdu_array_builder);  // Close sub-container
+    g_variant_builder_add(
+      detected_displays_builder,
+      "(iiisssqs)",
+      dlist->info[ndx].dispno, dlist->info[ndx].usb_bus, dlist->info[ndx].usb_device,
+      dlist->info[ndx].mfg_id, dlist->info[ndx].model_name, dlist->info[ndx].sn,
+      dlist->info[ndx].product_code, edid_to_hex(dlist->info[ndx].edid_bytes));
   }
 
-  GVariant *result = g_variant_new("(iaa{sv}is)", dlist->ct, vdu_array_builder, status, message_text);
+  GVariant *result = g_variant_new("(ia(iiisssqs)is)",
+    dlist->ct, detected_displays_builder, status, message_text);
 
   g_dbus_method_invocation_return_value(invocation, result);
   ddca_free_display_info_list(dlist);
@@ -556,6 +558,17 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   } 
   else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
     ret = g_variant_new_double(ddca_get_sleep_multiplier());
+  }
+  else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
+    GVariantBuilder *builder;
+    GVariant *value;
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+    for (int i = 0; attributes_returned_from_detect[i] != NULL; i++) {
+      g_variant_builder_add (builder, "s", attributes_returned_from_detect[i]);
+    }
+    value = g_variant_new ("as", builder);
+    g_variant_builder_unref(builder);
+    ret = value;
   }
   return ret;
 }
