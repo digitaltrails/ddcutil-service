@@ -110,7 +110,7 @@ static const gchar introspection_xml[] =
     "    <method name='GetCapabilitiesMetadata'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
-    "      <arg name='model' type='s' direction='out'/>"
+    "      <arg name='model_name' type='s' direction='out'/>"
     "      <arg name='mccs_major' type='y' direction='out'/>"
     "      <arg name='mccs_minor' type='y' direction='out'/>"
     "      <arg name='commands' type='a{ys}' direction='out'/>"

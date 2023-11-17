@@ -27,6 +27,7 @@ from collections import namedtuple
 from dasbus.connection import SessionMessageBus
 
 BRIGHTNESS_VCP = 0x10
+CONTRAST_VCP = 0x12
 
 bus = SessionMessageBus()
 
@@ -61,6 +62,9 @@ for vdu in vdu_list:
 
     vcp_metadata = ddcutil_proxy.GetVcpMetadata(-1, vdu.edid_hex, BRIGHTNESS_VCP)
     print(vcp_metadata)
+
+    values, status, errmsg = ddcutil_proxy.GetMultipleVcp(-1, vdu.edid_hex, [BRIGHTNESS_VCP, CONTRAST_VCP])
+    print(values)
 
     feature_name, desc, is_ro, is_wo, is_rw, is_complex, is_continuous, _, _ = vcp_metadata
     print(f"{is_rw=} {is_complex=} {is_continuous=}\n")
