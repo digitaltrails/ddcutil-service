@@ -50,7 +50,7 @@ static const gchar introspection_xml[] =
 
     "    <method name='Detect'>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
-    "      <arg name='detected_displays' type='a(iiisssqs)' direction='out'/>"
+    "      <arg name='detected_displays' type='a(iiisssqsu)' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
@@ -170,7 +170,9 @@ Status_Definition status_definitions[] = {
 
 static const char *attributes_returned_from_detect[] = {
   "display_number", "usb_bus", "usb_device",
-  "manufacturer_id", "model_name", "serial_number", "product_code", "edid_hex", NULL
+  "manufacturer_id", "model_name", "serial_number", "product_code",
+  "edid_hex", "binary_serial_number",
+  NULL
 };
 
 static char *edid_to_hex(const uint8_t *edid) {
@@ -180,6 +182,15 @@ static char *edid_to_hex(const uint8_t *edid) {
     ptr += sprintf(ptr, "%02X", edid[i]);
   }
   return hex_edid;
+}
+
+static uint32_t edit_to_binary_serial_number(const uint8_t *edid_bytes) {
+  const uint32_t binary_serial =
+    edid_bytes[0x0c]       |
+    edid_bytes[0x0d] <<  8 |
+    edid_bytes[0x0e] << 16 |
+    edid_bytes[0x0f] << 24;
+  return binary_serial;
 }
 
 static char *get_status_message(const DDCA_Status status) {
@@ -230,19 +241,21 @@ static void detect(GDBusMethodInvocation* invocation) {
   GVariantBuilder detected_displays_builder_instance;  // Allocate on the stack for easier memory management.
   GVariantBuilder *detected_displays_builder = &detected_displays_builder_instance;
 
-  g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqs)"));
+  g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqsu)"));
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
     g_printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
     g_printf("%s %s %s\n", dlist->info[ndx].mfg_id, dlist->info[ndx].model_name, dlist->info[ndx].sn);
     g_variant_builder_add(
       detected_displays_builder,
-      "(iiisssqs)",
+      "(iiisssqsu)",
       dlist->info[ndx].dispno, dlist->info[ndx].usb_bus, dlist->info[ndx].usb_device,
       dlist->info[ndx].mfg_id, dlist->info[ndx].model_name, dlist->info[ndx].sn,
-      dlist->info[ndx].product_code, edid_to_hex(dlist->info[ndx].edid_bytes));
+      dlist->info[ndx].product_code,
+      edid_to_hex(dlist->info[ndx].edid_bytes),
+      edit_to_binary_serial_number(dlist->info[ndx].edid_bytes));
   }
 
-  GVariant *result = g_variant_new("(ia(iiisssqs)is)",
+  GVariant *result = g_variant_new("(ia(iiisssqsu)is)",
     dlist->ct, detected_displays_builder, status, message_text);
 
   g_dbus_method_invocation_return_value(invocation, result);

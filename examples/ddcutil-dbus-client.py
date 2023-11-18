@@ -51,7 +51,8 @@ print(f"{vdu_list=}\n")
 
 # Play with each VDU - this will change the brightness
 for vdu in vdu_list:
-    print(f">>>>>TARGET VDU: {vdu.display_number=} {vdu.manufacturer_id=} {vdu.model_name=}\n")
+    print(f">>>>>TARGET VDU: {vdu.display_number=} {vdu.manufacturer_id=} {vdu.model_name=} " 
+          f"{vdu.serial_number=} {vdu.binary_serial_number=}\n")
 
     val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP)
     print(f"GetVcp returned: {val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
@@ -73,9 +74,9 @@ for vdu in vdu_list:
         ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_hex)
     print(f"GetCapabilitiesMetadata returned: {model=}\n{capabilities=}\n")
 
-    print("Status Values:")
-    status_values = ddcutil_proxy.StatusValues
-    for value, name in status_values.items():
-        print(f"  {value}: {name}")
+print("Status Values:")
+status_values = ddcutil_proxy.StatusValues
+for value, name in status_values.items():
+    print(f"  {value}: {name}")
 
 
