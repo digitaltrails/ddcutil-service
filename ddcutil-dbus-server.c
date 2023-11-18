@@ -226,7 +226,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *formatted_value = NULL;
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
@@ -272,7 +272,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   g_variant_builder_init(value_array_builder, G_VARIANT_TYPE("a(yqqs)"));
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
@@ -318,7 +318,7 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
            vcp_code, new_value, display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
@@ -347,7 +347,7 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   g_printf("GetCapabilitiesString display_num=%d, edid=%s\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Display_Handle disp_handle;
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
 
@@ -378,9 +378,9 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   g_printf("GetCapabilitiesMetadata display_num=%d, edid=%s\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Display_Handle disp_handle;
-  DDCA_Capabilities *parsed_capabilities_ptr;
+  DDCA_Capabilities *parsed_capabilities_ptr = NULL;
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
 
   uint8_t mccs_version_major = 0, mccs_version_minor = 0;
@@ -458,11 +458,23 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
           }
         }
       }
+      ddca_close_display(disp_handle);
     }
-    ddca_close_display(disp_handle);
   }
 
-  char *message_text = get_status_message(status);
+  char *message_text = NULL;
+  if (parsed_capabilities_ptr != NULL && parsed_capabilities_ptr->msg_ct > 0) {
+    char *messages_null_terminated[parsed_capabilities_ptr->msg_ct + 1];
+    for (int i = 0; i <= parsed_capabilities_ptr->msg_ct; i++) {
+      messages_null_terminated[i] = parsed_capabilities_ptr->messages[i];
+    }
+    messages_null_terminated[parsed_capabilities_ptr->msg_ct] = NULL;
+    message_text = g_strjoinv("; ", messages_null_terminated);
+  }
+  else {
+    message_text = get_status_message(status);
+  }
+
   GVariant *result = g_variant_new("(syya{ys}a{y(ssa{ys})}is)",
                                    vdu_model,
                                    mccs_version_major,
@@ -487,7 +499,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   g_printf("GetVcpMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
-  DDCA_Display_Info *vdu_info = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   char *feature_name = "";
   char *feature_description= "";
