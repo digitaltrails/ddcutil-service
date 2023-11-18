@@ -123,12 +123,50 @@ static const gchar introspection_xml[] =
     "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
     "    <property type='s' name='DdcutilVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
-    
+    "    <property type='a{is}' name='StatusValues' access='read'/>"
+
     "  </interface>"
     "</node>";
 
 /* ----------------------------------------------------------------------------------------------------
  */
+typedef struct Status_Definition_Struct {  char *name;  int value; } Status_Definition;
+
+Status_Definition status_definitions[] = {
+  { "DDCRC_OK", DDCRC_OK },
+  { "DDCRC_DDC_DATA", DDCRC_DDC_DATA },
+  { "DDCRC_NULL_RESPONSE", DDCRC_NULL_RESPONSE },
+  { "DDCRC_MULTI_PART_READ_FRAGMENT", DDCRC_MULTI_PART_READ_FRAGMENT },
+  { "DDCRC_ALL_TRIES_ZERO", DDCRC_ALL_TRIES_ZERO },
+  { "DDCRC_REPORTED_UNSUPPORTED", DDCRC_REPORTED_UNSUPPORTED },
+  { "DDCRC_READ_ALL_ZERO", DDCRC_READ_ALL_ZERO },
+  { "DDCRC_RETRIES", DDCRC_RETRIES },
+  { "DDCRC_EDID", DDCRC_EDID },
+  { "DDCRC_READ_EDID", DDCRC_READ_EDID },
+  { "DDCRC_INVALID_EDID", DDCRC_INVALID_EDID },
+  { "DDCRC_ALL_RESPONSES_NULL", DDCRC_ALL_RESPONSES_NULL },
+  { "DDCRC_DETERMINED_UNSUPPORTED", DDCRC_DETERMINED_UNSUPPORTED },
+
+  { "DDCRC_ARG", DDCRC_ARG },
+  { "DDCRC_INVALID_OPERATION", DDCRC_INVALID_OPERATION },
+  { "DDCRC_UNIMPLEMENTED", DDCRC_UNIMPLEMENTED },
+  { "DDCRC_UNINITIALIZED", DDCRC_UNINITIALIZED },
+  { "DDCRC_UNKNOWN_FEATURE", DDCRC_UNKNOWN_FEATURE },
+  { "DDCRC_INTERPRETATION_FAILED", DDCRC_INTERPRETATION_FAILED },
+  { "DDCRC_MULTI_FEATURE_ERROR", DDCRC_MULTI_FEATURE_ERROR },
+  { "DDCRC_INVALID_DISPLAY", DDCRC_INVALID_DISPLAY },
+  { "DDCRC_INTERNAL_ERROR", DDCRC_INTERNAL_ERROR },
+  { "DDCRC_OTHER", DDCRC_OTHER },
+  { "DDCRC_VERIFY", DDCRC_VERIFY },
+  { "DDCRC_NOT_FOUND", DDCRC_NOT_FOUND },
+  { "DDCRC_LOCKED", DDCRC_LOCKED },
+  { "DDCRC_ALREADY_OPEN", DDCRC_ALREADY_OPEN },
+  { "DDCRC_BAD_DATA", DDCRC_BAD_DATA },
+  //{ "DDCRC_INVALID_CONFIG_FILE", DDCRC_INVALID_CONFIG_FILE }
+  {NULL, 0},
+  };
+
+
 
 static const char *attributes_returned_from_detect[] = {
   "display_number", "usb_bus", "usb_device",
@@ -591,6 +629,17 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     g_variant_builder_unref(builder);
     ret = value;
   }
+  else if (g_strcmp0(property_name, "StatusValues") == 0) {
+    GVariantBuilder *builder;
+    GVariant *value;
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{is}"));
+    for (int i = 0; status_definitions[i].name != NULL; i++) {
+      g_variant_builder_add (builder, "{is}", status_definitions[i].value, status_definitions[i].name);
+    }
+    value = g_variant_new ("a{is}", builder);
+    g_variant_builder_unref(builder);
+    ret = value;
+  }
   return ret;
 }
 
@@ -630,6 +679,8 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
   g_print("Lost registration - is another instance already registered?\n");
   exit(1);
 }
+
+
 
 int main(int argc, char *argv[]) {
 

@@ -71,7 +71,11 @@ for vdu in vdu_list:
 
     model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
         ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_hex)
-    print(f"GetCapabilitiesMetadata returned: {model=}\n{capabilities=}")
+    print(f"GetCapabilitiesMetadata returned: {model=}\n{capabilities=}\n")
 
+    print("Status Values:")
+    status_values = ddcutil_proxy.StatusValues
+    for value, name in status_values.items():
+        print(f"  {value}: {name}")
 
 
