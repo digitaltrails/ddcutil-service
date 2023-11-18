@@ -427,15 +427,21 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
               GVariantBuilder *value_dict_builder = &value_dict_builder_instance;
               g_variant_builder_init(value_dict_builder, G_VARIANT_TYPE("a{ys}"));
               for (int value_idx = 0; value_idx < feature_def.value_ct; value_idx++) {
+                u_int8_t value_code = feature_def.values[value_idx];
+                char *value_name = "";
                 if (metadata_ptr->sl_values != NULL) {
                   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
-                    if (sl_ptr->value_code == feature_def.values[value_idx]) {
-                      g_printf("  ValueDef feature %x value %d %s\n",
+                    if (sl_ptr->value_code == value_code) {
+                      g_printf("  ValueDef match feature %x value %d %s\n",
                                feature_def.feature_code, sl_ptr->value_code, sl_ptr->value_name);
                       g_variant_builder_add(value_dict_builder, "{ys}", sl_ptr->value_code, sl_ptr->value_name);
+                      value_name = sl_ptr->value_name;
                     }
                   }
                 }
+                g_printf("  ValueDef feature %x value %d %s\n",
+                               feature_def.feature_code, value_code, value_name);
+                g_variant_builder_add(value_dict_builder, "{ys}", value_code, value_name);
               }
               g_variant_builder_add(
                 feature_dict_builder,
