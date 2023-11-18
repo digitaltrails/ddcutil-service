@@ -26,6 +26,8 @@ from collections import namedtuple
 
 from dasbus.connection import SessionMessageBus
 
+DO_SET_VCP_TEST = False   # If enabled, a test will run to change VDU brightness.
+
 BRIGHTNESS_VCP = 0x10
 CONTRAST_VCP = 0x12
 
@@ -41,39 +43,35 @@ DetectedAttributes = namedtuple("DetectedAttributes", ddcutil_proxy.AttributesRe
 
 # Call detect to get back a list of unnamed tuples, one for each VDU
 number_detected, list_of_displays, status, errmsg = ddcutil_proxy.Detect()
-print(f"{number_detected=} {status=} {errmsg=}\n")
-print(list_of_displays)
+print(f"Detect returned: {number_detected=} {status=} {errmsg=}\n", list_of_displays, '\n')
 
 # Reform unnamed tuples into a list of namedtuples (optional, for convenience)
 vdu_list = [DetectedAttributes(*vdu) for vdu in list_of_displays]
-print(vdu_list)
+print(f"{vdu_list=}\n")
 
 # Play with each VDU - this will change the brightness
 for vdu in vdu_list:
-    print(vdu.display_number, vdu.manufacturer_id, vdu.model_name)
+    print(f">>>>>TARGET VDU: {vdu.display_number=} {vdu.manufacturer_id=} {vdu.model_name=}\n")
 
     val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP)
-    print(f"{val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
+    print(f"GetVcp returned: {val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
 
-    # If uncommented, brightness will be changed:
-    # print(f"Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
-    # status, errmsg = ddcutil_proxy.SetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP, val - 1)
-    # print(f"{status=} {errmsg=}\n")
+    if DO_SET_VCP_TEST:
+        print(f"Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
+        status, errmsg = ddcutil_proxy.SetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP, val - 1)
+        print(f"SetVcp returned: {status=} {errmsg=}\n")
 
     vcp_metadata = ddcutil_proxy.GetVcpMetadata(-1, vdu.edid_hex, BRIGHTNESS_VCP)
-    print(vcp_metadata)
+    print("GetVcpMetadata returned:", vcp_metadata)
+    feature_name, desc, is_ro, is_wo, is_rw, is_complex, is_continuous, _, _ = vcp_metadata
+    print(f"metadata: {is_rw=} {is_complex=} {is_continuous=}\n")
 
     values, status, errmsg = ddcutil_proxy.GetMultipleVcp(-1, vdu.edid_hex, [BRIGHTNESS_VCP, CONTRAST_VCP])
-    print(values)
-
-    feature_name, desc, is_ro, is_wo, is_rw, is_complex, is_continuous, _, _ = vcp_metadata
-    print(f"{is_rw=} {is_complex=} {is_continuous=}\n")
+    print(f"GetMultipleVcp returned: {values=} {status=} {errmsg=}\n")
 
     model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
         ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_hex)
-
-    print(f"{model=}\n{capabilities=}")
-
+    print(f"GetCapabilitiesMetadata returned: {model=}\n{capabilities=}")
 
 
 

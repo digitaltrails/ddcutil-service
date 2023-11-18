@@ -195,6 +195,7 @@ static void detect(GDBusMethodInvocation* invocation) {
   g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqs)"));
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
     g_printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
+    g_printf("%s %s %s\n", dlist->info[ndx].mfg_id, dlist->info[ndx].model_name, dlist->info[ndx].sn);
     g_variant_builder_add(
       detected_displays_builder,
       "(iiisssqs)",
@@ -275,24 +276,26 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
-    ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    for (int i = 0; i < number_of_vcp_codes; i++) {
-      const u_int8_t vcp_code = vcp_codes[i];
-      static DDCA_Non_Table_Vcp_Value valrec;
-      status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
-      if (status == 0) {
-        const uint16_t current_value = valrec.sh << 8 | valrec.sl;
-        const uint16_t max_value = valrec.mh << 8 | valrec.ml;
-        char *formatted_value;
-        status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
-        g_variant_builder_add(value_array_builder, "(yqqs)", vcp_code, current_value, max_value, formatted_value);
-        free(formatted_value);
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
+    if (status == 0) {
+      for (int i = 0; i < number_of_vcp_codes; i++) {
+        const u_int8_t vcp_code = vcp_codes[i];
+        static DDCA_Non_Table_Vcp_Value valrec;
+        status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
+        if (status == 0) {
+          const uint16_t current_value = valrec.sh << 8 | valrec.sl;
+          const uint16_t max_value = valrec.mh << 8 | valrec.ml;
+          char *formatted_value;
+          status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+          g_variant_builder_add(value_array_builder, "(yqqs)", vcp_code, current_value, max_value, formatted_value);
+          free(formatted_value);
+        }
+        else {
+          g_printf("GetMultipleVcp failed to get value for display %d vcp_code %d\n", display_number, vcp_code);
+        }
       }
-      else {
-        g_printf("GetFeatureValue failed to get value for display %d vcp_code %d\n", display_number, vcp_code);
-      }
+      ddca_close_display(disp_handle);
     }
-    ddca_close_display(disp_handle);
   }
   char *message_text = get_status_message(status);
   g_printf("status=%d message=%s\n", status, message_text);
@@ -352,8 +355,8 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
       status = ddca_get_capabilities_string(disp_handle, &caps_text);
+      ddca_close_display(disp_handle);
     }
-    ddca_close_display(disp_handle);
   }
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(sis)",
@@ -510,8 +513,8 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
         is_rw = metadata_ptr->feature_flags & DDCA_RW;
         is_complex = metadata_ptr->feature_flags & (DDCA_COMPLEX_CONT | DDCA_COMPLEX_NC);
         is_continuous = metadata_ptr->feature_flags & DDCA_CONT;
-        ddca_close_display(disp_handle);
       }
+      ddca_close_display(disp_handle);
     }
   }
   char *message_text = get_status_message(status);
