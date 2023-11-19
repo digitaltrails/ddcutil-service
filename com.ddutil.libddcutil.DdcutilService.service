@@ -4,7 +4,7 @@ Exec=/usr/local/bin/ddcutil-dbus-server
 #
 # dbus-daemon service file for auto-starting and auto-restarting the service.
 # Installation steps:
-#  1. Edit the about Exec location of the server executable.
+#  1. Edit the Exec location of the server executable (can be annywhere).
 #  2. Install to: /usr/share/dbus-1/services/com.ddutil.libddcutil.DdcutilService.service
 #  3. Install the executable at the location specified.
 #  4. Logout and login to a new session.
