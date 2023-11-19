@@ -42,7 +42,7 @@ ddcutil_proxy = bus.get_proxy(
 DetectedAttributes = namedtuple("DetectedAttributes", ddcutil_proxy.AttributesReturnedByDetect)
 
 # Call detect to get back a list of unnamed tuples, one for each VDU
-number_detected, list_of_displays, status, errmsg = ddcutil_proxy.Detect()
+number_detected, list_of_displays, status, errmsg = ddcutil_proxy.Detect(1)
 print(f"Detect returned: {number_detected=} {status=} {errmsg=}\n", list_of_displays, '\n')
 
 # Reform unnamed tuples into a list of namedtuples (optional, for convenience)

@@ -49,6 +49,7 @@ static const gchar introspection_xml[] =
     "  <interface name='com.ddcutil.libddcutil.DdcutilInterface'>"
 
     "    <method name='Detect'>"
+    "      <arg name='include_invalid_displays' type='b' direction='in'/>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
     "      <arg name='detected_displays' type='a(iiisssqsu)' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
@@ -231,9 +232,13 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
     return status;
 }
 
-static void detect(GDBusMethodInvocation* invocation) {
+static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  bool include_invalid_displays;
+  g_variant_get(parameters, "(isy)", &include_invalid_displays);
+
   DDCA_Display_Info_List *dlist = NULL;
-  const DDCA_Status status = ddca_get_display_info_list2(0, &dlist);
+  const DDCA_Status status = ddca_get_display_info_list2(include_invalid_displays, &dlist);
+
   char *message_text = get_status_message(status);
   g_printf("Detect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
   // see https://docs.gtk.org/glib/struct.VariantBuilder.html
@@ -602,7 +607,7 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
                                const gchar *interface_name, const gchar *method_name, GVariant *parameters,
                                GDBusMethodInvocation *invocation, gpointer user_data) {
   if (g_strcmp0(method_name, "Detect") == 0) {
-    detect(invocation);
+    detect(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetVcp") == 0) {
     get_vcp(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetMultipleVcp") == 0) {
