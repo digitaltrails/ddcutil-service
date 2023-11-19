@@ -194,6 +194,20 @@ static uint32_t edit_to_binary_serial_number(const uint8_t *edid_bytes) {
   return binary_serial;
 }
 
+static GString *sanitize_utf8(const char *text) {
+  GString *result = g_string_new("");
+  const char *ptr = text, *end = ptr + strlen(text);
+  while (true) {
+    const char *ptr2;
+    g_utf8_validate(ptr, end - ptr, &ptr2);
+    g_string_append_len(result, ptr, ptr2 - ptr);
+    if (ptr2 == end)
+      break;
+    ptr = ptr2 + 1;
+  }
+  return result;
+}
+
 static char *get_status_message(const DDCA_Status status) {
   const char *status_text = ddca_rc_name(status);
   char *message_text = NULL;
@@ -248,16 +262,21 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqsu)"));
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
-    g_printf("ndx=%d dlist->ct=%d\n", ndx, dlist->ct);
-    g_printf("%s %s %s\n", dlist->info[ndx].mfg_id, dlist->info[ndx].model_name, dlist->info[ndx].sn);
+    GString *safe_mfg_id = sanitize_utf8(dlist->info[ndx].mfg_id);
+    GString *safe_model = sanitize_utf8(dlist->info[ndx].model_name);
+    GString *safe_sn = sanitize_utf8(dlist->info[ndx].sn);
+    g_printf("%s %s %s\n", safe_mfg_id->str, safe_model->str, safe_sn->str);
     g_variant_builder_add(
       detected_displays_builder,
       "(iiisssqsu)",
       dlist->info[ndx].dispno, dlist->info[ndx].usb_bus, dlist->info[ndx].usb_device,
-      dlist->info[ndx].mfg_id, dlist->info[ndx].model_name, dlist->info[ndx].sn,
+      safe_mfg_id->str, safe_model->str, safe_sn->str,
       dlist->info[ndx].product_code,
       edid_to_hex(dlist->info[ndx].edid_bytes),
       edit_to_binary_serial_number(dlist->info[ndx].edid_bytes));
+    free(safe_mfg_id);
+    g_free(safe_model);
+    g_free(safe_sn);
   }
 
   GVariant *result = g_variant_new("(ia(iiisssqsu)is)",
