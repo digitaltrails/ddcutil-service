@@ -275,7 +275,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   uint8_t vcp_code;
 
   g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-  g_printf("GetVcp vcp_code=%d display_num=%d, edid=%s\n", vcp_code, display_number, hex_edid);
+  g_printf("GetVcp vcp_code=%d display_num=%d, edid=%.30s...\n", vcp_code, display_number, hex_edid);
 
   uint16_t current_value = 0;
   uint16_t max_value = 0;
@@ -314,7 +314,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   GVariantIter *vcp_code_iter;
   g_variant_get(parameters, "(isay)", &display_number, &hex_edid, &vcp_code_iter);
 
-  g_printf("GetMultipleVcp display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetMultipleVcp display_num=%d, edid=%.30s...\n", display_number, hex_edid);
 
   const int number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
   const u_int8_t vcp_codes[number_of_vcp_codes];
@@ -370,7 +370,7 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   uint16_t new_value;
 
   g_variant_get(parameters, "(isyq)", &display_number, &hex_edid, &vcp_code, &new_value);
-  g_printf("SetVcp vcp_code=%d value=%d display_num=%d edid=%s\n",
+  g_printf("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...\n",
            vcp_code, new_value, display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
@@ -400,7 +400,7 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   char *caps_text = NULL;
 
   g_variant_get(parameters, "(is)", &display_number, &hex_edid);
-  g_printf("GetCapabilitiesString display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetCapabilitiesString display_num=%d, edid=%.30s...\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
@@ -431,7 +431,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   char *caps_text = NULL;
 
   g_variant_get(parameters, "(is)", &display_number, &hex_edid);
-  g_printf("GetCapabilitiesMetadata display_num=%d, edid=%s\n", display_number, hex_edid);
+  g_printf("GetCapabilitiesMetadata display_num=%d, edid=%.30s...\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
@@ -552,7 +552,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   uint8_t vcp_code;
 
   g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
-  g_printf("GetVcpMetadata display_num=%d, edid=%s\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
+  g_printf("GetVcpMetadata display_num=%d, edid=%.30s...\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
