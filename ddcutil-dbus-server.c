@@ -248,7 +248,7 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
 
 static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   bool include_invalid_displays;
-  g_variant_get(parameters, "(isy)", &include_invalid_displays);
+  g_variant_get(parameters, "(b)", &include_invalid_displays);
 
   DDCA_Display_Info_List *dlist = NULL;
   const DDCA_Status status = ddca_get_display_info_list2(include_invalid_displays, &dlist);
@@ -274,7 +274,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
       dlist->info[ndx].product_code,
       edid_to_hex(dlist->info[ndx].edid_bytes),
       edit_to_binary_serial_number(dlist->info[ndx].edid_bytes));
-    free(safe_mfg_id);
+    g_free(safe_mfg_id);
     g_free(safe_model);
     g_free(safe_sn);
   }
