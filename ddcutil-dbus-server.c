@@ -194,15 +194,15 @@ static uint32_t edit_to_binary_serial_number(const uint8_t *edid_bytes) {
   return binary_serial;
 }
 
-static GString *sanitize_utf8(const char *text) {
-  GString *result = g_string_new("");
-  const char *ptr = text, *end = ptr + strlen(text);
+static gchar *sanitize_utf8(const char *text) {
+  gchar *result = strdup(text);
+  const char *ptr = result, *end = ptr + strlen(result);
   while (true) {
     const char *ptr2;
     g_utf8_validate(ptr, end - ptr, &ptr2);
-    g_string_append_len(result, ptr, ptr2 - ptr);
     if (ptr2 == end)
       break;
+    result[ptr2 - result] = '?';  // Sanitize invalid utf-8
     ptr = ptr2 + 1;
   }
   return result;
@@ -262,18 +262,19 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqsu)"));
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
-    GString *safe_mfg_id = sanitize_utf8(dlist->info[ndx].mfg_id);
-    GString *safe_model = sanitize_utf8(dlist->info[ndx].model_name);
-    GString *safe_sn = sanitize_utf8(dlist->info[ndx].sn);
-    g_printf("%s %s %s\n", safe_mfg_id->str, safe_model->str, safe_sn->str);
+    DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+    gchar *safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
+    gchar *safe_model = sanitize_utf8(vdu_info->model_name);//"xxxxwww\xF0\xA4\xADiii" );
+    gchar *safe_sn = sanitize_utf8(vdu_info->sn);
+    g_printf("%s %s %s\n", safe_mfg_id, safe_model, safe_sn);
     g_variant_builder_add(
       detected_displays_builder,
       "(iiisssqsu)",
-      dlist->info[ndx].dispno, dlist->info[ndx].usb_bus, dlist->info[ndx].usb_device,
-      safe_mfg_id->str, safe_model->str, safe_sn->str,
-      dlist->info[ndx].product_code,
-      edid_to_hex(dlist->info[ndx].edid_bytes),
-      edit_to_binary_serial_number(dlist->info[ndx].edid_bytes));
+      vdu_info->dispno, vdu_info->usb_bus, vdu_info->usb_device,
+      safe_mfg_id, safe_model, safe_sn,
+      vdu_info->product_code,
+      edid_to_hex(vdu_info->edid_bytes),
+      edit_to_binary_serial_number(vdu_info->edid_bytes));
     g_free(safe_mfg_id);
     g_free(safe_model);
     g_free(safe_sn);
