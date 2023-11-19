@@ -34,7 +34,7 @@ CONTRAST_VCP = 0x12
 bus = SessionMessageBus()
 
 ddcutil_proxy = bus.get_proxy(
-    "com.ddcutil.libddcutil.DdcutilServer",  # The bus name
+    "com.ddcutil.libddcutil.DdcutilService",  # The bus name
     "/com/ddcutil/libddcutil/DdcutilObject",  # The object name
 )
 

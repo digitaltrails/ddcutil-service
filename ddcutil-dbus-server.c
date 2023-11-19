@@ -709,7 +709,7 @@ int main(int argc, char *argv[]) {
 
   const guint owner_id = g_bus_own_name(
     G_BUS_TYPE_SESSION,
-    "com.ddcutil.libddcutil.DdcutilServer",
+    "com.ddcutil.libddcutil.DdcutilService",
     G_BUS_NAME_OWNER_FLAGS_NONE,
     on_bus_acquired,
     on_name_acquired,
