@@ -46,7 +46,7 @@ static GDBusNodeInfo *introspection_data = NULL;
 static const gchar introspection_xml[] =
 
     "<node>"
-    "  <interface name='com.ddcutil.libddcutil.DdcutilInterface'>"
+    "  <interface name='com.ddcutil.DdcutilInterface'>"
 
     "    <method name='Detect'>"
     "      <arg name='include_invalid_displays' type='b' direction='in'/>"
@@ -125,6 +125,7 @@ static const gchar introspection_xml[] =
     "    <property type='s' name='DdcutilVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
+    "    <property type='y' name='OutputLevel' access='readwrite'/>"
 
     "  </interface>"
     "</node>";
@@ -166,8 +167,6 @@ Status_Definition status_definitions[] = {
   //{ "DDCRC_INVALID_CONFIG_FILE", DDCRC_INVALID_CONFIG_FILE }
   {NULL, 0},
   };
-
-
 
 static const char *attributes_returned_from_detect[] = {
   "display_number", "usb_bus", "usb_device",
@@ -678,6 +677,9 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     g_variant_builder_unref(builder);
     ret = value;
   }
+  else if (g_strcmp0(property_name, "OutputLevel") == 0) {
+    ret = g_variant_new_byte(ddca_get_output_level());
+  }
   return ret;
 }
 
@@ -689,7 +691,10 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   }
   else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
     ddca_set_sleep_multiplier(g_variant_get_double(value));
-  } 
+  }
+  else if (g_strcmp0(property_name, "OutputLevel") == 0) {
+    ddca_set_output_level(g_variant_get_byte(value));
+  }
   return *error == NULL;
 }
 
@@ -697,7 +702,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
 static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  const char* object_path = "/com/ddcutil/libddcutil/DdcutilObject";
+  const char* object_path = "/com/ddcutil/DdcutilObject";
   const guint registration_id =
     g_dbus_connection_register_object(connection,
                                       object_path,
@@ -721,6 +726,28 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
 
 
 int main(int argc, char *argv[]) {
+  g_set_prgname("ddcutil-dbus-server");
+
+  gint output_level = 0;
+  gdouble sleep_multiplier = 1.0;
+
+  const GOptionEntry entries[] = {
+    { "output-level", 'o', 0, G_OPTION_ARG_INT, &output_level, "ddcutil Output-Level 0xNN hex string", NULL },
+    { "sleep-multiplier", 'm', 0, G_OPTION_ARG_DOUBLE, &sleep_multiplier, "ddcutil Sleep Multiplier", NULL },
+    { NULL }
+  };
+
+  GError *error = NULL;
+  GOptionContext *context = g_option_context_new("- ddcutil dbus service");
+  g_option_context_add_main_entries(context, entries, NULL);
+  //g_option_context_add_group (context, gtk_get_option_group (TRUE));
+  if (!g_option_context_parse(context, &argc, &argv, &error)) {
+    g_print ("option parsing failed: %s\n", error->message);
+    exit (1);
+  }
+
+  ddca_set_output_level(output_level);
+  ddca_set_sleep_multiplier(sleep_multiplier);
 
   /* Build introspection data structures from XML.
    */
@@ -729,7 +756,7 @@ int main(int argc, char *argv[]) {
 
   const guint owner_id = g_bus_own_name(
     G_BUS_TYPE_SESSION,
-    "com.ddcutil.libddcutil.DdcutilService",
+    "com.ddcutil.DdcutilService",
     G_BUS_NAME_OWNER_FLAGS_NONE,
     on_bus_acquired,
     on_name_acquired,

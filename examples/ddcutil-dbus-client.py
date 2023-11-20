@@ -34,8 +34,8 @@ CONTRAST_VCP = 0x12
 bus = SessionMessageBus()
 
 ddcutil_proxy = bus.get_proxy(
-    "com.ddcutil.libddcutil.DdcutilService",  # The bus name
-    "/com/ddcutil/libddcutil/DdcutilObject",  # The object name
+    "com.ddcutil.DdcutilService",  # The bus name
+    "/com/ddcutil/DdcutilObject",  # The object name
 )
 
 # Create a namedtuple that matches the attributes returned by the detect method
