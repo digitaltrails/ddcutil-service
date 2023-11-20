@@ -1,16 +1,3 @@
 [D-BUS Service]
 Name=com.ddcutil.DdcutilService
 Exec=/usr/local/bin/ddcutil-dbus-server
-#
-# dbus-daemon service file for auto-starting and auto-restarting the service.
-# Installation steps:
-#  1. Edit the Exec location of the server executable (can be annywhere).
-#  2. Install to: /usr/share/dbus-1/services/com.ddutil.DdcutilService.service
-#     Or maybe to: $HOME/.local/share/dbus-1/services/com.ddutil.DdcutilService.service
-#  3. Install the executable at the location specified.
-#  4. Logout and login to a new session.
-#  5. Check service is available (use d-feet or any other test program).
-#
-# Installing this file is optional,
-# The server executable can manually started without this file being installed.
-#

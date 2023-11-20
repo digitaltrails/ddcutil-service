@@ -27,3 +27,18 @@ VDU's are identified either by display-number or EDID-hex.
 Some properties are R/W, but I don't think d-feet can write them.
 
 
+### Installing the DdcutilService dbus-daemon service file
+
+Follow these steps to install a dbus-daemon service file for auto-starting and 
+auto-restarting the service:
+
+1. Edit `com.ddcutil.DdcutilService.service` and set the Exec location of 
+   the server executable (can be annywhere).
+2. Install to: `/usr/share/dbus-1/services/com.ddutil.DdcutilService.service`
+   Or maybe to: `$HOME/.local/share/dbus-1/services/com.ddutil.DdcutilService.service`
+3. Install the executable at the location specified.
+4. Logout and login to a new session.
+5. Check service is available (use d-feet or any other test program).
+
+Installing this file is optional, the server executable can manually started without
+this file being installed.

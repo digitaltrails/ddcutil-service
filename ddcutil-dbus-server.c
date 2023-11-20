@@ -49,7 +49,7 @@ static const gchar introspection_xml[] =
     "  <interface name='com.ddcutil.DdcutilInterface'>"
 
     "    <method name='Detect'>"
-    "      <arg name='include_invalid_displays' type='b' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='number_of_displays' type='i' direction='out'/>"
     "      <arg name='detected_displays' type='a(iiisssqsu)' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
@@ -60,6 +60,7 @@ static const gchar introspection_xml[] =
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='vcp_current_value' type='q' direction='out'/>"
     "      <arg name='vcp_max_value' type='q' direction='out'/>"
     "      <arg name='vcp_formatted_value' type='s' direction='out'/>"
@@ -71,6 +72,7 @@ static const gchar introspection_xml[] =
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='ay' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
@@ -81,6 +83,7 @@ static const gchar introspection_xml[] =
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
     "      <arg name='vcp_new_value' type='q' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
@@ -89,6 +92,7 @@ static const gchar introspection_xml[] =
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='feature_name' type='s' direction='out'/>"
     "      <arg name='feature_description' type='s' direction='out'/>"
     "      <arg name='is_read_only' type='b' direction='out'/>"
@@ -103,6 +107,7 @@ static const gchar introspection_xml[] =
     "    <method name='GetCapabilitiesString'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='capabilities_text' type='s' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
@@ -111,6 +116,7 @@ static const gchar introspection_xml[] =
     "    <method name='GetCapabilitiesMetadata'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='model_name' type='s' direction='out'/>"
     "      <arg name='mccs_major' type='y' direction='out'/>"
     "      <arg name='mccs_minor' type='y' direction='out'/>"
@@ -246,11 +252,11 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
 }
 
 static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
-  bool include_invalid_displays;
-  g_variant_get(parameters, "(b)", &include_invalid_displays);
+  u_int32_t flags;
+  g_variant_get(parameters, "(u)", &flags);
 
   DDCA_Display_Info_List *dlist = NULL;
-  const DDCA_Status status = ddca_get_display_info_list2(include_invalid_displays, &dlist);
+  const DDCA_Status status = ddca_get_display_info_list2(flags != 0, &dlist);
 
   char *message_text = get_status_message(status);
   g_printf("Detect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
@@ -292,8 +298,9 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
   uint8_t vcp_code;
+  u_int32_t flags;
 
-  g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
+  g_variant_get(parameters, "(isyu)", &display_number, &hex_edid, &vcp_code, &flags);
   g_printf("GetVcp vcp_code=%d display_num=%d, edid=%.30s...\n", vcp_code, display_number, hex_edid);
 
   uint16_t current_value = 0;
@@ -329,9 +336,10 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
 static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
+  u_int32_t flags;
 
   GVariantIter *vcp_code_iter;
-  g_variant_get(parameters, "(isay)", &display_number, &hex_edid, &vcp_code_iter);
+  g_variant_get(parameters, "(isayu)", &display_number, &hex_edid, &vcp_code_iter, &flags);
 
   g_printf("GetMultipleVcp display_num=%d, edid=%.30s...\n", display_number, hex_edid);
 
@@ -387,8 +395,9 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *hex_edid;
   uint8_t vcp_code;
   uint16_t new_value;
+  u_int32_t flags;
 
-  g_variant_get(parameters, "(isyq)", &display_number, &hex_edid, &vcp_code, &new_value);
+  g_variant_get(parameters, "(isyqu)", &display_number, &hex_edid, &vcp_code, &new_value, &flags);
   g_printf("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...\n",
            vcp_code, new_value, display_number, hex_edid);
 
@@ -417,8 +426,9 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   int display_number;
   char *hex_edid;
   char *caps_text = NULL;
+  u_int32_t flags;
 
-  g_variant_get(parameters, "(is)", &display_number, &hex_edid);
+  g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
   g_printf("GetCapabilitiesString display_num=%d, edid=%.30s...\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
@@ -448,8 +458,9 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   int display_number;
   char *hex_edid;
   char *caps_text = NULL;
+  u_int32_t flags;
 
-  g_variant_get(parameters, "(is)", &display_number, &hex_edid);
+  g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
   g_printf("GetCapabilitiesMetadata display_num=%d, edid=%.30s...\n", display_number, hex_edid);
 
   DDCA_Display_Info_List *info_list = NULL;
@@ -569,8 +580,9 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   int display_number;
   char *hex_edid;
   uint8_t vcp_code;
+  u_int32_t flags;
 
-  g_variant_get(parameters, "(isy)", &display_number, &hex_edid, &vcp_code);
+  g_variant_get(parameters, "(isyu)", &display_number, &hex_edid, &vcp_code, &flags);
   g_printf("GetVcpMetadata display_num=%d, edid=%.30s...\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
