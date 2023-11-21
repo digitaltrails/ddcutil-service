@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-from base64 import b64encode, b85encode
+
 # dasbus seems to be recent, popular and actively supported.
 # (perhaps also look at dbus-next)
 
@@ -54,9 +54,6 @@ for vdu in vdu_list:
     print(f">>>>>TARGET VDU: {vdu.display_number=} {vdu.manufacturer_id=} {vdu.model_name=} " 
           f"{vdu.serial_number=} {vdu.binary_serial_number=}\n")
 
-    edid_b64 = b64encode(bytes.fromhex(vdu.edid_hex))
-    print(len(vdu.edid_hex), vdu.edid_hex)
-    print(len(edid_b64), edid_b64)
     val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP, 0)
     print(f"GetVcp returned: {val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
 
