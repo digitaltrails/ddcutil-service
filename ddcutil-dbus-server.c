@@ -190,7 +190,7 @@ static char *edid_to_hex(const uint8_t *edid) {
   return hex_edid;
 }
 
-static uint32_t edit_to_binary_serial_number(const uint8_t *edid_bytes) {
+static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
   const uint32_t binary_serial =
     edid_bytes[0x0c]       |
     edid_bytes[0x0d] <<  8 |
@@ -279,7 +279,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
       safe_mfg_id, safe_model, safe_sn,
       vdu_info->product_code,
       edid_to_hex(vdu_info->edid_bytes),
-      edit_to_binary_serial_number(vdu_info->edid_bytes));
+      edid_to_binary_serial_number(vdu_info->edid_bytes));
     g_free(safe_mfg_id);
     g_free(safe_model);
     g_free(safe_sn);
@@ -665,27 +665,27 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   } 
   else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
-    ret = g_variant_new_double(ddca_get_sleep_multiplier());
+    ret = g_variant_new_double(ddca_get_default_sleep_multiplier());
   }
   else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
     GVariantBuilder *builder;
     GVariant *value;
     builder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
     for (int i = 0; attributes_returned_from_detect[i] != NULL; i++) {
-      g_variant_builder_add (builder, "s", attributes_returned_from_detect[i]);
+      g_variant_builder_add(builder, "s", attributes_returned_from_detect[i]);
     }
-    value = g_variant_new ("as", builder);
+    value = g_variant_new("as", builder);
     g_variant_builder_unref(builder);
     ret = value;
   }
   else if (g_strcmp0(property_name, "StatusValues") == 0) {
     GVariantBuilder *builder;
     GVariant *value;
-    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{is}"));
+    builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
     for (int i = 0; status_definitions[i].name != NULL; i++) {
       g_variant_builder_add (builder, "{is}", status_definitions[i].value, status_definitions[i].name);
     }
-    value = g_variant_new ("a{is}", builder);
+    value = g_variant_new("a{is}", builder);
     g_variant_builder_unref(builder);
     ret = value;
   }
@@ -702,7 +702,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
     ddca_enable_verify(g_variant_get_boolean(value));
   }
   else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
-    ddca_set_sleep_multiplier(g_variant_get_double(value));
+    ddca_set_default_sleep_multiplier(g_variant_get_double(value));
   }
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_byte(value));
