@@ -51,3 +51,9 @@ auto-restarting the service are as follows:
 Installing the service file is optional. The service file enables autostart of 
 the service by `dbus-daemon`.  The server executable can be manually started 
 without the service file being installed.  
+
+### Use with `vdu_controls`
+
+The `vdu_controls` GUI has been branched and modified to optionally use the service, see:
+https://github.com/digitaltrails/vdu_controls/tree/d-bus
+
