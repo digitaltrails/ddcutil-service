@@ -1,20 +1,23 @@
 # Copyright (C) 2023, Michael Hamilton
-CFLAGS_DBUS = $(shell pkg-config --cflags --libs dbus-1)
-CFLAGS_DBUS_GLIB = $(shell pkg-config --cflags --libs dbus-glib-1)
 CFLAGS_GIO  = $(shell pkg-config --cflags --libs gio-2.0)
-CFLAGS_GUNIX  = $(shell pkg-config --cflags --libs gio-unix-2.0)
+CFLAGS_DDCUTIL = $(shell pkg-config --cflags --libs ddcutil)
+CFLAGS = -g -Wall -Werror -std=gnu11 #-I ddcutil-2.0.0/src/public
+SOURCE = ddcutil-dbus-server.c
+EXE = ddcutil-dbus-server
+PREFIX = $(HOME)/.local
+BIN_DIR = $(PREFIX)/bin
+SERVICE_FILE = com.ddutil.DdcutilService.service
+SERVICES_DIR = $(PREFIX)/share/dbus-1/services
 
-CFLAGS = -g -Wall -Werror -lddcutil -std=gnu11 #-I ddcutil-2.0.0/src/public
+all: $(SOURCE) $(EXE)
 
+$(EXE): $(SOURCE)
+	gcc $< -o $@ $(CFLAGS) $(CFLAGS_GIO) $(CFLAGS_DDCUTIL) # -I ddcutil-2.0.0/src/public
 
-all: ddcutil-dbus-server
+install:
+	sed 's?/usr/bin/?$(BIN_DIR)/?' < $(SERVICE_FILE) > $(SERVICE_FILE).tmp
+	install $(SERVICE_FILE).tmp $(SERVICES_DIR)/$(SERVICE_FILE)
+	install $(EXE) $(BIN_DIR)
 
-ddcutil-dbus-server: ddcutil-dbus-server.c
-	gcc $< -o $@ $(CFLAGS) $(CFLAGS_DBUS) $(CFLAGS_GIO) $(CFLAGS_GUNIX) # -I ddcutil-2.0.0/src/public
-	
 clean:
-	rm -f ddcutil-dbus-server
-
-
-
-.PHONY: all clean
+	rm -f $(EXE)

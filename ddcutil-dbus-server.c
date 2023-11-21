@@ -234,7 +234,6 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
           break;
         }
         gchar *dlist_edid_encoded = edid_encode((*dlist)->info[ndx].edid_bytes);
-        printf("%s\n%s\n", hex_edid, dlist_edid_encoded);
         if (hex_edid != NULL && strcmp(hex_edid, dlist_edid_encoded) == 0) {
           *dinfo = &((*dlist)->info[ndx]);
           free(dlist_edid_encoded);
@@ -254,11 +253,13 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   u_int32_t flags;
   g_variant_get(parameters, "(u)", &flags);
 
+  g_printf("Detect flags=%x\n", flags);
+
   DDCA_Display_Info_List *dlist = NULL;
   const DDCA_Status status = ddca_get_display_info_list2(flags != 0, &dlist);
 
   char *message_text = get_status_message(status);
-  g_printf("Detect ddca_get_display_info_list2() done. dlist=%p %s\n", dlist, message_text);
+  g_printf("Detect status=%d message=%s\n", status, message_text);
   // see https://docs.gtk.org/glib/struct.VariantBuilder.html
 
   GVariantBuilder detected_displays_builder_instance;  // Allocate on the stack for easier memory management.
@@ -271,7 +272,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     gchar *safe_model = sanitize_utf8(vdu_info->model_name);//"xxxxwww\xF0\xA4\xADiii" );
     gchar *safe_sn = sanitize_utf8(vdu_info->sn);
     gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
-    g_printf("%s %s %s\n", safe_mfg_id, safe_model, safe_sn);
+    g_printf("Detected %s %s %s\n", safe_mfg_id, safe_model, safe_sn);
 
     g_variant_builder_add(
       detected_displays_builder,
@@ -314,7 +315,6 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    g_printf("GetVcp opened display %d\n", display_number);
     static DDCA_Non_Table_Vcp_Value valrec;
     status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
     if (status == 0) {
@@ -325,7 +325,6 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
     ddca_close_display(disp_handle);
   }
   char *message_text = get_status_message(status);
-  g_printf("status=%d message=%s\n", status, message_text);
   GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
@@ -346,9 +345,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
 
   const int number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
   const u_int8_t vcp_codes[number_of_vcp_codes];
-  for (int i = 0; g_variant_iter_loop(vcp_code_iter, "y", &vcp_codes[i]); i++) {
-    g_printf(" vcp_code=%d\n", vcp_codes[i]);
-  }
+  for (int i = 0; g_variant_iter_loop(vcp_code_iter, "y", &vcp_codes[i]); i++) {}
   g_variant_iter_free (vcp_code_iter);
 
   GVariantBuilder value_array_builder_instance;
@@ -382,7 +379,6 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
     }
   }
   char *message_text = get_status_message(status);
-  g_printf("status=%d message=%s\n", status, message_text);
   GVariant *result = g_variant_new("(a(yqqs)is)", value_array_builder, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
@@ -610,9 +606,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
           feature_description = metadata_ptr->feature_desc;
         }
         if (metadata_ptr->sl_values != NULL) {
-          for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
-            g_printf("%d %s\n", sl_ptr->value_code, sl_ptr->value_name);
-          }
+          for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
         }
         is_read_only = metadata_ptr->feature_flags & DDCA_RO;
         is_write_only = metadata_ptr->feature_flags & DDCA_WO;
@@ -753,7 +747,6 @@ int main(int argc, char *argv[]) {
   GError *error = NULL;
   GOptionContext *context = g_option_context_new("- ddcutil dbus service");
   g_option_context_add_main_entries(context, entries, NULL);
-  //g_option_context_add_group (context, gtk_get_option_group (TRUE));
   if (!g_option_context_parse(context, &argc, &argv, &error)) {
     g_print ("option parsing failed: %s\n", error->message);
     exit (1);
