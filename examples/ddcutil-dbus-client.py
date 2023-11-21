@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-
+import base64
 # dasbus seems to be recent, popular and actively supported.
 # (perhaps also look at dbus-next)
 
@@ -53,25 +53,28 @@ print(f"{vdu_list=}\n")
 for vdu in vdu_list:
     print(f">>>>>TARGET VDU: {vdu.display_number=} {vdu.manufacturer_id=} {vdu.model_name=} " 
           f"{vdu.serial_number=} {vdu.binary_serial_number=}\n")
+    print(f"{vdu.edid_txt=}")
+    if vdu.edid_txt.endswith("="):  # base64 encoded
+        print(f"vdu.edid in hex={base64.b64decode(vdu.edid_txt).hex()}")
 
-    val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP, 0)
+    val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_txt, BRIGHTNESS_VCP, 0)
     print(f"GetVcp returned: {val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
 
     if DO_SET_VCP_TEST:
         print(f"Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
-        status, errmsg = ddcutil_proxy.SetVcp(-1, vdu.edid_hex, BRIGHTNESS_VCP, val - 1, 0)
+        status, errmsg = ddcutil_proxy.SetVcp(-1, vdu.edid_txt, BRIGHTNESS_VCP, val - 1, 0)
         print(f"SetVcp returned: {status=} {errmsg=}\n")
 
-    vcp_metadata = ddcutil_proxy.GetVcpMetadata(-1, vdu.edid_hex, BRIGHTNESS_VCP, 0)
+    vcp_metadata = ddcutil_proxy.GetVcpMetadata(-1, vdu.edid_txt, BRIGHTNESS_VCP, 0)
     print("GetVcpMetadata returned:", vcp_metadata)
     feature_name, desc, is_ro, is_wo, is_rw, is_complex, is_continuous, _, _ = vcp_metadata
     print(f"metadata: {is_rw=} {is_complex=} {is_continuous=}\n")
 
-    values, status, errmsg = ddcutil_proxy.GetMultipleVcp(-1, vdu.edid_hex, [BRIGHTNESS_VCP, CONTRAST_VCP], 0)
+    values, status, errmsg = ddcutil_proxy.GetMultipleVcp(-1, vdu.edid_txt, [BRIGHTNESS_VCP, CONTRAST_VCP], 0)
     print(f"GetMultipleVcp returned: {values=} {status=} {errmsg=}\n")
 
     model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
-        ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_hex, 0)
+        ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_txt, 0)
     print(f"GetCapabilitiesMetadata returned: {model=}\n{capabilities=}\n")
 
 print("Status Values:")

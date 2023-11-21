@@ -58,7 +58,7 @@ static const gchar introspection_xml[] =
 
     "    <method name='GetVcp'>"
     "      <arg name='display_number' type='i' direction='in'/>"
-    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='vcp_current_value' type='q' direction='out'/>"
@@ -70,7 +70,7 @@ static const gchar introspection_xml[] =
 
     "    <method name='GetMultipleVcp'>"
     "      <arg name='display_number' type='i' direction='in'/>"
-    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='ay' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>"
@@ -80,7 +80,7 @@ static const gchar introspection_xml[] =
 
     "    <method name='SetVcp'>"
     "      <arg name='display_number' type='i' direction='in'/>"
-    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
     "      <arg name='vcp_new_value' type='q' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
@@ -90,7 +90,7 @@ static const gchar introspection_xml[] =
     
     "    <method name='GetVcpMetadata'>"
     "      <arg name='display_number' type='i' direction='in'/>"
-    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='vcp_code' type='y' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='feature_name' type='s' direction='out'/>"
@@ -106,7 +106,7 @@ static const gchar introspection_xml[] =
     
     "    <method name='GetCapabilitiesString'>"
     "      <arg name='display_number' type='i' direction='in'/>"
-    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='capabilities_text' type='s' direction='out'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
@@ -115,7 +115,7 @@ static const gchar introspection_xml[] =
     
     "    <method name='GetCapabilitiesMetadata'>"
     "      <arg name='display_number' type='i' direction='in'/>"
-    "      <arg name='edid_hex' type='s' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='model_name' type='s' direction='out'/>"
     "      <arg name='mccs_major' type='y' direction='out'/>"
@@ -177,17 +177,12 @@ Status_Definition status_definitions[] = {
 static const char *attributes_returned_from_detect[] = {
   "display_number", "usb_bus", "usb_device",
   "manufacturer_id", "model_name", "serial_number", "product_code",
-  "edid_hex", "binary_serial_number",
+  "edid_txt", "binary_serial_number",
   NULL
 };
 
-static char *edid_to_hex(const uint8_t *edid) {
-  _Thread_local static char hex_edid[512];
-  gchar *ptr = &hex_edid[0];
-  for (int i = 0; i < 128; i++) {
-    ptr += sprintf(ptr, "%02X", edid[i]);
-  }
-  return hex_edid;
+static char *edid_encode(const uint8_t *edid) {
+  return g_base64_encode(edid, 128);
 }
 
 static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
@@ -238,10 +233,14 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
           *dinfo = &((*dlist)->info[ndx]);
           break;
         }
-        if (hex_edid != NULL && strcmp(hex_edid, edid_to_hex((*dlist)->info[ndx].edid_bytes)) == 0) {
+        gchar *dlist_edid_encoded = edid_encode((*dlist)->info[ndx].edid_bytes);
+        printf("%s\n%s\n", hex_edid, dlist_edid_encoded);
+        if (hex_edid != NULL && strcmp(hex_edid, dlist_edid_encoded) == 0) {
           *dinfo = &((*dlist)->info[ndx]);
+          free(dlist_edid_encoded);
           break;
         }
+        free(dlist_edid_encoded);
       }
       if (*dinfo == NULL) {
         g_printf("Bad display ID %d %s?\n", display_number, hex_edid);
@@ -271,18 +270,21 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     gchar *safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
     gchar *safe_model = sanitize_utf8(vdu_info->model_name);//"xxxxwww\xF0\xA4\xADiii" );
     gchar *safe_sn = sanitize_utf8(vdu_info->sn);
+    gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
     g_printf("%s %s %s\n", safe_mfg_id, safe_model, safe_sn);
+
     g_variant_builder_add(
       detected_displays_builder,
       "(iiisssqsu)",
       vdu_info->dispno, vdu_info->usb_bus, vdu_info->usb_device,
       safe_mfg_id, safe_model, safe_sn,
       vdu_info->product_code,
-      edid_to_hex(vdu_info->edid_bytes),
+      edid_encoded,
       edid_to_binary_serial_number(vdu_info->edid_bytes));
     g_free(safe_mfg_id);
     g_free(safe_model);
     g_free(safe_sn);
+    g_free(edid_encoded);
   }
 
   GVariant *result = g_variant_new("(ia(iiisssqsu)is)",
