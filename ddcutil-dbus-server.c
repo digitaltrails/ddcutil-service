@@ -288,10 +288,9 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   GVariant *result = g_variant_new("(ia(iiisssqsu)is)",
     dlist->ct, detected_displays_builder, status, message_text);
 
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result.
   ddca_free_display_info_list(dlist);
   free(message_text);
-  g_free(result);
 }
 
 static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -326,11 +325,11 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *message_text = get_status_message(status);
   g_printf("status=%d message=%s\n", status, message_text);
   GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
   free(formatted_value);
+  free(hex_edid);
   free(message_text);
-  g_free(result);
 }
 
 static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -383,11 +382,10 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   char *message_text = get_status_message(status);
   g_printf("status=%d message=%s\n", status, message_text);
   GVariant *result = g_variant_new("(a(yqqs)is)", value_array_builder, status, message_text);
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
-
+  g_free(hex_edid);
   free(message_text);
-  g_free(result);
 }
 
 static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -416,10 +414,10 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   }
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(is)", status, message_text);
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
+  g_free(hex_edid);
   free(message_text);
-  g_free (result);
 }
 
 static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -447,11 +445,11 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   GVariant *result = g_variant_new("(sis)",
                                    caps_text == NULL ? "" : caps_text,
                                    status, message_text);
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result
   ddca_free_display_info_list(info_list);
   free(caps_text);
+  g_free(hex_edid);
   free(message_text);
-  g_free(result);
 }
 
 static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -495,38 +493,39 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
           mccs_version_major = parsed_capabilities_ptr->version_spec.major;
           mccs_version_minor = parsed_capabilities_ptr->version_spec.minor;
           for (int command_idx = 0; command_idx < parsed_capabilities_ptr->cmd_ct; command_idx++) {
-            const char *command_desc = g_strdup_printf("desc of %d", parsed_capabilities_ptr->cmd_codes[command_idx]);
+            char *command_desc = g_strdup_printf("desc of %d", parsed_capabilities_ptr->cmd_codes[command_idx]);
             //ddca_cmd_code_name();
             g_printf("CommandDef %x %s \n", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
             g_variant_builder_add(command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+            g_free(command_desc);  // TODO is this OK, or are we freeing too early?
           }
 
           for (int feature_idx = 0; feature_idx < parsed_capabilities_ptr->vcp_code_ct; feature_idx++) {
-            const DDCA_Cap_Vcp feature_def = vcp_feature_array[feature_idx];
+            DDCA_Cap_Vcp *feature_def = vcp_feature_array + feature_idx;
             DDCA_Feature_Metadata *metadata_ptr;
 
-            status = ddca_get_feature_metadata_by_dh(feature_def.feature_code, disp_handle, true, &metadata_ptr);
+            status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true, &metadata_ptr);  // TODO valgrind complains
             if (status == 0) {
               g_printf("FeatureDef: %x %s %s\n",
                        metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
               GVariantBuilder value_dict_builder_instance;  // Allocate on the stack for easier memory management.
               GVariantBuilder *value_dict_builder = &value_dict_builder_instance;
               g_variant_builder_init(value_dict_builder, G_VARIANT_TYPE("a{ys}"));
-              for (int value_idx = 0; value_idx < feature_def.value_ct; value_idx++) {
-                u_int8_t value_code = feature_def.values[value_idx];
+              for (int value_idx = 0; value_idx < feature_def->value_ct; value_idx++) {
+                u_int8_t value_code = feature_def->values[value_idx];
                 char *value_name = "";
                 if (metadata_ptr->sl_values != NULL) {
                   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
                     if (sl_ptr->value_code == value_code) {
                       g_printf("  ValueDef match feature %x value %d %s\n",
-                               feature_def.feature_code, sl_ptr->value_code, sl_ptr->value_name);
+                               feature_def->feature_code, sl_ptr->value_code, sl_ptr->value_name);
                       g_variant_builder_add(value_dict_builder, "{ys}", sl_ptr->value_code, sl_ptr->value_name);
                       value_name = sl_ptr->value_name;
                     }
                   }
                 }
                 g_printf("  ValueDef feature %x value %d %s\n",
-                               feature_def.feature_code, value_code, value_name);
+                               feature_def->feature_code, value_code, value_name);
                 g_variant_builder_add(value_dict_builder, "{ys}", value_code, value_name);
               }
               g_variant_builder_add(
@@ -536,10 +535,10 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                 metadata_ptr->feature_name,
                 metadata_ptr->feature_desc == NULL ? "" : metadata_ptr->feature_desc,
                 value_dict_builder);
-              free(metadata_ptr);
+              ddca_free_feature_metadata(metadata_ptr);
             }
             else {
-              g_printf("%x %s\n", feature_def.feature_code, get_status_message(status));
+              g_printf("%x %s\n", feature_def->feature_code, get_status_message(status));
             }
           }
         }
@@ -568,12 +567,12 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                                    command_dict_builder,
                                    feature_dict_builder,
                                    status, message_text);
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
   ddca_free_parsed_capabilities(parsed_capabilities_ptr);
   free(caps_text);
+  g_free(hex_edid);
   free(message_text);
-  g_free(result);
 }
 
 static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -600,7 +599,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
-      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 0, &metadata_ptr);
+      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 0, &metadata_ptr);  // TODO valgrind complains
       if (status == 0) {
         if (metadata_ptr->feature_name != NULL) {
           feature_name = metadata_ptr->feature_name;
@@ -627,11 +626,11 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
                                    feature_name, feature_description,
                                    is_read_only, is_write_only, is_rw, is_complex, is_continuous,
                                    status, status == 0 ? "OK" : message_text);
-  g_dbus_method_invocation_return_value(invocation, result);
+  g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result
   ddca_free_display_info_list(info_list);
-  free(metadata_ptr);
+  ddca_free_feature_metadata(metadata_ptr);
+  g_free(hex_edid);
   free(message_text);
-  g_free(result);
 }
 
 static void handle_method_call(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
