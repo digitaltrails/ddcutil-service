@@ -5,6 +5,7 @@
 
 #include <ddcutil_c_api.h>
 #include <ddcutil_status_codes.h>
+#include <ddcutil_macros.h>
 #include <assert.h>
 #include <string.h>
 
@@ -47,6 +48,14 @@ static const gchar introspection_xml[] =
 
     "<node>"
     "  <interface name='com.ddcutil.DdcutilInterface'>"
+
+    "    <method name='Initialize'>"
+    "      <arg name='text_options' type='s' direction='in'/>"
+    "      <arg name='syslog_level' type='u' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
 
     "    <method name='Detect'>"
     "      <arg name='flags' type='u' direction='in'/>"
@@ -138,41 +147,6 @@ static const gchar introspection_xml[] =
 
 /* ----------------------------------------------------------------------------------------------------
  */
-typedef struct Status_Definition_Struct {  char *name;  int value; } Status_Definition;
-
-Status_Definition status_definitions[] = {
-  { "DDCRC_OK", DDCRC_OK },
-  { "DDCRC_DDC_DATA", DDCRC_DDC_DATA },
-  { "DDCRC_NULL_RESPONSE", DDCRC_NULL_RESPONSE },
-  { "DDCRC_MULTI_PART_READ_FRAGMENT", DDCRC_MULTI_PART_READ_FRAGMENT },
-  { "DDCRC_ALL_TRIES_ZERO", DDCRC_ALL_TRIES_ZERO },
-  { "DDCRC_REPORTED_UNSUPPORTED", DDCRC_REPORTED_UNSUPPORTED },
-  { "DDCRC_READ_ALL_ZERO", DDCRC_READ_ALL_ZERO },
-  { "DDCRC_RETRIES", DDCRC_RETRIES },
-  { "DDCRC_EDID", DDCRC_EDID },
-  { "DDCRC_READ_EDID", DDCRC_READ_EDID },
-  { "DDCRC_INVALID_EDID", DDCRC_INVALID_EDID },
-  { "DDCRC_ALL_RESPONSES_NULL", DDCRC_ALL_RESPONSES_NULL },
-  { "DDCRC_DETERMINED_UNSUPPORTED", DDCRC_DETERMINED_UNSUPPORTED },
-
-  { "DDCRC_ARG", DDCRC_ARG },
-  { "DDCRC_INVALID_OPERATION", DDCRC_INVALID_OPERATION },
-  { "DDCRC_UNIMPLEMENTED", DDCRC_UNIMPLEMENTED },
-  { "DDCRC_UNINITIALIZED", DDCRC_UNINITIALIZED },
-  { "DDCRC_UNKNOWN_FEATURE", DDCRC_UNKNOWN_FEATURE },
-  { "DDCRC_INTERPRETATION_FAILED", DDCRC_INTERPRETATION_FAILED },
-  { "DDCRC_MULTI_FEATURE_ERROR", DDCRC_MULTI_FEATURE_ERROR },
-  { "DDCRC_INVALID_DISPLAY", DDCRC_INVALID_DISPLAY },
-  { "DDCRC_INTERNAL_ERROR", DDCRC_INTERNAL_ERROR },
-  { "DDCRC_OTHER", DDCRC_OTHER },
-  { "DDCRC_VERIFY", DDCRC_VERIFY },
-  { "DDCRC_NOT_FOUND", DDCRC_NOT_FOUND },
-  { "DDCRC_LOCKED", DDCRC_LOCKED },
-  { "DDCRC_ALREADY_OPEN", DDCRC_ALREADY_OPEN },
-  { "DDCRC_BAD_DATA", DDCRC_BAD_DATA },
-  //{ "DDCRC_INVALID_CONFIG_FILE", DDCRC_INVALID_CONFIG_FILE }
-  {NULL, 0},
-  };
 
 static const char *attributes_returned_from_detect[] = {
   "display_number", "usb_bus", "usb_device",
@@ -248,6 +222,30 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
     }
     return status;
 }
+
+static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  char *libopts;
+  u_int32_t syslog_level;
+  u_int32_t opts;
+  g_variant_get(parameters, "(suu)", &libopts, &syslog_level, &opts);
+
+  g_printf("DdcaInit syslog_level=%x opts=%x options=%s\n", syslog_level, opts, libopts);
+
+#if DDCUTIL_VMAJOR >= 2
+  const DDCA_Status status = ddca_init(libopts, syslog_level, opts);
+#else
+  const DDCA_Status status = DDCRC_UNIMPLEMENTED;
+#endif
+
+  char *message_text = get_status_message(status);
+  g_printf("DdcaInit status=%d message=%s\n", status, message_text);
+
+  GVariant *result = g_variant_new("(is)", status, message_text);
+  g_dbus_method_invocation_return_value(invocation, result);
+
+  g_free(libopts);
+}
+
 
 static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   u_int32_t flags;
@@ -646,6 +644,8 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     get_capabilities_string(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetCapabilitiesMetadata") == 0) {
     get_capabilities_metadata(parameters, invocation);
+  } else if (g_strcmp0(method_name, "Initialize") == 0) {
+    initialize_libddcutil(parameters, invocation);
   }
 }
 
@@ -660,7 +660,11 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   } 
   else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
+#if DDCUTIL_VMAJOR >= 2
+    ret = g_variant_new_double(ddca_get_sleep_multiplier());
+#else
     ret = g_variant_new_double(ddca_get_default_sleep_multiplier());
+#endif
   }
   else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
     GVariantBuilder *builder;
@@ -677,9 +681,10 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     GVariantBuilder *builder;
     GVariant *value;
     builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
-    for (int i = 0; status_definitions[i].name != NULL; i++) {
-      g_variant_builder_add (builder, "{is}", status_definitions[i].value, status_definitions[i].name);
+    for (int i = RCRANGE_DDC_START + 1; ddca_rc_name(-i) != NULL; i++) {
+      g_variant_builder_add (builder, "{is}", -i, ddca_rc_name(-i));
     }
+
     value = g_variant_new("a{is}", builder);
     g_variant_builder_unref(builder);
     ret = value;
@@ -697,7 +702,11 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
     ddca_enable_verify(g_variant_get_boolean(value));
   }
   else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
+#if DDCUTIL_VMAJOR >= 2
+    ddca_set_sleep_multiplier(g_variant_get_double(value));
+#elif DDCUTIL_VMAJOR
     ddca_set_default_sleep_multiplier(g_variant_get_double(value));
+#endif
   }
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_byte(value));
