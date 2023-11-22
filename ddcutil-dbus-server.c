@@ -41,6 +41,8 @@
  *                    https://github.com/rockowitz/ddcutil/tree/2.0.2-dev/src/public
  */
 
+#define DDCUTIL_SERVICE_VERSION_STRING "1.0.0"
+
 static GDBusNodeInfo *introspection_data = NULL;
 
 /* Introspection data for the service we are exporting */
@@ -49,7 +51,7 @@ static const gchar introspection_xml[] =
     "<node>"
     "  <interface name='com.ddcutil.DdcutilInterface'>"
 
-    "    <method name='Initialize'>"
+    "    <method name='Initialize'>"  // Probably not useful
     "      <arg name='text_options' type='s' direction='in'/>"
     "      <arg name='syslog_level' type='u' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
@@ -138,6 +140,7 @@ static const gchar introspection_xml[] =
     "    <property type='d' name='Verify' access='readwrite'/>"
     "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
     "    <property type='s' name='DdcutilVersionString' access='read'/>"
+    "    <property type='s' name='InterfaceVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
     "    <property type='y' name='OutputLevel' access='readwrite'/>"
@@ -654,7 +657,10 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
                                      gpointer user_data) {
   GVariant *ret = NULL;
   if (g_strcmp0(property_name, "DdcutilVersionString") == 0) {
-    ret = g_variant_new_string(g_strdup(ddca_ddcutil_extended_version_string()));
+    ret = g_variant_new_string(ddca_ddcutil_extended_version_string());
+  }
+  else   if (g_strcmp0(property_name, "InterfaceVersionString") == 0) {
+    ret = g_variant_new_string(DDCUTIL_SERVICE_VERSION_STRING);
   }
   else if (g_strcmp0(property_name, "Verify") == 0) {
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
@@ -739,30 +745,52 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
   exit(1);
 }
 
-
-
 int main(int argc, char *argv[]) {
   g_set_prgname("ddcutil-dbus-server");
 
-  gint output_level = 0;
-  gdouble sleep_multiplier = 1.0;
+  bool version_request = FALSE;
+
+#if DDCUTIL_VMAJOR >= 2
+  gint ddca_syslog_level = 0;
+  gint ddca_init_options = 0;
+#endif
 
   const GOptionEntry entries[] = {
-    { "output-level", 'o', 0, G_OPTION_ARG_INT, &output_level, "ddcutil Output-Level 0xNN hex string", NULL },
-    { "sleep-multiplier", 'm', 0, G_OPTION_ARG_DOUBLE, &sleep_multiplier, "ddcutil Sleep Multiplier", NULL },
+    { "version", 'v', 0, G_OPTION_ARG_NONE, &version_request,
+"print ddcutil version, com.ddcutil.DdcUtilInterface version, and exit", NULL },
+#if DDCUTIL_VMAJOR >= 2
+    { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
+      "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL },
+    { "ddca-init-options", 'i', 0, G_OPTION_ARG_INT, &ddca_init_options,
+      "1=Disable-Config-File", NULL },
+#endif
     { NULL }
   };
 
   GError *error = NULL;
-  GOptionContext *context = g_option_context_new("- ddcutil dbus service");
+  GOptionContext *context = g_option_context_new("-- [LIBDDCUTIL-OPTION?]");
   g_option_context_add_main_entries(context, entries, NULL);
   if (!g_option_context_parse(context, &argc, &argv, &error)) {
     g_print ("option parsing failed: %s\n", error->message);
     exit (1);
   }
 
-  ddca_set_output_level(output_level);
-  ddca_set_sleep_multiplier(sleep_multiplier);
+if (version_request) {
+  g_print("ddcutil %s com.ddcutil.DdcUtilInterface %s\n",
+    ddca_ddcutil_extended_version_string(), DDCUTIL_SERVICE_VERSION_STRING);
+  exit(1);
+}
+
+#if DDCUTIL_VMAJOR >= 2
+  char *argv_null_terminated[argc];
+  for (int i = 0; i < argc; i++) {
+    argv_null_terminated[i] = argv[i + 1];
+  }
+  argv_null_terminated[argc - 1] = NULL;
+  char *arg_string = g_strjoinv(" ", argv_null_terminated);
+
+  ddca_init(arg_string,0,0);
+#endif
 
   /* Build introspection data structures from XML.
    */
