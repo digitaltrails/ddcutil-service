@@ -165,7 +165,7 @@ static char *edid_encode(const uint8_t *edid) {
   return g_base64_encode(edid, 128);
 }
 
-char *server_execuatble = "ddcutil-dbus-server";
+char *server_executable = "ddcutil-dbus-server";
 
 static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
   const uint32_t binary_serial =
@@ -246,9 +246,9 @@ static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* i
   GVariant *result = g_variant_new("(is)", DDCRC_OK, message_text);
   g_dbus_method_invocation_return_value(invocation, result);
 
-  char** argv;
+  gchar** argv;
 #if DDCUTIL_VMAJOR >= 2
-  char *args_str = "";
+  gchar *args_str = "";
   if (syslog_level != 0) {
     args_str = g_strdup_printf("%s --ddca-syslog-level=%d", args_str, syslog_level);
   }
@@ -258,7 +258,7 @@ static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* i
   args_str = g_strdup_printf("%s -- %s", args_str, libopts);
   argv = g_strsplit(args_str, " ", -1);
 #else
-  char *no_args = { NULL };
+  gchar *no_args = { NULL };
   argv = &no_args;
 #endif
 
@@ -273,7 +273,7 @@ static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* i
   sigaction(SIGCHLD, &arg, NULL);
 
   pid_t spawn_pid;
-  posix_spawn(&spawn_pid, server_execuatble, NULL, NULL, argv,environ);
+  posix_spawn(&spawn_pid, server_executable, NULL, NULL, argv,environ);
   exit(0);
 }
 
@@ -774,7 +774,7 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
 }
 
 int main(int argc, char *argv[]) {
-  server_execuatble = argv[0];
+  server_executable = argv[0];
   g_set_prgname("ddcutil-dbus-server");
 
   bool version_request = FALSE;
