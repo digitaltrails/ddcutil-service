@@ -54,7 +54,7 @@ static const gchar introspection_xml[] =
     "<node>"
     "  <interface name='com.ddcutil.DdcutilInterface'>"
 
-    "    <method name='Initialize'>"  // Probably not useful
+    "    <method name='Restart'>"
     "      <arg name='text_options' type='s' direction='in'/>"
     "      <arg name='syslog_level' type='u' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
@@ -232,7 +232,7 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
 }
 
 extern char** environ;
-static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *libopts;
   u_int32_t syslog_level;
   u_int32_t opts;
@@ -262,8 +262,6 @@ static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* i
   argv = &no_args;
 #endif
 
-  // TODO super hacky respawn follows...
-
   // If running under dbus-daemon a respawn is not necessary except that
   // we want to pass arguments.
   struct sigaction arg = {
@@ -284,11 +282,14 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   g_printf("Detect flags=%x\n", flags);
 
-  DDCA_Display_Info_List *dlist = NULL;
-  const DDCA_Status status = ddca_get_display_info_list2(flags != 0, &dlist);
+  const DDCA_Status detect_status = ddca_redetect_displays();
+  char *detect_message_text = get_status_message(detect_status);
 
-  char *message_text = get_status_message(status);
-  g_printf("Detect status=%d message=%s\n", status, message_text);
+  DDCA_Display_Info_List *dlist = NULL;
+  const DDCA_Status list_status = ddca_get_display_info_list2(flags != 0, &dlist);
+  char *list_message_text = get_status_message(list_status);
+
+  g_printf("Detect status=%d message=%s\n", list_status, list_message_text);
   // see https://docs.gtk.org/glib/struct.VariantBuilder.html
 
   GVariantBuilder detected_displays_builder_instance;  // Allocate on the stack for easier memory management.
@@ -317,12 +318,16 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     g_free(edid_encoded);
   }
 
+  const int final_status = (detect_status != 0) ? detect_status : list_status;
+  const char *final_message_text = (detect_status != 0) ? detect_message_text : list_message_text;
+
   GVariant *result = g_variant_new("(ia(iiisssqsu)is)",
-    dlist->ct, detected_displays_builder, status, message_text);
+    dlist->ct, detected_displays_builder, final_status, final_message_text);
 
   g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result.
   ddca_free_display_info_list(dlist);
-  free(message_text);
+  free(list_message_text);
+  free(detect_message_text);
 }
 
 static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
@@ -675,8 +680,8 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     get_capabilities_string(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetCapabilitiesMetadata") == 0) {
     get_capabilities_metadata(parameters, invocation);
-  } else if (g_strcmp0(method_name, "Initialize") == 0) {
-    initialize_libddcutil(parameters, invocation);
+  } else if (g_strcmp0(method_name, "Restart") == 0) {
+    restart(parameters, invocation);
   }
 }
 
