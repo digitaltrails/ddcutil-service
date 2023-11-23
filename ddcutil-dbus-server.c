@@ -46,6 +46,13 @@
 
 #define DDCUTIL_SERVICE_VERSION_STRING "1.0.0"
 
+/*
+ * Demonstrations of two ways of raising d-bus signals:
+ */
+#define COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
+#undef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
+
+
 static GDBusNodeInfo *introspection_data = NULL;
 
 /* Introspection data for the service we are exporting */
@@ -139,6 +146,11 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
+
+    "    <signal name='ConnectedDisplaysChanged'>"
+    "      <arg type='i' name='count'/>"
+    "      <arg type='u' name='flags'/>"
+    "    </signal>"
 
     "    <property type='d' name='Verify' access='readwrite'/>"
     "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
@@ -753,11 +765,32 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   return *error == NULL;
 }
 
+#ifdef COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
+
+/*** Test code that generates a signal from a timer attached to the d-bus connection ***/
+
+static gboolean handle_polling_timeout (gpointer user_data) {
+  GDBusConnection *connection = G_DBUS_CONNECTION (user_data);
+  GError *local_error = NULL;
+  printf("handle_polling_timeout\n");
+  g_dbus_connection_emit_signal (connection,
+                                 NULL,
+                                 "/com/ddcutil/DdcutilObject",
+                                 "com.ddcutil.DdcutilInterface",
+                                 "ConnectedDisplaysChanged",
+                                 g_variant_new ("(iu)", 0, 0),
+                                 &local_error);
+  return TRUE;
+}
+#endif
+
 /* GDBUS service handlers */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
+GDBusConnection *dbus_connection = NULL;
 static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
   const char* object_path = "/com/ddcutil/DdcutilObject";
+  dbus_connection = connection;
   const guint registration_id =
     g_dbus_connection_register_object(connection,
                                       object_path,
@@ -767,6 +800,11 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
                                       NULL);                   /* GError** */
   g_assert(registration_id > 0);
   g_print("Registered %s\n", object_path);
+#ifdef COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
+  g_timeout_add_seconds (2,
+                         handle_polling_timeout,
+                         connection);
+#endif
 }
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
@@ -777,6 +815,55 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
   g_print("Lost registration - is another instance already registered?\n");
   exit(1);
 }
+
+#ifdef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
+
+/*** Test code that generates a signal conditionally during the g-main-loop ***/
+
+struct  Signal_Source {
+    GSource source;
+    gchar my_data[256];
+};
+typedef struct Signal_Source Signal_Source;
+
+static gboolean signal_prepare(GSource *source, gint *timeout) {
+  *timeout = 0;
+  if (dbus_connection == NULL) {
+    return FALSE;
+  }
+  return TRUE;
+}
+
+static gboolean signal_check(GSource *source) {
+  if (dbus_connection == NULL) {
+    return FALSE;
+  }
+  return TRUE;
+}
+
+static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
+  //Signal_Source *signal_source = (Signal_Source *) source;
+  GError *local_error = NULL;
+  if (dbus_connection == NULL) {
+    printf("3 null connection\n");
+    return FALSE;
+  }
+  static time_t last_time = 0;
+  time_t now = time(0);
+  if (now - last_time > 5) {
+    last_time = now;
+    printf("dispatch now %ld\n", now);
+    g_dbus_connection_emit_signal (dbus_connection,
+                                   NULL,
+                                   "/com/ddcutil/DdcutilObject",
+                                   "com.ddcutil.DdcutilInterface",
+                                   "ConnectedDisplaysChanged",
+                                   g_variant_new ("(iu)", 0, 0),
+                                   &local_error);
+  }
+  return TRUE;
+}
+#endif
 
 int main(int argc, char *argv[]) {
   server_executable = argv[0];
@@ -841,6 +928,15 @@ if (version_request) {
     NULL);
 
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+
+#ifdef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
+  GMainContext* loop_context = g_main_loop_get_context(loop);
+  GSourceFuncs source_funcs = { signal_prepare, signal_check, signal_dispatch };
+  GSource *source = g_source_new(&source_funcs, sizeof(Signal_Source));
+  g_source_attach(source, loop_context);
+  g_source_unref(source);
+#endif
+
   g_main_loop_run(loop);
   g_bus_unown_name(owner_id);
   g_dbus_node_info_unref(introspection_data);
