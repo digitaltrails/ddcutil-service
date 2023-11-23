@@ -246,9 +246,9 @@ static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* i
   GVariant *result = g_variant_new("(is)", DDCRC_OK, message_text);
   g_dbus_method_invocation_return_value(invocation, result);
 
-  char *args_str = "";
   char** argv;
 #if DDCUTIL_VMAJOR >= 2
+  char *args_str = "";
   if (syslog_level != 0) {
     args_str = g_strdup_printf("%s --ddca-syslog-level=%d", args_str, syslog_level);
   }
@@ -258,7 +258,8 @@ static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* i
   args_str = g_strdup_printf("%s -- %s", args_str, libopts);
   argv = g_strsplit(args_str, " ", -1);
 #else
-  argv = { NULL }
+  char *no_args = { NULL };
+  argv = &no_args;
 #endif
 
   // TODO super hacky respawn follows...
