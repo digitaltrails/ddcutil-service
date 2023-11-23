@@ -2,12 +2,15 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 #include <stdlib.h>
+#include <string.h>
+#include <spawn.h>
+#include <assert.h>
+
 
 #include <ddcutil_c_api.h>
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
-#include <assert.h>
-#include <string.h>
+
 
 /* ----------------------------------------------------------------------------------------------------
  * ddcutil-dbus-server.c
@@ -162,6 +165,8 @@ static char *edid_encode(const uint8_t *edid) {
   return g_base64_encode(edid, 128);
 }
 
+char *server_execuatble = "ddcutil-dbus-server";
+
 static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
   const uint32_t binary_serial =
     edid_bytes[0x0c]       |
@@ -226,27 +231,49 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
     return status;
 }
 
+extern char** environ;
 static void initialize_libddcutil(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *libopts;
   u_int32_t syslog_level;
   u_int32_t opts;
   g_variant_get(parameters, "(suu)", &libopts, &syslog_level, &opts);
 
-  g_printf("DdcaInit syslog_level=%x opts=%x options=%s\n", syslog_level, opts, libopts);
+  g_printf("DdcaInit syslog_level=%x opts=%x libopts=%s\n", syslog_level, opts, libopts);
 
-#if DDCUTIL_VMAJOR >= 2
-  const DDCA_Status status = ddca_init(libopts, syslog_level, opts);
-#else
-  const DDCA_Status status = DDCRC_UNIMPLEMENTED;
-#endif
+  char *message_text = get_status_message(DDCRC_OK);
+  g_printf("DdcaInit status=%d message=%s\n", DDCRC_OK, message_text);
 
-  char *message_text = get_status_message(status);
-  g_printf("DdcaInit status=%d message=%s\n", status, message_text);
-
-  GVariant *result = g_variant_new("(is)", status, message_text);
+  GVariant *result = g_variant_new("(is)", DDCRC_OK, message_text);
   g_dbus_method_invocation_return_value(invocation, result);
 
-  g_free(libopts);
+  char *args_str = "";
+  char** argv;
+#if DDCUTIL_VMAJOR >= 2
+  if (syslog_level != 0) {
+    args_str = g_strdup_printf("%s --ddca-syslog-level=%d", args_str, syslog_level);
+  }
+  if (opts != 0) {
+    args_str = g_strdup_printf("%s --ddca-init-options=%d", args_str, opts);
+  }
+  args_str = g_strdup_printf("%s -- %s", args_str, libopts);
+  argv = g_strsplit(args_str, " ", -1);
+#else
+  argv = { NULL }
+#endif
+
+  // TODO super hacky respawn follows...
+
+  // If running under dbus-daemon a respawn is not necessary except that
+  // we want to pass arguments.
+  struct sigaction arg = {
+    .sa_handler=SIG_IGN,
+    .sa_flags=SA_NOCLDWAIT // Never wait for termination of a child process.
+  };
+  sigaction(SIGCHLD, &arg, NULL);
+
+  pid_t spawn_pid;
+  posix_spawn(&spawn_pid, server_execuatble, NULL, NULL, argv,environ);
+  exit(0);
 }
 
 
@@ -687,10 +714,10 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     GVariantBuilder *builder;
     GVariant *value;
     builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
+    g_variant_builder_add(builder, "{is}", DDCRC_OK, ddca_rc_name(DDCRC_OK));
     for (int i = RCRANGE_DDC_START + 1; ddca_rc_name(-i) != NULL; i++) {
-      g_variant_builder_add (builder, "{is}", -i, ddca_rc_name(-i));
+      g_variant_builder_add(builder, "{is}", -i, ddca_rc_name(-i));
     }
-
     value = g_variant_new("a{is}", builder);
     g_variant_builder_unref(builder);
     ret = value;
@@ -746,6 +773,7 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
 }
 
 int main(int argc, char *argv[]) {
+  server_execuatble = argv[0];
   g_set_prgname("ddcutil-dbus-server");
 
   bool version_request = FALSE;
@@ -784,7 +812,7 @@ if (version_request) {
 #if DDCUTIL_VMAJOR >= 2
   char *argv_null_terminated[argc];
   for (int i = 0; i < argc; i++) {
-    argv_null_terminated[i] = argv[i + 1];
+    argv_null_terminated[i] = argv[i + 2];
   }
   argv_null_terminated[argc - 1] = NULL;
   char *arg_string = g_strjoinv(" ", argv_null_terminated);
