@@ -1,4 +1,4 @@
-# ddcutil-dbus-client.py
+# ddcutil-dasbus-client.py
 # ----------------------
 # Python dasbus example of using ddcutil-dbus-server
 #

@@ -1,5 +1,5 @@
-# ddcutil-dbus-client.py
-# ----------------------
+# ddcutil-dasbus-signal-receiver.py
+# ---------------------------------
 # Python dasbus example of receiving signals from ddcutil-dbus-server
 #
 # Copyright (C) 2023, Michael Hamilton

@@ -1,6 +1,6 @@
-# ddcutil-dbus-qt-client.py
-# ----------------------
-# Python Qt QDBus example of using ddcutil-dbus-server
+# ddcutil-qtdbus-client.py
+# ------------------------
+# Python Qt QtDBus example of using ddcutil-dbus-server
 #
 # Copyright (C) 2023, Michael Hamilton
 #
@@ -19,13 +19,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 import base64
-import sys
+from collections import namedtuple
 
 from PyQt5.QtCore import *
 from PyQt5.QtDBus import *
-
-from collections import namedtuple
-
 
 DO_SET_VCP_TEST = False   # If enabled, a test will run to change VDU brightness.
 
