@@ -55,7 +55,10 @@
 
 static GDBusNodeInfo *introspection_data = NULL;
 
-/* Introspection data for the service we are exporting */
+/* Introspection data for the service we are exporting
+ * TODO At some point this could possibly be moved to a file.
+ * TODO Needs Documentation, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
+ */
 static const gchar introspection_xml[] =
 
     "<node>"
@@ -108,7 +111,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
-    
+
     "    <method name='GetVcpMetadata'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_txt' type='s' direction='in'/>"
@@ -124,7 +127,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
-    
+
     "    <method name='GetCapabilitiesString'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_txt' type='s' direction='in'/>"
@@ -133,7 +136,7 @@ static const gchar introspection_xml[] =
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
-    
+
     "    <method name='GetCapabilitiesMetadata'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_txt' type='s' direction='in'/>"
@@ -643,7 +646,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
-      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, 0, &metadata_ptr);  // TODO valgrind complains
+      status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);  // TODO valgrind complains
       if (status == 0) {
         if (metadata_ptr->feature_name != NULL) {
           feature_name = metadata_ptr->feature_name;
