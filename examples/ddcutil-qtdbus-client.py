@@ -42,6 +42,8 @@ ddcutil_dbus_props = QDBusInterface("com.ddcutil.DdcutilService",
                                     "org.freedesktop.DBus.Properties",
                                     connection=bus)
 
+ddcutil_dbus_iface.setTimeout(5000)
+
 # Create a namedtuple that matches the attributes returned by the detect method
 DetectedAttributes = namedtuple("DetectedAttributes",
                                 ddcutil_dbus_props.call("Get",
