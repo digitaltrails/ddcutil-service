@@ -31,6 +31,8 @@ DO_SET_VCP_TEST = False   # If enabled, a test will run to change VDU brightness
 BRIGHTNESS_VCP = 0x10
 CONTRAST_VCP = 0x12
 
+DBUS_TIMEOUT_MILLIS = 1000
+
 bus = SessionMessageBus()
 
 ddcutil_proxy = bus.get_proxy(
@@ -38,11 +40,13 @@ ddcutil_proxy = bus.get_proxy(
     "/com/ddcutil/DdcutilObject",  # The object name
 )
 
+ddcutil_proxy.OutputLevel = 20
+
 # Create a namedtuple that matches the attributes returned by the detect method
 DetectedAttributes = namedtuple("DetectedAttributes", ddcutil_proxy.AttributesReturnedByDetect)
 
 # Call detect to get back a list of unnamed tuples, one for each VDU
-number_detected, list_of_displays, status, errmsg = ddcutil_proxy.Detect(1)
+number_detected, list_of_displays, status, errmsg = ddcutil_proxy.Detect(1, timeout=DBUS_TIMEOUT_MILLIS)
 print(f"Detect returned: {number_detected=} {status=} {errmsg=}\n", list_of_displays, '\n')
 
 # Reform unnamed tuples into a list of namedtuples (optional, for convenience)
@@ -57,24 +61,26 @@ for vdu in vdu_list:
     if vdu.edid_txt.endswith("="):  # base64 encoded
         print(f"vdu.edid in hex={base64.b64decode(vdu.edid_txt).hex()}")
 
-    val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_txt, BRIGHTNESS_VCP, 0)
+    val, max_val, formatted_val, status, errmsg = ddcutil_proxy.GetVcp(-1, vdu.edid_txt, BRIGHTNESS_VCP, 0,
+                                                                       timeout=DBUS_TIMEOUT_MILLIS)
     print(f"GetVcp returned: {val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
 
     if DO_SET_VCP_TEST:
         print(f"Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
-        status, errmsg = ddcutil_proxy.SetVcp(-1, vdu.edid_txt, BRIGHTNESS_VCP, val - 1, 0)
+        status, errmsg = ddcutil_proxy.SetVcp(-1, vdu.edid_txt, BRIGHTNESS_VCP, val - 1, 0, timeout=DBUS_TIMEOUT_MILLIS)
         print(f"SetVcp returned: {status=} {errmsg=}\n")
 
-    vcp_metadata = ddcutil_proxy.GetVcpMetadata(-1, vdu.edid_txt, BRIGHTNESS_VCP, 0)
+    vcp_metadata = ddcutil_proxy.GetVcpMetadata(-1, vdu.edid_txt, BRIGHTNESS_VCP, 0, timeout=2000)
     print("GetVcpMetadata returned:", vcp_metadata)
     feature_name, desc, is_ro, is_wo, is_rw, is_complex, is_continuous, _, _ = vcp_metadata
     print(f"metadata: {is_rw=} {is_complex=} {is_continuous=}\n")
 
-    values, status, errmsg = ddcutil_proxy.GetMultipleVcp(-1, vdu.edid_txt, [BRIGHTNESS_VCP, CONTRAST_VCP], 0)
+    values, status, errmsg = ddcutil_proxy.GetMultipleVcp(-1, vdu.edid_txt, [BRIGHTNESS_VCP, CONTRAST_VCP], 0,
+                                                          timeout=DBUS_TIMEOUT_MILLIS)
     print(f"GetMultipleVcp returned: {values=} {status=} {errmsg=}\n")
 
     model, mccs_major, mccs_minor, commands, capabilities, status, errmsg = \
-        ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_txt, 0)
+        ddcutil_proxy.GetCapabilitiesMetadata(-1, vdu.edid_txt, 0, timeout=DBUS_TIMEOUT_MILLIS)
     print(f"GetCapabilitiesMetadata returned: {model=}\n{capabilities=}\n")
 
 print("Status Values:")
