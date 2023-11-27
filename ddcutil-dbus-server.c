@@ -149,18 +149,35 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
+    "    <method name='GetSleepMultiplier'>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
+    "      <arg name='current_multiplier' type='d' direction='out'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
+
+    "    <method name='SetSleepMultiplier'>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
+    "      <arg name='new_multiplier' type='d' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
+
     "    <signal name='ConnectedDisplaysChanged'>"
     "      <arg type='i' name='count'/>"
     "      <arg type='u' name='flags'/>"
     "    </signal>"
-
 
     "    <property type='s' name='DdcutilVersionString' access='read'/>"
     "    <property type='s' name='InterfaceVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
     "    <property type='b' name='Verify' access='readwrite'/>"
-    "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
+    "    <property type='b' name='DynamicSleep' access='readwrite'/>"
     "    <property type='u' name='OutputLevel' access='readwrite'/>"
 
     "  </interface>"
@@ -702,6 +719,78 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   free(message_text);
 }
 
+static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  int display_number;
+  char *hex_edid;
+  u_int32_t flags;
+
+  g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
+  if (get_service_output_level() & DDCA_OL_VERBOSE) {
+    g_printf("GetSleepMultiplier display_num=%d, edid=%.30s...\n", display_number, hex_edid);
+  }
+
+  static DDCA_Sleep_Multiplier multiplier;
+  DDCA_Status status = 0;
+#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+  multiplier = ddca_get_sleep_multiplier();
+#elif DDCUTIL_VMAJOR < 2
+  multiplier = ddca_get_default_sleep_multiplier();
+#else
+  DDCA_Display_Info_List *info_list = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
+  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  if (status == 0) {
+    DDCA_Display_Handle disp_handle;
+    ddca_open_display2(vdu_info->dref, 1, &disp_handle);
+    status = ddca_get_current_display_sleep_multiplier(disp_handle, &multiplier);
+    ddca_close_display(disp_handle);
+  }
+#endif
+  char *message_text = get_status_message(status);
+  GVariant *result = g_variant_new("(dis)", (double) multiplier, status, message_text);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
+  ddca_free_display_info_list(info_list);
+  free(hex_edid);
+  free(message_text);
+}
+
+static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  int display_number;
+  char *hex_edid;
+  u_int32_t flags;
+  double new_multiplier;
+  DDCA_Status status = 0;
+
+  g_variant_get(parameters, "(isdu)", &display_number, &hex_edid, &new_multiplier, &flags);
+  if (get_service_output_level() & DDCA_OL_VERBOSE) {
+    g_printf("SetSleepMultiplier value=%f display_num=%d edid=%.30s...\n",
+             new_multiplier, display_number, hex_edid);
+  }
+
+#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+  ddca_set_sleep_multiplier(new_multiplier);
+#elif DDCUTIL_VMAJOR < 2
+  ddca_set_default_sleep_multiplier(new_multiplier);
+#endif
+  DDCA_Display_Info_List *info_list = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
+  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  if (status == 0) {
+    DDCA_Display_Handle disp_handle;
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
+    if (status == 0) {
+      status = ddca_set_display_sleep_multiplier(disp_handle, new_multiplier);
+      ddca_close_display(disp_handle);
+    }
+  }
+  char *message_text = get_status_message(status);
+  GVariant *result = g_variant_new("(is)", status, message_text);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
+  ddca_free_display_info_list(info_list);
+  g_free(hex_edid);
+  free(message_text);
+}
+
 static void handle_method_call(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                const gchar *interface_name, const gchar *method_name, GVariant *parameters,
                                GDBusMethodInvocation *invocation, gpointer user_data) {
@@ -715,6 +804,10 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     set_vcp(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetVcpMetadata") == 0) {
     get_vcp_metadata(parameters, invocation);
+  } else if (g_strcmp0(method_name, "GetSleepMultiplier") == 0) {
+    get_sleep_multiplier(parameters, invocation);
+  } else if (g_strcmp0(method_name, "SetSleepMultiplier") == 0) {
+    set_sleep_multiplier(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetCapabilitiesString") == 0) {
     get_capabilities_string(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetCapabilitiesMetadata") == 0) {
@@ -737,11 +830,11 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else if (g_strcmp0(property_name, "Verify") == 0) {
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   }
-  else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
-#if DDCUTIL_VMAJOR >= 2
-    ret = g_variant_new_double(ddca_get_sleep_multiplier());
+  else if (g_strcmp0(property_name, "DynamicSleep") == 0) {
+#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+#elif DDCUTIL_VMAJOR < 2
 #else
-    ret = g_variant_new_double(ddca_get_default_sleep_multiplier());
+    ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
 #endif
   }
   else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
@@ -779,11 +872,11 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   if (g_strcmp0(property_name, "Verify") == 0) {
     ddca_enable_verify(g_variant_get_boolean(value));
   }
-  else if (g_strcmp0(property_name, "SleepMultiplier") == 0) {
-#if DDCUTIL_VMAJOR >= 2
-    ddca_set_sleep_multiplier(g_variant_get_double(value));
-#elif DDCUTIL_VMAJOR
-    ddca_set_default_sleep_multiplier(g_variant_get_double(value));
+  else if (g_strcmp0(property_name, "DynamicSleep") == 0) {
+#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+#elif DDCUTIL_VMAJOR < 2
+#else
+    ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
 #endif
   }
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
