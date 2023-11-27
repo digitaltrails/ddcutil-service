@@ -88,4 +88,6 @@ status_values = ddcutil_proxy.StatusValues
 for value, name in status_values.items():
     print(f"  {value}: {name}")
 
-
+print(f"\n{ddcutil_proxy.OutputLevel=}")
+ddcutil_proxy.OutputLevel = 20
+print(f"{ddcutil_proxy.OutputLevel=}")

@@ -49,7 +49,7 @@
 /*
  * Demonstrations of two ways of raising d-bus signals:
  */
-#define COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
+#undef COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
 #undef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
 
 static GDBusNodeInfo *introspection_data = NULL;
@@ -159,9 +159,9 @@ static const gchar introspection_xml[] =
     "    <property type='s' name='InterfaceVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
-    "    <property type='d' name='Verify' access='readwrite'/>"
+    "    <property type='b' name='Verify' access='readwrite'/>"
     "    <property type='d' name='SleepMultiplier' access='readwrite'/>"
-    "    <property type='y' name='OutputLevel' access='readwrite'/>"
+    "    <property type='u' name='OutputLevel' access='readwrite'/>"
 
     "  </interface>"
     "</node>";
@@ -768,7 +768,7 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     ret = value;
   }
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
-    ret = g_variant_new_byte(ddca_get_output_level());
+    ret = g_variant_new_uint32(ddca_get_output_level());
   }
   return ret;
 }
@@ -787,7 +787,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
 #endif
   }
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
-    ddca_set_output_level(g_variant_get_byte(value));
+    ddca_set_output_level(g_variant_get_uint32(value));
     if (get_service_output_level() & DDCA_OL_NORMAL) {
       g_printf("New output_level=%x\n", get_service_output_level());
     }

@@ -101,16 +101,16 @@ for vdu in vdu_list:
     feature_name, desc, is_ro, is_wo, is_rw, is_complex, is_continuous, _, _ = vcp_metadata
     print(f"metadata: {is_rw=} {is_complex=} {is_continuous=}\n")
 
-    vpc_code_array = QDBusArgument()
-    vpc_code_array.beginArray(QMetaType.UChar)
-    vpc_code_array.add(QDBusArgument(BRIGHTNESS_VCP, QMetaType.UChar))
-    vpc_code_array.add(QDBusArgument(CONTRAST_VCP, QMetaType.UChar))
-    vpc_code_array.endArray(),
+    vcp_code_array = QDBusArgument()
+    vcp_code_array.beginArray(QMetaType.UChar)
+    vcp_code_array.add(QDBusArgument(BRIGHTNESS_VCP, QMetaType.UChar))
+    vcp_code_array.add(QDBusArgument(CONTRAST_VCP, QMetaType.UChar))
+    vcp_code_array.endArray()
     result = ddcutil_dbus_iface.call(
         "GetMultipleVcp",
         -1,
         vdu.edid_txt,
-        vpc_code_array,
+        vcp_code_array,
         QDBusArgument(0, QMetaType.UInt))
     print(result.arguments())
     values, status, errmsg = result.arguments()
@@ -131,4 +131,12 @@ print(status_values)
 for value, name in status_values.items():
     print(f"  {value}: {name}")
 
+output_level = ddcutil_dbus_props.call("Get", "com.ddcutil.DdcutilInterface", "OutputLevel").arguments()[0]
+print(f"\n{output_level=}\n")
+ddcutil_dbus_props.call("Set",
+                        "com.ddcutil.DdcutilInterface",
+                        "OutputLevel",
+                        QDBusVariant(QDBusArgument(20, QMetaType.UInt)))
 
+output_level = ddcutil_dbus_props.call("Get", "com.ddcutil.DdcutilInterface", "OutputLevel").arguments()[0]
+print(f"{output_level=}\n")
