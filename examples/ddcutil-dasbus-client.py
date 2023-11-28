@@ -31,7 +31,7 @@ DO_SET_VCP_TEST = False   # If enabled, a test will run to change VDU brightness
 BRIGHTNESS_VCP = 0x10
 CONTRAST_VCP = 0x12
 
-DBUS_TIMEOUT_MILLIS = 1000
+DBUS_TIMEOUT_MILLIS = 5000
 
 bus = SessionMessageBus()
 
@@ -39,8 +39,11 @@ ddcutil_proxy = bus.get_proxy(
     "com.ddcutil.DdcutilService",  # The bus name
     "/com/ddcutil/DdcutilObject",  # The object name
 )
+ddcutil_proxy.DynamicSleep = False
+ddcutil_proxy.OutputLevel = 0xff
 
-ddcutil_proxy.OutputLevel = 20
+print(f"\n{ddcutil_proxy.DynamicSleep=}")
+print(f"{ddcutil_proxy.OutputLevel=}")
 
 # Create a namedtuple that matches the attributes returned by the detect method
 DetectedAttributes = namedtuple("DetectedAttributes", ddcutil_proxy.AttributesReturnedByDetect)
@@ -88,6 +91,7 @@ status_values = ddcutil_proxy.StatusValues
 for value, name in status_values.items():
     print(f"  {value}: {name}")
 
-print(f"\n{ddcutil_proxy.OutputLevel=}")
-ddcutil_proxy.OutputLevel = 20
-print(f"{ddcutil_proxy.OutputLevel=}")
+
+
+
+

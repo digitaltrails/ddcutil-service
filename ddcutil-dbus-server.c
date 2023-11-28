@@ -906,15 +906,16 @@ struct  Signal_Source {
 typedef struct Signal_Source Signal_Source;
 
 static gboolean signal_prepare(GSource *source, gint *timeout) {
-  *timeout = 0;
-  if (dbus_connection == NULL) {
+  *timeout = 1000;
+  if (dbus_connection == NULL || display_detection_event == NULL) {
     return FALSE;
   }
+  g_printf("display_detection_event ready\n");
   return TRUE;
 }
 
 static gboolean signal_check(GSource *source) {
-  if (dbus_connection == NULL) {
+  if (dbus_connection == NULL || display_detection_event == NULL) {
     return FALSE;
   }
   return TRUE;
@@ -924,15 +925,22 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
   //Signal_Source *signal_source = (Signal_Source *) source;
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
-    printf("3 null connection\n");
+    g_printf("3 null connection\n");
     return FALSE;
   }
+  static int count = 0;
+  g_printf("dispatch called\n");
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
+  if (count == 0) {
+    event_ptr = g_malloc(sizeof(DDCA_Display_Detection_Event));
+    event_ptr->event_type = -1; // Just testing
+    count++;
+  }
   if (event_ptr != NULL) {
-    if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
-      printf("signal_dispatch emit ConnectedDisplaysChanged now\n");
-    }
+    //if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
+      g_printf("signal_dispatch emit ConnectedDisplaysChanged now\n");
+    //}
     g_dbus_connection_emit_signal (dbus_connection,
                                    NULL,
                                    "/com/ddcutil/DdcutilObject",
@@ -948,14 +956,15 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
 
 #if defined(COMPILE_TIMER_SIGNAL_SOURCE)
 static gboolean handle_polling_timeout (gpointer user_data) {
+  g_print("Timer ping\n");
   GDBusConnection *connection = G_DBUS_CONNECTION (user_data);
   GError *local_error = NULL;
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
   if (event_ptr != NULL) {
-    if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
+    //if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
       g_printf("polling_timeout emit ConnectedDisplaysChanged\n");
-    }
+    //}
     g_dbus_connection_emit_signal (connection,
                                    NULL,
                                    "/com/ddcutil/DdcutilObject",
