@@ -1056,8 +1056,8 @@ int main(int argc, char *argv[]) {
   }
   argv_null_terminated[argc - 1] = NULL;
   char *arg_string = g_strjoinv(" ", argv_null_terminated);
-  g_print("Calling ddca_init %s\n", arg_string);
-  ddca_init(arg_string,0,0);
+  g_print("Calling ddca_init %d %d '%s'\n", ddca_syslog_level, ddca_init_options, arg_string);
+  ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
 #endif
 
 #if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
