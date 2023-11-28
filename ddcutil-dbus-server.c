@@ -4,13 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <spawn.h>
-#include <assert.h>
-
 
 #include <ddcutil_c_api.h>
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
-
 
 /* ----------------------------------------------------------------------------------------------------
  * ddcutil-dbus-server.c
@@ -44,13 +41,20 @@
  *                    https://github.com/rockowitz/ddcutil/tree/2.0.2-dev/src/public
  */
 
-#define DDCUTIL_SERVICE_VERSION_STRING "1.0.0"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.0"
 
-/*
- * Demonstrations of two ways of raising d-bus signals:
- */
-#undef COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
-#undef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
+#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+  #define HAS_OPTION_ARGUMENTS
+  #define HAS_DDCA_GET_SLEEP_MULTIPLIER
+#elif DDCUTIL_VMAJOR >= 2
+  #undef COMPILE_TIMER_SIGNAL_SOURCE
+  #define COMPILE_MAIN_LOOP_SIGNAL_SOURCE
+  #define HAS_OPTION_ARGUMENTS
+  #define HAS_INDIVIDUAL_SLEEP_MULTIPLIER
+  #define HAS_DYNAMIC_SLEEP
+#else
+  #define HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
+#endif
 
 static GDBusNodeInfo *introspection_data = NULL;
 
@@ -284,7 +288,7 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
   g_dbus_method_invocation_return_value(invocation, result);
 
   gchar** argv;
-#if DDCUTIL_VMAJOR >= 2
+#if defined(HAS_OPTION_ARGUMENTS)
   gchar *args_str = "";
   if (syslog_level != 0) {
     args_str = g_strdup_printf("%s --ddca-syslog-level=%d", args_str, syslog_level);
@@ -578,7 +582,8 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
             if (get_service_output_level() & DDCA_OL_VERBOSE) {
               g_printf("CommandDef %x %s \n", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
             }
-            g_variant_builder_add(command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+            g_variant_builder_add(
+              command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
             g_free(command_desc);  // TODO is this OK, or are we freeing too early?
           }
 
@@ -728,28 +733,24 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
     g_printf("GetSleepMultiplier display_num=%d, edid=%.30s...\n", display_number, hex_edid);
   }
-
-  static DDCA_Sleep_Multiplier multiplier;
+  double multiplier;
   DDCA_Status status = 0;
-#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+#if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
   multiplier = ddca_get_sleep_multiplier();
-#elif DDCUTIL_VMAJOR < 2
+#elif defined(HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
   multiplier = ddca_get_default_sleep_multiplier();
-#else
+#elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
-    DDCA_Display_Handle disp_handle;
-    ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    status = ddca_get_current_display_sleep_multiplier(disp_handle, &multiplier);
-    ddca_close_display(disp_handle);
+    status = ddca_get_current_display_sleep_multiplier(vdu_info->dref, &multiplier);
   }
+  ddca_free_display_info_list(info_list);
 #endif
   char *message_text = get_status_message(status);
-  GVariant *result = g_variant_new("(dis)", (double) multiplier, status, message_text);
+  GVariant *result = g_variant_new("(dis)", multiplier, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
-  ddca_free_display_info_list(info_list);
   free(hex_edid);
   free(message_text);
 }
@@ -767,26 +768,22 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
              new_multiplier, display_number, hex_edid);
   }
 
-#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
+#if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
   ddca_set_sleep_multiplier(new_multiplier);
-#elif DDCUTIL_VMAJOR < 2
+#elif defined(HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
   ddca_set_default_sleep_multiplier(new_multiplier);
-#endif
+#elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
-    DDCA_Display_Handle disp_handle;
-    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
-      status = ddca_set_display_sleep_multiplier(disp_handle, new_multiplier);
-      ddca_close_display(disp_handle);
-    }
+    status = ddca_set_display_sleep_multiplier(vdu_info->dref, new_multiplier);
   }
+  ddca_free_display_info_list(info_list);
+#endif
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(is)", status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
-  ddca_free_display_info_list(info_list);
   g_free(hex_edid);
   free(message_text);
 }
@@ -825,16 +822,16 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     ret = g_variant_new_string(ddca_ddcutil_extended_version_string());
   }
   else   if (g_strcmp0(property_name, "InterfaceVersionString") == 0) {
-    ret = g_variant_new_string(DDCUTIL_SERVICE_VERSION_STRING);
+    ret = g_variant_new_string(DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
   }
   else if (g_strcmp0(property_name, "Verify") == 0) {
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   }
   else if (g_strcmp0(property_name, "DynamicSleep") == 0) {
-#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
-#elif DDCUTIL_VMAJOR < 2
-#else
-    ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
+#if defined(HAS_DYNAMIC_SLEEP)
+    if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
+      ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
+    }
 #endif
   }
   else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
@@ -873,9 +870,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
     ddca_enable_verify(g_variant_get_boolean(value));
   }
   else if (g_strcmp0(property_name, "DynamicSleep") == 0) {
-#if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
-#elif DDCUTIL_VMAJOR < 2
-#else
+#if defined(HAS_DYNAMIC_SLEEP)
     ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
 #endif
   }
@@ -888,8 +883,19 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   return *error == NULL;
 }
 
+#if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
+static DDCA_Display_Detection_Event *display_detection_event = NULL;
 
-#ifdef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
+static void display_detection_callback(DDCA_Display_Detection_Event event) {
+  g_printf("Triggered display_detection_callback %d\n", event.event_type);
+  display_detection_event = g_malloc(sizeof(DDCA_Display_Detection_Event));
+  *display_detection_event = event;
+}
+#endif
+
+GDBusConnection *dbus_connection = NULL;
+
+#if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE)
 
 /*** Test code that generates a signal conditionally during the g-main-loop ***/
 
@@ -921,42 +927,44 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
     printf("3 null connection\n");
     return FALSE;
   }
-  static time_t last_time = 0;
-  time_t now = time(0);
-  if (now - last_time > 5) {
-    last_time = now;
+  DDCA_Display_Detection_Event *event_ptr = display_detection_event;
+  display_detection_event = NULL;
+  if (event_ptr != NULL) {
     if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
-      printf("signal_dispatch emit ConnectedDisplaysChanged now %ld\n", now);
+      printf("signal_dispatch emit ConnectedDisplaysChanged now\n");
     }
     g_dbus_connection_emit_signal (dbus_connection,
                                    NULL,
                                    "/com/ddcutil/DdcutilObject",
                                    "com.ddcutil.DdcutilInterface",
                                    "ConnectedDisplaysChanged",
-                                   g_variant_new ("(iu)", 0, 0),
+                                   g_variant_new ("(iu)", 0, event_ptr->event_type),
                                    &local_error);
+    g_free(event_ptr);
   }
   return TRUE;
 }
 #endif
 
-#ifdef COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
-
-/*** Test code that generates a signal from a timer attached to the d-bus connection ***/
-
+#if defined(COMPILE_TIMER_SIGNAL_SOURCE)
 static gboolean handle_polling_timeout (gpointer user_data) {
   GDBusConnection *connection = G_DBUS_CONNECTION (user_data);
   GError *local_error = NULL;
-  if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
-    g_printf("polling_timeout emit ConnectedDisplaysChanged\n");
+  DDCA_Display_Detection_Event *event_ptr = display_detection_event;
+  display_detection_event = NULL;
+  if (event_ptr != NULL) {
+    if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
+      g_printf("polling_timeout emit ConnectedDisplaysChanged\n");
+    }
+    g_dbus_connection_emit_signal (connection,
+                                   NULL,
+                                   "/com/ddcutil/DdcutilObject",
+                                   "com.ddcutil.DdcutilInterface",
+                                   "ConnectedDisplaysChanged",
+                                   g_variant_new ("(iu)", 0, event_ptr->event_type),
+                                   &local_error);
+    g_free(event_ptr);
   }
-  g_dbus_connection_emit_signal (connection,
-                                 NULL,
-                                 "/com/ddcutil/DdcutilObject",
-                                 "com.ddcutil.DdcutilInterface",
-                                 "ConnectedDisplaysChanged",
-                                 g_variant_new ("(iu)", 0, 0),
-                                 &local_error);
   return TRUE;
 }
 #endif
@@ -965,7 +973,7 @@ static gboolean handle_polling_timeout (gpointer user_data) {
 /* GDBUS service handlers */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
-GDBusConnection *dbus_connection = NULL;
+
 static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
   const char* object_path = "/com/ddcutil/DdcutilObject";
   dbus_connection = connection;
@@ -979,7 +987,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
   g_assert(registration_id > 0);
   g_print("Registered %s\n", object_path);
 
-#ifdef COMPILE_DEMO_SIGNAL_CONNECTION_TIMER
+#if defined(COMPILE_TIMER_SIGNAL_SOURCE)
   g_timeout_add_seconds (2,
                          handle_polling_timeout,
                          connection);
@@ -1001,7 +1009,7 @@ int main(int argc, char *argv[]) {
 
   bool version_request = FALSE;
 
-#if DDCUTIL_VMAJOR >= 2
+#if defined(HAS_OPTION_ARGUMENTS)
   gint ddca_syslog_level = 0;
   gint ddca_init_options = 0;
 #endif
@@ -1009,7 +1017,7 @@ int main(int argc, char *argv[]) {
   const GOptionEntry entries[] = {
     { "version", 'v', 0, G_OPTION_ARG_NONE, &version_request,
 "print ddcutil version, com.ddcutil.DdcUtilInterface version, and exit", NULL },
-#if DDCUTIL_VMAJOR >= 2
+#if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
       "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL },
     { "ddca-init-options", 'i', 0, G_OPTION_ARG_INT, &ddca_init_options,
@@ -1026,21 +1034,28 @@ int main(int argc, char *argv[]) {
     exit (1);
   }
 
-if (version_request) {
-  g_print("ddcutil %s com.ddcutil.DdcUtilInterface %s\n",
-    ddca_ddcutil_extended_version_string(), DDCUTIL_SERVICE_VERSION_STRING);
-  exit(1);
-}
+  if (version_request) {
+    g_print("ddcutil %s com.ddcutil.DdcUtilInterface %s\n",
+      ddca_ddcutil_extended_version_string(), DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
+    exit(1);
+  }
 
-#if DDCUTIL_VMAJOR >= 2
+#if defined(HAS_OPTION_ARGUMENTS)
   char *argv_null_terminated[argc];
   for (int i = 0; i < argc; i++) {
     argv_null_terminated[i] = argv[i + 2];
   }
   argv_null_terminated[argc - 1] = NULL;
   char *arg_string = g_strjoinv(" ", argv_null_terminated);
-
+  g_print("Calling ddca_init %s\n", arg_string);
   ddca_init(arg_string,0,0);
+#endif
+
+#if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
+  g_print("Registering display_detection_callback\n");
+  if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
+    ddca_register_display_detection_callback(display_detection_callback);
+  }
 #endif
 
   /* Build introspection data structures from XML.
@@ -1059,7 +1074,7 @@ if (version_request) {
 
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-#ifdef COMPILE_DEMO_SIGNAL_MAIN_LOOP_CUSTOM_SOURCE
+#ifdef COMPILE_MAIN_LOOP_SIGNAL_SOURCE
   GMainContext* loop_context = g_main_loop_get_context(loop);
   GSourceFuncs source_funcs = { signal_prepare, signal_check, signal_dispatch };
   GSource *source = g_source_new(&source_funcs, sizeof(Signal_Source));
