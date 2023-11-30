@@ -1017,6 +1017,7 @@ int main(int argc, char *argv[]) {
   g_set_prgname("ddcutil-dbus-server");
 
   bool version_request = FALSE;
+  bool introspect_request = FALSE;
 
 #if defined(HAS_OPTION_ARGUMENTS)
   gint ddca_syslog_level = 0;
@@ -1026,6 +1027,8 @@ int main(int argc, char *argv[]) {
   const GOptionEntry entries[] = {
     { "version", 'v', 0, G_OPTION_ARG_NONE, &version_request,
 "print ddcutil version, com.ddcutil.DdcUtilInterface version, and exit", NULL },
+    { "introspect", 'x', 0, G_OPTION_ARG_NONE, &introspect_request,
+"print introspection xml and exit", NULL },
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
       "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL },
@@ -1049,6 +1052,23 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  /* Build introspection data structures from XML.
+   */
+  introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
+  g_assert(introspection_data != NULL);
+
+  if (introspect_request) {
+#if defined(XML_FROM_INTROSPECTED_DATA)
+    GString *formatted_xml = g_string_new("");
+    g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml);
+#else
+    GString *formatted_xml = g_string_new(introspection_xml);
+    g_string_replace(formatted_xml, ">", ">\n", 0);
+#endif
+    g_print("%s\n", formatted_xml->str);
+    exit(1);
+  }
+
 #if defined(HAS_OPTION_ARGUMENTS)
   char *argv_null_terminated[argc];
   for (int i = 0; i < argc; i++) {
@@ -1061,16 +1081,12 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
-  g_print("Registering display_detection_callback\n");
+
   if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
+    g_print("Registering display_detection_callback\n");
     ddca_register_display_detection_callback(display_detection_callback);
   }
 #endif
-
-  /* Build introspection data structures from XML.
-   */
-  introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
-  g_assert(introspection_data != NULL);
 
   const guint owner_id = g_bus_own_name(
     G_BUS_TYPE_SESSION,
