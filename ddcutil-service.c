@@ -10,8 +10,8 @@
 #include <ddcutil_macros.h>
 
 /* ----------------------------------------------------------------------------------------------------
- * ddcutil-dbus-server.c
- * ---------------------
+ * ddcutil-service.c
+ * -----------------
  * A D-Bus server for libddcutil/ddcutil
  *
  *
@@ -47,8 +47,8 @@
   #define HAS_OPTION_ARGUMENTS
   #define HAS_DDCA_GET_SLEEP_MULTIPLIER
 #elif DDCUTIL_VMAJOR >= 2
-  #undef COMPILE_TIMER_SIGNAL_SOURCE
-  #define COMPILE_MAIN_LOOP_SIGNAL_SOURCE
+  #define COMPILE_TIMER_SIGNAL_SOURCE
+  #undef COMPILE_MAIN_LOOP_SIGNAL_SOURCE
   #define HAS_OPTION_ARGUMENTS
   #define HAS_INDIVIDUAL_SLEEP_MULTIPLIER
   #define HAS_DYNAMIC_SLEEP
@@ -956,21 +956,22 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
 
 #if defined(COMPILE_TIMER_SIGNAL_SOURCE)
 static gboolean handle_polling_timeout (gpointer user_data) {
-  g_print("Timer ping\n");
+  //g_print("Timer ping\n");
   GDBusConnection *connection = G_DBUS_CONNECTION (user_data);
   GError *local_error = NULL;
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
-  if (event_ptr != NULL) {
+  static int count = 0;
+  if (event_ptr != NULL || count++ == 0) {
     //if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
-      g_printf("polling_timeout emit ConnectedDisplaysChanged\n");
+      g_printf("polling_timeout emit ConnectedDisplaysChanged count=%d\n", count);
     //}
     g_dbus_connection_emit_signal (connection,
                                    NULL,
                                    "/com/ddcutil/DdcutilObject",
                                    "com.ddcutil.DdcutilInterface",
                                    "ConnectedDisplaysChanged",
-                                   g_variant_new ("(iu)", 0, event_ptr->event_type),
+                                   g_variant_new ("(iu)", 0, event_ptr != NULL ? event_ptr->event_type : 0),
                                    &local_error);
     g_free(event_ptr);
   }
@@ -1014,7 +1015,7 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
 
 int main(int argc, char *argv[]) {
   server_executable = argv[0];
-  g_set_prgname("ddcutil-dbus-server");
+  g_set_prgname("ddcutil-service");
 
   bool version_request = FALSE;
   bool introspect_request = FALSE;
@@ -1081,7 +1082,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
-
+  sleep(5);
   if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
     g_print("Registering display_detection_callback\n");
     ddca_register_display_detection_callback(display_detection_callback);

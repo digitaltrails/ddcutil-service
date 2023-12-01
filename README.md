@@ -1,5 +1,5 @@
-# ddcutil-dbus
-A D-Bus ddcutil server for control of DDC Monitors/VDUs
+# ddcutil-service 
+A D-Bus ddcutil service for control of DDC Monitors/VDUs
 
 This code is a work in progress, it is possibly buggy and the API may
 change when the requirements are better understood.
@@ -11,8 +11,8 @@ Testing using the d-feet D-Bus interactive GUI:
 1. start d-feet;
 2. press the session-bus button in the d-feet header;
 3. search for ddcutil.
-4. click on com.ddcutil.DdcutilServer
-5. open the Object Path com/ddcutil/DdcutilServer and 
+4. click on com.ddcutil.DdcutilService
+5. open the Object Path com/ddcutil/DdcutilService and 
    navigate down to the com.ddcutil.DdcutilInterface
 7. Double-click methods and properties to run them.
 
@@ -44,7 +44,7 @@ Manual steps for installing a dbus-daemon service file for auto-starting and
 auto-restarting the service are as follows:
 
 1. Edit `com.ddcutil.DdcutilService.service` and set the Exec location of 
-   the server executable (can be anywhere).
+   the service executable (can be anywhere).
 2. Install to: `/usr/share/dbus-1/services/com.ddutil.DdcutilService.service`
    Or maybe to: `$HOME/.local/share/dbus-1/services/com.ddutil.DdcutilService.service`
 3. Install the executable at the location set in step 1.
@@ -52,7 +52,7 @@ auto-restarting the service are as follows:
 5. Check service is available (use d-feet or any other test program).
 
 Installing the service file is optional. The service file enables autostart of 
-the service by `dbus-daemon`.  The server executable can be manually started 
+the service by `dbus-daemon`.  The service executable can be manually started 
 without the service file being installed.  
 
 ### Use with `vdu_controls`
