@@ -1,3 +1,6 @@
+#define G_LOG_USE_STRUCTURED
+#define G_LOG_DOMAIN "ddcutil-service"
+
 #include <gio/gio.h>
 #include <glib.h>
 #include <glib/gprintf.h>
@@ -40,6 +43,8 @@
  * Info on lbddcutil: https://www.ddcutil.com/api_main/ and the inline documentation the header files at
  *                    https://github.com/rockowitz/ddcutil/tree/2.0.2-dev/src/public
  */
+
+
 
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.0"
 
@@ -265,7 +270,7 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
       }
       if (*dinfo == NULL) {
         if (get_service_output_level() & DDCA_OL_VERBOSE) {
-          g_printf("Bad display ID %d %s?\n", display_number, hex_edid);
+          g_error("Bad display ID %d %s?\n", display_number, hex_edid);
         }
         status = DDCRC_INVALID_DISPLAY;
       }
@@ -281,8 +286,8 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
   g_variant_get(parameters, "(suu)", &libopts, &syslog_level, &opts);
   char *message_text = get_status_message(DDCRC_OK);
   if (get_service_output_level() & DDCA_OL_TERSE) {
-    g_printf("DdcaInit syslog_level=%x opts=%x libopts=%s\n", syslog_level, opts, libopts);
-    g_printf("DdcaInit status=%d message=%s\n", DDCRC_OK, message_text);
+    g_info("DdcaInit syslog_level=%x opts=%x libopts=%s\n", syslog_level, opts, libopts);
+    g_info("DdcaInit status=%d message=%s\n", DDCRC_OK, message_text);
   }
   GVariant *result = g_variant_new("(is)", DDCRC_OK, message_text);
   g_dbus_method_invocation_return_value(invocation, result);
@@ -322,7 +327,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   g_variant_get(parameters, "(u)", &flags);
 
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("Detect flags=%x\n", flags);
+    g_info("Detect flags=%x\n", flags);
   }
   const DDCA_Status detect_status = ddca_redetect_displays();
   char *detect_message_text = get_status_message(detect_status);
@@ -332,7 +337,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *list_message_text = get_status_message(list_status);
 
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("Detect status=%d message=%s\n", list_status, list_message_text);
+    g_info("Detect status=%d message=%s\n", list_status, list_message_text);
   }
 
   // see https://docs.gtk.org/glib/struct.VariantBuilder.html
@@ -348,7 +353,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     gchar *safe_sn = sanitize_utf8(vdu_info->sn);
     gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
     if (get_service_output_level() & DDCA_OL_VERBOSE) {
-      g_printf("Detected %s %s %s\n", safe_mfg_id, safe_model, safe_sn);
+      g_info("Detected %s %s %s\n", safe_mfg_id, safe_model, safe_sn);
     }
 
     g_variant_builder_add(
@@ -385,7 +390,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   g_variant_get(parameters, "(isyu)", &display_number, &hex_edid, &vcp_code, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("GetVcp vcp_code=%d display_num=%d, edid=%.30s...\n", vcp_code, display_number, hex_edid);
+    g_info("GetVcp vcp_code=%d display_num=%d, edid=%.30s...\n", vcp_code, display_number, hex_edid);
   }
   uint16_t current_value = 0;
   uint16_t max_value = 0;
@@ -423,7 +428,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   GVariantIter *vcp_code_iter;
   g_variant_get(parameters, "(isayu)", &display_number, &hex_edid, &vcp_code_iter, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("GetMultipleVcp display_num=%d, edid=%.30s...\n", display_number, hex_edid);
+    g_info("GetMultipleVcp display_num=%d, edid=%.30s...\n", display_number, hex_edid);
   }
   const int number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
   const u_int8_t vcp_codes[number_of_vcp_codes];
@@ -454,7 +459,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
           free(formatted_value);
         }
         else if (get_service_output_level() & DDCA_OL_VERBOSE) {
-          g_printf("GetMultipleVcp failed to get value for display %d vcp_code %d\n", display_number, vcp_code);
+          g_error("GetMultipleVcp failed to get value for display %d vcp_code %d\n", display_number, vcp_code);
         }
       }
       ddca_close_display(disp_handle);
@@ -477,7 +482,7 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   g_variant_get(parameters, "(isyqu)", &display_number, &hex_edid, &vcp_code, &new_value, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...\n",
+    g_info("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...\n",
              vcp_code, new_value, display_number, hex_edid);
   }
   DDCA_Display_Info_List *info_list = NULL;
@@ -509,7 +514,7 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
 
   g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("GetCapabilitiesString display_num=%d, edid=%.30s...\n", display_number, hex_edid);
+    g_info("GetCapabilitiesString display_num=%d, edid=%.30s...\n", display_number, hex_edid);
   }
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
@@ -542,7 +547,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
 
   g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("GetCapabilitiesMetadata display_num=%d, edid=%.30s...\n", display_number, hex_edid);
+    g_info("GetCapabilitiesMetadata display_num=%d, edid=%.30s...\n", display_number, hex_edid);
   }
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
@@ -572,7 +577,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
         if (status == 0) {
           DDCA_Cap_Vcp *vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
           if (get_service_output_level() & DDCA_OL_VERBOSE) {
-            g_printf("vcp_code_ct=%d\n", parsed_capabilities_ptr->vcp_code_ct);
+            g_info("vcp_code_ct=%d\n", parsed_capabilities_ptr->vcp_code_ct);
           }
           mccs_version_major = parsed_capabilities_ptr->version_spec.major;
           mccs_version_minor = parsed_capabilities_ptr->version_spec.minor;
@@ -580,7 +585,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
             char *command_desc = g_strdup_printf("desc of %d", parsed_capabilities_ptr->cmd_codes[command_idx]);
             //ddca_cmd_code_name();
             if (get_service_output_level() & DDCA_OL_VERBOSE) {
-              g_printf("CommandDef %x %s \n", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+              g_info("CommandDef %x %s \n", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
             }
             g_variant_builder_add(
               command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
@@ -594,7 +599,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
             status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true, &metadata_ptr);  // TODO valgrind complains
             if (status == 0) {
               if (get_service_output_level() & DDCA_OL_VERBOSE) {
-                g_printf("FeatureDef: %x %s %s\n",
+                g_info("FeatureDef: %x %s %s\n",
                          metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
               }
               GVariantBuilder value_dict_builder_instance;  // Allocate on the stack for easier memory management.
@@ -607,7 +612,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
                     if (sl_ptr->value_code == value_code) {
                       if (get_service_output_level() & DDCA_OL_VERBOSE) {
-                        g_printf("  ValueDef match feature %x value %d %s\n",
+                        g_info("  ValueDef match feature %x value %d %s\n",
                                  feature_def->feature_code, sl_ptr->value_code, sl_ptr->value_name);
                       }
                       g_variant_builder_add(value_dict_builder, "{ys}", sl_ptr->value_code, sl_ptr->value_name);
@@ -616,7 +621,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                   }
                 }
                 if (get_service_output_level() & DDCA_OL_VERBOSE) {
-                  g_printf("  ValueDef feature %x value %d %s\n",
+                  g_info("  ValueDef feature %x value %d %s\n",
                                 feature_def->feature_code, value_code, value_name);
                 }
                 g_variant_builder_add(value_dict_builder, "{ys}", value_code, value_name);
@@ -631,7 +636,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
               ddca_free_feature_metadata(metadata_ptr);
             }
             else {
-              g_printf("%x %s\n", feature_def->feature_code, get_status_message(status));
+              g_error("%x %s\n", feature_def->feature_code, get_status_message(status));
             }
           }
         }
@@ -675,7 +680,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   u_int32_t flags;
 
   g_variant_get(parameters, "(isyu)", &display_number, &hex_edid, &vcp_code, &flags);
-  g_printf("GetVcpMetadata display_num=%d, edid=%.30s...\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
+  g_info("GetVcpMetadata display_num=%d, edid=%.30s...\nvcp_code=%d\n", display_number, hex_edid, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
@@ -731,7 +736,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 
   g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("GetSleepMultiplier display_num=%d, edid=%.30s...\n", display_number, hex_edid);
+    g_info("GetSleepMultiplier display_num=%d, edid=%.30s...\n", display_number, hex_edid);
   }
   double multiplier;
   DDCA_Status status = 0;
@@ -764,7 +769,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 
   g_variant_get(parameters, "(isdu)", &display_number, &hex_edid, &new_multiplier, &flags);
   if (get_service_output_level() & DDCA_OL_VERBOSE) {
-    g_printf("SetSleepMultiplier value=%f display_num=%d edid=%.30s...\n",
+    g_info("SetSleepMultiplier value=%f display_num=%d edid=%.30s...\n",
              new_multiplier, display_number, hex_edid);
   }
 
@@ -877,7 +882,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_uint32(value));
     if (get_service_output_level() & DDCA_OL_NORMAL) {
-      g_printf("New output_level=%x\n", get_service_output_level());
+      g_info("New output_level=%x\n", get_service_output_level());
     }
   }
   return *error == NULL;
@@ -887,7 +892,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
 static DDCA_Display_Detection_Event *display_detection_event = NULL;
 
 static void display_detection_callback(DDCA_Display_Detection_Event event) {
-  g_printf("Triggered display_detection_callback %d\n", event.event_type);
+  g_info("Triggered display_detection_callback %d\n", event.event_type);
   display_detection_event = g_malloc(sizeof(DDCA_Display_Detection_Event));
   *display_detection_event = event;
 }
@@ -910,7 +915,7 @@ static gboolean signal_prepare(GSource *source, gint *timeout) {
   if (dbus_connection == NULL || display_detection_event == NULL) {
     return FALSE;
   }
-  g_printf("display_detection_event ready\n");
+  g_info("display_detection_event ready\n");
   return TRUE;
 }
 
@@ -925,11 +930,11 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
   //Signal_Source *signal_source = (Signal_Source *) source;
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
-    g_printf("3 null connection\n");
+    g_info("3 null connection\n");
     return FALSE;
   }
   static int count = 0;
-  g_printf("dispatch called\n");
+  g_info("dispatch called\n");
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
   if (count == 0) {
@@ -939,7 +944,7 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
   }
   if (event_ptr != NULL) {
     //if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
-      g_printf("signal_dispatch emit ConnectedDisplaysChanged now\n");
+      g_info("signal_dispatch emit ConnectedDisplaysChanged now\n");
     //}
     g_dbus_connection_emit_signal (dbus_connection,
                                    NULL,
@@ -964,7 +969,7 @@ static gboolean handle_polling_timeout (gpointer user_data) {
   static int count = 0;
   if (event_ptr != NULL || count++ == 0) {
     //if (ddca_get_output_level() >= DDCA_OL_VERBOSE) {
-      g_printf("polling_timeout emit ConnectedDisplaysChanged count=%d\n", count);
+      g_info("polling_timeout emit ConnectedDisplaysChanged count=%d\n", count);
     //}
     g_dbus_connection_emit_signal (connection,
                                    NULL,
@@ -995,7 +1000,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
                                       NULL,                    /* user_data_free_func */
                                       NULL);                   /* GError** */
   g_assert(registration_id > 0);
-  g_print("Registered %s\n", object_path);
+  g_info("Registered %s\n", object_path);
 
 #if defined(COMPILE_TIMER_SIGNAL_SOURCE)
   g_timeout_add_seconds (2,
@@ -1005,15 +1010,18 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 }
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  g_print("Name acquired %s\n", name);
+  g_info("Name acquired %s\n", name);
 }
 
 static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  g_print("Lost registration - is another instance already registered?\n");
+  g_error("Lost registration - is another instance already registered?\n");
   exit(1);
 }
 
 int main(int argc, char *argv[]) {
+
+  g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, TRUE);  // Define log level if not already set
+
   server_executable = argv[0];
   g_set_prgname("ddcutil-service");
 
@@ -1077,14 +1085,14 @@ int main(int argc, char *argv[]) {
   }
   argv_null_terminated[argc - 1] = NULL;
   char *arg_string = g_strjoinv(" ", argv_null_terminated);
-  g_print("Calling ddca_init %d %d '%s'\n", ddca_syslog_level, ddca_init_options, arg_string);
+  g_info("Calling ddca_init %d %d '%s'\n", ddca_syslog_level, ddca_init_options, arg_string);
   ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
 #endif
 
 #if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
   sleep(5);
   if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
-    g_print("Registering display_detection_callback\n");
+    g_info("Registering display_detection_callback\n");
     ddca_register_display_detection_callback(display_detection_callback);
   }
 #endif
