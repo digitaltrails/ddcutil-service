@@ -251,9 +251,11 @@ static char *get_status_message(const DDCA_Status status) {
   return message_text;
 }
 
-static DDCA_Status get_display_info(const int display_number, const char *hex_edid,
+static DDCA_Status get_display_info(const int display_number, const char *edid_encoded,
                             DDCA_Display_Info_List **dlist, DDCA_Display_Info **dinfo) {
-    DDCA_Status status = ddca_get_display_info_list2(0, dlist);
+  *dinfo = NULL;
+  DDCA_Status status = ddca_get_display_info_list2(0, dlist);
+
     if (status == 0) {
       for (int ndx = 0; ndx < (*dlist)->ct; ndx++) {
         if (display_number == (*dlist)->info[ndx].dispno) {
@@ -261,15 +263,15 @@ static DDCA_Status get_display_info(const int display_number, const char *hex_ed
           break;
         }
         gchar *dlist_edid_encoded = edid_encode((*dlist)->info[ndx].edid_bytes);
-        if (hex_edid != NULL && strcmp(hex_edid, dlist_edid_encoded) == 0) {
+        if (edid_encoded != NULL && strcmp(edid_encoded, dlist_edid_encoded) == 0) {
           *dinfo = &((*dlist)->info[ndx]);
-          free(dlist_edid_encoded);
+          g_free(dlist_edid_encoded);
           break;
         }
-        free(dlist_edid_encoded);
+        g_free(dlist_edid_encoded);
       }
       if (*dinfo == NULL) {
-        g_error("Bad display ID %d %s?", display_number, hex_edid);
+        //g_error("Bad display ID %d %-30s?", display_number, edid_encoded);
         status = DDCRC_INVALID_DISPLAY;
       }
     }
