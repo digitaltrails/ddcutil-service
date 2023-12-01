@@ -329,7 +329,7 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   // If running under dbus-daemon a respawn is not necessary except that
   // we want to pass arguments.
-  struct sigaction arg = {
+  const struct sigaction arg = {
     .sa_handler=SIG_IGN,
     .sa_flags=SA_NOCLDWAIT // Never wait for termination of a child process.
   };
@@ -363,7 +363,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqsu)"));
   for (int ndx = 0; ndx < dlist->ct; ndx++) {
-    DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+    const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
     gchar *safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
     gchar *safe_model = sanitize_utf8(vdu_info->model_name);//"xxxxwww\xF0\xA4\xADiii" );
     gchar *safe_sn = sanitize_utf8(vdu_info->sn);
@@ -588,7 +588,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
         status = ddca_parse_capabilities_string(caps_text, &parsed_capabilities_ptr);
 
         if (status == 0) {
-          DDCA_Cap_Vcp *vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
+          const DDCA_Cap_Vcp *vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
 
           g_debug("vcp_code_ct=%d", parsed_capabilities_ptr->vcp_code_ct);
 
@@ -605,10 +605,11 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
           }
 
           for (int feature_idx = 0; feature_idx < parsed_capabilities_ptr->vcp_code_ct; feature_idx++) {
-            DDCA_Cap_Vcp *feature_def = vcp_feature_array + feature_idx;
+            const DDCA_Cap_Vcp *feature_def = vcp_feature_array + feature_idx;
             DDCA_Feature_Metadata *metadata_ptr;
 
-            status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true, &metadata_ptr);  // TODO valgrind complains
+            // TODO valgrind complains
+            status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true, &metadata_ptr);
             if (status == 0) {
               g_debug("FeatureDef: %x %s %s",
                       metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
@@ -616,15 +617,15 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
               GVariantBuilder *value_dict_builder = &value_dict_builder_instance;
               g_variant_builder_init(value_dict_builder, G_VARIANT_TYPE("a{ys}"));
               for (int value_idx = 0; value_idx < feature_def->value_ct; value_idx++) {
-                u_int8_t value_code = feature_def->values[value_idx];
+                const u_int8_t value_code = feature_def->values[value_idx];
                 char *value_name = "";
                 if (metadata_ptr->sl_values != NULL) {
-                  for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {
-                    if (sl_ptr->value_code == value_code) {
+                  for (const DDCA_Feature_Value_Entry *fve = metadata_ptr->sl_values; fve->value_code != 0; fve++) {
+                    if (fve->value_code == value_code) {
                       g_debug("  ValueDef match feature %x value %d %s",
-                                feature_def->feature_code, sl_ptr->value_code, sl_ptr->value_name);
-                      g_variant_builder_add(value_dict_builder, "{ys}", sl_ptr->value_code, sl_ptr->value_name);
-                      value_name = sl_ptr->value_name;
+                                feature_def->feature_code, fve->value_code, fve->value_name);
+                      g_variant_builder_add(value_dict_builder, "{ys}", fve->value_code, fve->value_name);
+                      value_name = fve->value_name;
                     }
                   }
                 }
@@ -713,7 +714,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
           feature_description = metadata_ptr->feature_desc;
         }
         if (metadata_ptr->sl_values != NULL) {
-          for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
+          for (const DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
         }
         is_read_only = metadata_ptr->feature_flags & DDCA_RO;
         is_write_only = metadata_ptr->feature_flags & DDCA_WO;
@@ -746,7 +747,6 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   g_info("GetSleepMultiplier display_num=%d, edid=%.30s...", display_number, hex_edid);
 
   double multiplier;
-  DDCA_Status status = 0;
 #if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
   multiplier = ddca_get_sleep_multiplier();
 #elif defined(HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
@@ -754,7 +754,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     status = ddca_get_current_display_sleep_multiplier(vdu_info->dref, &multiplier);
   }
@@ -772,7 +772,6 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   char *hex_edid;
   u_int32_t flags;
   double new_multiplier;
-  DDCA_Status status = 0;
 
   g_variant_get(parameters, "(isdu)", &display_number, &hex_edid, &new_multiplier, &flags);
 
@@ -787,7 +786,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     status = ddca_set_display_sleep_multiplier(vdu_info->dref, new_multiplier);
   }
@@ -847,25 +846,21 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
 #endif
   }
   else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
-    GVariantBuilder *builder;
-    GVariant *value;
-    builder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+    GVariantBuilder *builder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
     for (int i = 0; attributes_returned_from_detect[i] != NULL; i++) {
       g_variant_builder_add(builder, "s", attributes_returned_from_detect[i]);
     }
-    value = g_variant_new("as", builder);
+    GVariant *value = g_variant_new("as", builder);
     g_variant_builder_unref(builder);
     ret = value;
   }
   else if (g_strcmp0(property_name, "StatusValues") == 0) {
-    GVariantBuilder *builder;
-    GVariant *value;
-    builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
     g_variant_builder_add(builder, "{is}", DDCRC_OK, ddca_rc_name(DDCRC_OK));
     for (int i = RCRANGE_DDC_START + 1; ddca_rc_name(-i) != NULL; i++) {
       g_variant_builder_add(builder, "{is}", -i, ddca_rc_name(-i));
     }
-    value = g_variant_new("a{is}", builder);
+    GVariant *value = g_variant_new("a{is}", builder);
     g_variant_builder_unref(builder);
     ret = value;
   }
@@ -894,7 +889,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
     g_message("New output_level=%x", get_service_output_level());
   }
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
-    bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
+    const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
     g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
   }
   return *error == NULL;
