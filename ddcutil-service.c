@@ -1036,7 +1036,7 @@ int main(int argc, char *argv[]) {
 "print ddcutil version, com.ddcutil.DdcUtilInterface version, and exit", NULL },
     { "introspect", 'x', 0, G_OPTION_ARG_NONE, &introspect_request,
 "print introspection xml and exit", NULL },
-    { "log-info", 'i', 0, G_OPTION_ARG_NONE, &log_info,
+    { "log-info", 'l', 0, G_OPTION_ARG_NONE, &log_info,
 "log service info and debug messages", NULL },
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
