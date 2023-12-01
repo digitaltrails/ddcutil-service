@@ -44,16 +44,14 @@
  *                    https://github.com/rockowitz/ddcutil/tree/2.0.2-dev/src/public
  */
 
-
-
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.0"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
   #define HAS_OPTION_ARGUMENTS
   #define HAS_DDCA_GET_SLEEP_MULTIPLIER
 #elif DDCUTIL_VMAJOR >= 2
-  #define COMPILE_TIMER_SIGNAL_SOURCE
-  #undef COMPILE_MAIN_LOOP_SIGNAL_SOURCE
+  #undef COMPILE_TIMER_SIGNAL_SOURCE  // Either provide a timer-based signal-source or a mainloop-based signal-source
+  #define COMPILE_MAIN_LOOP_SIGNAL_SOURCE
   #define HAS_OPTION_ARGUMENTS
   #define HAS_INDIVIDUAL_SLEEP_MULTIPLIER
   #define HAS_DYNAMIC_SLEEP
@@ -188,6 +186,7 @@ static const gchar introspection_xml[] =
     "    <property type='b' name='Verify' access='readwrite'/>"
     "    <property type='b' name='DynamicSleep' access='readwrite'/>"
     "    <property type='u' name='OutputLevel' access='readwrite'/>"
+    "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
 
     "  </interface>"
     "</node>";
@@ -229,6 +228,20 @@ static gchar *sanitize_utf8(const char *text) {
     ptr = ptr2 + 1;
   }
   return result;
+}
+
+bool enable_service_info_logging(bool enable, bool overwrite) {
+  if (enable) {
+    g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite);
+    return TRUE;
+  }
+  g_unsetenv("G_MESSAGES_DEBUG");
+  return FALSE;
+}
+
+bool is_service_info_logging() {
+  const char *value = g_getenv("G_MESSAGES_DEBUG");
+  return value != NULL && strstr(value, G_LOG_DOMAIN) != NULL;
 }
 
 static uint8_t get_service_output_level(void) {
@@ -850,6 +863,9 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
     ret = g_variant_new_uint32(ddca_get_output_level());
   }
+  else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
+    ret = g_variant_new_boolean(is_service_info_logging());
+  }
   return ret;
 }
 
@@ -867,6 +883,10 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_uint32(value));
     g_message("New output_level=%x", get_service_output_level());
+  }
+  else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
+    bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
+    g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
   }
   return *error == NULL;
 }
@@ -999,13 +1019,12 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
 
 int main(int argc, char *argv[]) {
 
-  g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, TRUE);  // Define log level if not already set
-
   server_executable = argv[0];
   g_set_prgname("ddcutil-service");
 
   bool version_request = FALSE;
   bool introspect_request = FALSE;
+  bool log_info = FALSE;
 
 #if defined(HAS_OPTION_ARGUMENTS)
   gint ddca_syslog_level = 0;
@@ -1017,6 +1036,8 @@ int main(int argc, char *argv[]) {
 "print ddcutil version, com.ddcutil.DdcUtilInterface version, and exit", NULL },
     { "introspect", 'x', 0, G_OPTION_ARG_NONE, &introspect_request,
 "print introspection xml and exit", NULL },
+    { "log-info", 'i', 0, G_OPTION_ARG_NONE, &log_info,
+"log service info and debug messages", NULL },
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
       "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL },
@@ -1039,6 +1060,11 @@ int main(int argc, char *argv[]) {
       ddca_ddcutil_extended_version_string(), DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
     exit(1);
   }
+
+  if (log_info) {
+    enable_service_info_logging(TRUE, FALSE);
+  }
+  g_message("ServiceInfoLogging %s", is_service_info_logging() ? "enabled" : "disabled");
 
   /* Build introspection data structures from XML.
    */
