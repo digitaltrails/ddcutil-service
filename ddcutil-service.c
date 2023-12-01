@@ -284,7 +284,7 @@ static DDCA_Status get_display_info(const int display_number, const char *edid_e
         g_free(dlist_edid_encoded);
       }
       if (*dinfo == NULL) {
-        //g_error("Bad display ID %d %-30s?", display_number, edid_encoded);
+        g_warning("Bad display ID %d %-30s?", display_number, edid_encoded);
         status = DDCRC_INVALID_DISPLAY;
       }
     }
@@ -464,7 +464,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
           free(formatted_value);
         }
         else {
-          g_error("GetMultipleVcp failed to get value for display %d vcp_code %d", display_number, vcp_code);
+          g_warning("GetMultipleVcp failed to get value for display %d vcp_code %d", display_number, vcp_code);
         }
       }
       ddca_close_display(disp_handle);
@@ -634,7 +634,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
               ddca_free_feature_metadata(metadata_ptr);
             }
             else {
-              g_error("%x %s", feature_def->feature_code, get_status_message(status));
+              g_warning("%x %s", feature_def->feature_code, get_status_message(status));
             }
           }
         }
@@ -1013,7 +1013,7 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 }
 
 static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  g_error("Lost registration - is another instance already registered?");
+  g_critical("Exiting: lost registration - is another instance already registered?");
   exit(1);
 }
 
