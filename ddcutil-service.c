@@ -1,17 +1,3 @@
-#define G_LOG_USE_STRUCTURED
-#define G_LOG_DOMAIN "ddcutil-service"
-
-#include <gio/gio.h>
-#include <glib.h>
-#include <glib/gprintf.h>
-#include <stdlib.h>
-#include <string.h>
-#include <spawn.h>
-
-#include <ddcutil_c_api.h>
-#include <ddcutil_status_codes.h>
-#include <ddcutil_macros.h>
-
 /* ----------------------------------------------------------------------------------------------------
  * ddcutil-service.c
  * -----------------
@@ -44,6 +30,29 @@
  *                    https://github.com/rockowitz/ddcutil/tree/2.0.2-dev/src/public
  */
 
+// Logging:
+// Using glib logging which defaults to syslog if running unde dbus-daemon, or the stderr otherwise
+// g_info() and g_debug are classed the same, and don't show by default
+// g_message() is higher and always shows.
+// g_warning() is for non fatal errors.
+// g_critical() is for serious errors (which, as a class, can optionally be set to terminate the progam).
+// g_error() is for programming errors and will automatically core dump - so don't use g_error().
+// There is also a special domain "all" - not sure if we want to use that.
+#define G_LOG_USE_STRUCTURED
+#define G_LOG_DOMAIN "ddcutil-service"  // set the log domain before including the glib headers.
+
+#include <gio/gio.h>
+#include <glib.h>
+#include <glib/gprintf.h>
+#include <stdlib.h>
+#include <string.h>
+#include <spawn.h>
+
+#include <ddcutil_c_api.h>
+#include <ddcutil_status_codes.h>
+#include <ddcutil_macros.h>
+
+
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.0"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -62,7 +71,7 @@
 static GDBusNodeInfo *introspection_data = NULL;
 
 /* Introspection data for the service we are exporting
- * TODO At some point this could possibly be moved to a file.
+ * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
  * TODO Needs Documentation, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
  */
 static const gchar introspection_xml[] =
@@ -232,10 +241,10 @@ static gchar *sanitize_utf8(const char *text) {
 
 bool enable_service_info_logging(bool enable, bool overwrite) {
   if (enable) {
-    g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite);
+    g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite);  // enable info & debug messages for our domain.
     return TRUE;
   }
-  g_unsetenv("G_MESSAGES_DEBUG");
+  g_unsetenv("G_MESSAGES_DEBUG"); // disable info & debug messages for our domain.
   return FALSE;
 }
 
