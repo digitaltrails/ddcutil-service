@@ -9,25 +9,25 @@ the D-Bus Session-Bus.
 
 Testing using the d-feet D-Bus interactive GUI: 
 1. start d-feet;
-2. press the session-bus button in the d-feet header;
-3. search for ddcutil.
-4. click on com.ddcutil.DdcutilService
-5. open the Object Path com/ddcutil/DdcutilService and 
-   navigate down to the com.ddcutil.DdcutilInterface
-7. Double-click methods and properties to run them.
+2. press the `session-bus` button in the d-feet header;
+3. search for `ddcutil`.
+4. click on `com.ddcutil.DdcutilService`
+5. open the *Object Path* `com/ddcutil/DdcutilService` and 
+   navigate down to the `com.ddcutil.DdcutilInterface`
+7. Double-click methods and properties to run or view them.
 
 Method inputs can be supplied as CSV, for example, Method Input to `GetVcp` could be 
 
 ```
 1,'',0x10
 ```
-This would access display `1`, blank-edid `''`, DDC VCP Feature code `0x10` (brightness). 
-VDU's are identified either by display-number or EDID-hex.
-
-D-feet can also query the service properties.  Some properties are R/W, but I don't think d-feet can write them.
+This would access display `1`, blank-edid `''`, DDC VCP Feature code `0x10` 
+(brightness). VDU's are identified either by display-number or base-64-encoded
+EDID.
 
 Several bash and python scripts that demonstrate using the service are included in the [examples](https://github.com/digitaltrails/ddcutil-dbus/tree/master/examples)
-folder.
+folder.  They cover the use of the `dbus-send` command line utiltity
+and the python `dasbus` and `QtDBus` libraries. 
 
 
 ### Installing the DdcutilService as a dbus-daemon auto-started service
