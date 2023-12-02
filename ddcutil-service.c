@@ -213,7 +213,7 @@ static const char *attributes_returned_from_detect[] = {
 };
 
 /**
- * PROGRAM_NAMEEncode the EDID for easy/efficient unmarshalling on clients.
+ * Encode the EDID for easy/efficient unmarshalling on clients.
  * @param edid binary EDID
  * @return a relatively compact character string encoded edid
  */
@@ -233,7 +233,7 @@ static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
 }
 
 /**
- * PROGRAM_NAMECreate a new string with invalid utf-8 edited out (replaced with ?)
+ * Create a new string with invalid utf-8 edited out (replaced with ?)
  * @param text suspect text
  * @return g_malloced text with invalid utf-8 edited out
  */
@@ -252,7 +252,7 @@ static gchar *sanitize_utf8(const char *text) {
 }
 
 /**
- * PROGRAM_NAMEEnabled logging of info and debug level messages for this service.
+ * Enable logging of info and debug level messages for this service.
  * @param enable whether to log or not
  * @param overwrite whether to overwrite any existing setting
  * @return the new enabled state
@@ -267,7 +267,7 @@ static bool enable_service_info_logging(bool enable, bool overwrite) {
 }
 
 /**
- * @brief Return whether the service currently set to log info and debug messages.
+ * @brief Return whether the service is set to log info and debug messages.
  * @return enabled state
  */
 static bool is_service_info_logging() {
@@ -299,8 +299,9 @@ static char *get_status_message(const DDCA_Status status) {
 /**
  * @brief Lookup DDCA_Display_Info for either a display_number or an encoded EDID.
  *
- * This is a help function used by functions that implement each service-method.
- * It does the donky work of looking up a display by number or EDID.
+ * This is a supporting-function, it's used by functions that implement the
+ * service's methods.  It does the donky work of looking up a display by
+ * number or EDID.
  *
  * @param display_number display number
  * @param edid_encoded text encoded edid
@@ -340,9 +341,9 @@ extern char** environ;
 /**
  * @brief Implement the DdcutilService Restart method
  *
- * Restarts the service.  In order to be able to call dca_init() apply
- * the libopts, syslog_level and opts), this function must terminate the
- * current process and forks a new one.
+ * Restarts the service. This function must terminate the current
+ * process and fork a new one so that dca_init() can then be called
+ * to apply libopts, syslog_level and opts.
  *
  * @param parameters containing the new libopts, syslog_level and opts (suu)
  * @param invocation the originating D-Bus call - returning a value to it before terminating the current process.
@@ -811,9 +812,9 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
         if (metadata_ptr->feature_desc != NULL) {
           feature_description = metadata_ptr->feature_desc;
         }
-        if (metadata_ptr->sl_values != NULL) {
-          for (const DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
-        }
+        // if (metadata_ptr->sl_values != NULL) {  // TODO - not used, do we need it?
+        //   for (const DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
+        // }
         is_read_only = metadata_ptr->feature_flags & DDCA_RO;
         is_write_only = metadata_ptr->feature_flags & DDCA_WO;
         is_rw = metadata_ptr->feature_flags & DDCA_RW;
@@ -915,7 +916,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 }
 
 /**
- * @brief Vectors DdcutilService D-Bus method calls off to the relevant implementating functions.
+ * @brief Handles DdcutilService D-Bus method-calls by passing them to implementating functions.
  *
  * This handler is registered with glib's D-Bus main loop to handle DdcutilService
  * method calls.
@@ -1077,19 +1078,26 @@ static void display_detection_callback(DDCA_Display_Detection_Event event) {
 }
 #endif
 
-GDBusConnection *dbus_connection = NULL;
+/*
+ * Our service connection - Will be set the the running connection when the bus is aquired.
+ */
+static GDBusConnection *dbus_connection = NULL;
 
-/*******************************************
- * The follow #if enables a main-loop implementation of a main-loop
+/*
+ * GDBUS service handler table - passed on registraction of the service
+ */
+static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
+
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+
+/*
+ * The follow code enables a main-loop implementation of a main-loop
  * custom event-source, a GSource.  It defines a polled source that
  * handles ddcutil displays-changed data and sends signals to
  * the D-Bus client.
  */
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 
-/*** Test code that generates a signal conditionally during the g-main-loop ***/
-
-struct  ConnectedDisplaysChanged_SignalSource {
+struct  ConnectedDisplaysChanged_SignalSource {  // Source structure including custom data (if any)
   GSource source;
   gchar cdc_data[129];  // do we actually have any data - no, maybe later.
 };
@@ -1172,9 +1180,6 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
 }
 #endif
 
-
-/* GDBUS service handlers */
-static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
 /**
  * @brief registered callback for when GD-Bus is ready to accept service registrations.
