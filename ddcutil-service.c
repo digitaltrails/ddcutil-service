@@ -62,8 +62,7 @@
   #define HAS_OPTION_ARGUMENTS
   #define HAS_DDCA_GET_SLEEP_MULTIPLIER
 #elif DDCUTIL_VMAJOR >= 2
-  #undef COMPILE_TIMER_SIGNAL_SOURCE  // Either provide a timer-based signal-source or a mainloop-based signal-source
-  #define COMPILE_MAIN_LOOP_SIGNAL_SOURCE
+  #define HAS_DISPLAYS_CHANGED_CALLBACK
   #define HAS_OPTION_ARGUMENTS
   #define HAS_INDIVIDUAL_SLEEP_MULTIPLIER
   #define HAS_DYNAMIC_SLEEP
@@ -848,6 +847,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   int display_number;
   char *hex_edid;
   u_int32_t flags;
+  DDCA_Status status = 0;
 
   g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
 
@@ -861,7 +861,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     status = ddca_get_current_display_sleep_multiplier(vdu_info->dref, &multiplier);
   }
@@ -887,12 +887,12 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   char *hex_edid;
   u_int32_t flags;
   double new_multiplier;
+  DDCA_Status status = 0;
 
   g_variant_get(parameters, "(isdu)", &display_number, &hex_edid, &new_multiplier, &flags);
 
   g_info("SetSleepMultiplier value=%f display_num=%d edid=%.30s...",
          new_multiplier, display_number, hex_edid);
-
 
 #if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
   ddca_set_sleep_multiplier(new_multiplier);
@@ -901,7 +901,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     status = ddca_set_display_sleep_multiplier(vdu_info->dref, new_multiplier);
   }
@@ -1028,7 +1028,7 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
 /**
  * @brief Handles calls to DdcutilService D-Bus org.freedesktop.DBus.Properties.Set.
  *
- * This handler is registered with glib's D-Bus main loop to handle DdcutilService
+ * This handler is registered with glib's D-Bus main-loop to handle DdcutilService
  * set-property calls.
  *
  * The handler only acts for the DdcutilService DdcutilInterface, so the only
@@ -1067,7 +1067,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   return *error == NULL;
 }
 
-#if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 static DDCA_Display_Detection_Event *display_detection_event = NULL;
 
 static void display_detection_callback(DDCA_Display_Detection_Event event) {
@@ -1085,15 +1085,15 @@ GDBusConnection *dbus_connection = NULL;
  * handles ddcutil displays-changed data and sends signals to
  * the D-Bus client.
  */
-#if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE)
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 
 /*** Test code that generates a signal conditionally during the g-main-loop ***/
 
-struct  Signal_Source {
+struct  ConnectedDisplaysChanged_SignalSource {
   GSource source;
-  gchar my_data[256];
+  gchar cdc_data[129];  // do we actually have any data - no, maybe later.
 };
-typedef struct Signal_Source Signal_Source;
+typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
 
 /**
  * @brief registered with main-loop as a custom prepare event function.
@@ -1106,7 +1106,7 @@ typedef struct Signal_Source Signal_Source;
  * @param timeout output parameter setting the timeout for next call
  * @return
  */
-static gboolean signal_prepare(GSource *source, gint *timeout) {
+static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
   *timeout = 1000;
   if (dbus_connection == NULL || display_detection_event == NULL) {
     return FALSE;
@@ -1123,7 +1123,7 @@ static gboolean signal_prepare(GSource *source, gint *timeout) {
  * @param source
  * @return
  */
-static gboolean signal_check(GSource *source) {
+static gboolean cdc_signal_check(GSource *source) {
   if (dbus_connection == NULL || display_detection_event == NULL) {
     return FALSE;
   }
@@ -1131,7 +1131,7 @@ static gboolean signal_check(GSource *source) {
 }
 
 /**
- * @brief registered with main-loop as a custom dispatch event function.
+ * @brief registered with main-loop to dispatch ConnectedDisplaysChanged signals.
  *
  * Called by the mainloop if the check function reports that an event
  * is ready.  This function should emit the signal to the D-Bus client.
@@ -1141,11 +1141,11 @@ static gboolean signal_check(GSource *source) {
  * @param user_data
  * @return
  */
-static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
-  //Signal_Source *signal_source = (Signal_Source *) source;
+static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
+  //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
-    g_warning("signal_dispatch null D-Bus connection");
+    g_warning("cdc_signal_dispatch null D-Bus connection");
     return FALSE;
   }
   static int count = 0;
@@ -1158,7 +1158,7 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
     count++;
   }
   if (event_ptr != NULL) {
-    g_debug("signal_dispatch emit ConnectedDisplaysChanged now");
+    g_debug("cdc_signal_dispatch emit ConnectedDisplaysChanged now");
     g_dbus_connection_emit_signal (dbus_connection,
                                    NULL,
                                    "/com/ddcutil/DdcutilObject",
@@ -1173,50 +1173,15 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
 #endif
 
 
-/*******************************************
- * The follow #if enables a periodic/polling-timer implementation of
- * the displays-changed callback to the D-Bus client.
- */
-#if defined(COMPILE_TIMER_SIGNAL_SOURCE)
-/**
- * @brief called each time the timer runs out
- *
- * This function checks for displays changed data and raises a signal
- * if any is present.
- *
- * @param user_data
- * @return
- */
-static gboolean handle_polling_timeout (gpointer user_data) {
-  //g_print("Timer ping\n");
-  GDBusConnection *connection = G_DBUS_CONNECTION (user_data);
-  GError *local_error = NULL;
-  DDCA_Display_Detection_Event *event_ptr = display_detection_event;
-  display_detection_event = NULL;
-  static int count = 0;
-  if (event_ptr != NULL || count++ == 0) {
-    g_debug("polling_timeout emit ConnectedDisplaysChanged count=%d", count);
-    g_dbus_connection_emit_signal (connection,
-                                   NULL,
-                                   "/com/ddcutil/DdcutilObject",
-                                   "com.ddcutil.DdcutilInterface",
-                                   "ConnectedDisplaysChanged",
-                                   g_variant_new ("(iu)", 0, event_ptr != NULL ? event_ptr->event_type : 0),
-                                   &local_error);
-    g_free(event_ptr);
-  }
-  return TRUE;
-}
-#endif
-
-
 /* GDBUS service handlers */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
 /**
- * @brief Registered to handle bus aquired events for the DdcutilService
+ * @brief registered callback for when GD-Bus is ready to accept service registrations.
  *
- * When the D-Bus is available this function registers the DdcutilService service.
+ * When called this function registers the DdcutilService service allong with the
+ * interface callback functions that will pass client-requests onto implementing
+ * functions.
  *
  * @param connection
  * @param name
@@ -1235,15 +1200,11 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
   g_assert(registration_id > 0);
   g_message("Registered %s", object_path);
 
-#if defined(COMPILE_TIMER_SIGNAL_SOURCE)
-  g_timeout_add_seconds (2,
-                         handle_polling_timeout,
-                         connection);
-#endif
+  // Setup any timers here - if needed.
 }
 
 /**
- * @brief called when the DdcutilService successfully obtains a registration
+ * @brief registered callback for when the DdcutilService successfully obtains a registration
  *
  * Registration may not succeed if the service is already running.
  *
@@ -1256,7 +1217,7 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 }
 
 /**
- * @brief called if the DdcutilService cannot be registered.
+ * @brief registered callback for when the DdcutilService cannot be registered.
  *
  * The most likely reason this method will be called is if there is another
  * process already running the service.
@@ -1356,7 +1317,7 @@ int main(int argc, char *argv[]) {
   ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
 #endif
 
-#if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
     g_message("Registering DDCA display_detection_callback");
     ddca_register_display_detection_callback(display_detection_callback);
@@ -1374,10 +1335,10 @@ int main(int argc, char *argv[]) {
 
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-#ifdef COMPILE_MAIN_LOOP_SIGNAL_SOURCE
+#ifdef HAS_DISPLAYS_CHANGED_CALLBACK
   GMainContext* loop_context = g_main_loop_get_context(loop);
-  GSourceFuncs source_funcs = { signal_prepare, signal_check, signal_dispatch };
-  GSource *source = g_source_new(&source_funcs, sizeof(Signal_Source));
+  GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
+  GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
   g_source_attach(source, loop_context);
   g_source_unref(source);
 #endif
