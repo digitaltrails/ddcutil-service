@@ -1291,6 +1291,8 @@ int main(int argc, char *argv[]) {
   if (log_info) {
     enable_service_info_logging(TRUE, FALSE);
   }
+  g_message("%s %s, libddcutil %s", PROGRAM_NAME,
+    DDCUTIL_DBUS_INTERFACE_VERSION_STRING, ddca_ddcutil_extended_version_string());
   g_message("ServiceInfoLogging %s", is_service_info_logging() ? "enabled" : "disabled");
 
   /* Build introspection data structures from XML.
