@@ -30,16 +30,19 @@
  *                    https://github.com/rockowitz/ddcutil/tree/2.0.2-dev/src/public
  */
 
-// Logging:
-// Using glib logging which defaults to syslog if running unde dbus-daemon, or the stderr otherwise
-// g_info() and g_debug are classed the same, and don't show by default
-// g_message() is higher and always shows.
-// g_warning() is for non fatal errors.
-// g_critical() is for serious errors (which, as a class, can optionally be set to terminate the progam).
-// g_error() is for programming errors and will automatically core dump - so don't use g_error().
-// There is also a special domain "all" - not sure if we want to use that.
+/**
+ * Logging:
+ * Using glib logging which defaults to syslog if running unde dbus-daemon, or the stderr otherwise
+ * g_info() and g_debug are classed the same, and don't show by default
+ * g_message() is higher and always shows.
+ * g_warning() is for non fatal errors.
+ * g_critical() is for serious errors (which, as a class, can optionally be set to terminate the progam).
+ * g_error() is for programming errors and will automatically core dump - so don't use g_error().
+ * There is also a special domain "all" - not sure if we want to use that.
+ */
+#define PROGRAM_NAME "ddcutil-service"
 #define G_LOG_USE_STRUCTURED
-#define G_LOG_DOMAIN "ddcutil-service"  // set the log domain before including the glib headers.
+#define G_LOG_DOMAIN PROGRAM_NAME  // set the log domain before including the glib headers.
 
 #include <gio/gio.h>
 #include <glib.h>
@@ -210,11 +213,16 @@ static const char *attributes_returned_from_detect[] = {
   NULL
 };
 
+/**
+ * PROGRAM_NAMEEncode the EDID for easy/efficient unmarshalling on clients.
+ * @param edid binary EDID
+ * @return a relatively compact character string encoded edid
+ */
 static char *edid_encode(const uint8_t *edid) {
-  return g_base64_encode(edid, 128);
+  return g_base64_encode(edid, 128);  // Shorter than hex but not too much like line noise.
 }
 
-char *server_executable = "ddcutil-dbus-server";
+static char *server_executable = PROGRAM_NAME;
 
 static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
   const uint32_t binary_serial =
@@ -225,8 +233,13 @@ static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
   return binary_serial;
 }
 
+/**
+ * PROGRAM_NAMECreate a new string with invalid utf-8 edited out (replaced with ?)
+ * @param text suspect text
+ * @return g_malloced text with invalid utf-8 edited out
+ */
 static gchar *sanitize_utf8(const char *text) {
-  gchar *result = strdup(text);
+  gchar *result = g_strdup(text);
   const char *ptr = result, *end = ptr + strlen(result);
   while (true) {
     const char *ptr2;
@@ -239,7 +252,13 @@ static gchar *sanitize_utf8(const char *text) {
   return result;
 }
 
-bool enable_service_info_logging(bool enable, bool overwrite) {
+/**
+ * PROGRAM_NAMEEnabled logging of info and debug level messages for this service.
+ * @param enable whether to log or not
+ * @param overwrite whether to overwrite any existing setting
+ * @return the new enabled state
+ */
+static bool enable_service_info_logging(bool enable, bool overwrite) {
   if (enable) {
     g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite);  // enable info & debug messages for our domain.
     return TRUE;
@@ -248,15 +267,20 @@ bool enable_service_info_logging(bool enable, bool overwrite) {
   return FALSE;
 }
 
-bool is_service_info_logging() {
+/**
+ * @brief Return whether the service currently set to log info and debug messages.
+ * @return enabled state
+ */
+static bool is_service_info_logging() {
   const char *value = g_getenv("G_MESSAGES_DEBUG");
   return value != NULL && strstr(value, G_LOG_DOMAIN) != NULL;
 }
 
-static uint8_t get_service_output_level(void) {
-  return ddca_get_output_level();
-}
-
+/**
+ * @brief Obtain a text message for a DDCA status.
+ * @param status the DDCA status
+ * @return a g_malloced message
+ */
 static char *get_status_message(const DDCA_Status status) {
   const char *status_text = ddca_rc_name(status);
   char *message_text = NULL;
@@ -273,8 +297,20 @@ static char *get_status_message(const DDCA_Status status) {
   return message_text;
 }
 
+/**
+ * @brief Lookup DDCA_Display_Info for either a display_number or an encoded EDID.
+ *
+ * This is a help function used by functions that implement each service-method.
+ * It does the donky work of looking up a display by number or EDID.
+ *
+ * @param display_number display number
+ * @param edid_encoded text encoded edid
+ * @param dlist ddcutil list of displays (will need to be freed after use)
+ * @param dinfo pointer into the list for the matched display
+ * @return success status
+ */
 static DDCA_Status get_display_info(const int display_number, const char *edid_encoded,
-                            DDCA_Display_Info_List **dlist, DDCA_Display_Info **dinfo) {
+                                    DDCA_Display_Info_List **dlist, DDCA_Display_Info **dinfo) {
   *dinfo = NULL;
   DDCA_Status status = ddca_get_display_info_list2(0, dlist);
 
@@ -301,6 +337,17 @@ static DDCA_Status get_display_info(const int display_number, const char *edid_e
 }
 
 extern char** environ;
+
+/**
+ * @brief Implement the DdcutilService Restart method
+ *
+ * Restarts the service.  In order to be able to call dca_init() apply
+ * the libopts, syslog_level and opts), this function must terminate the
+ * current process and forks a new one.
+ *
+ * @param parameters containing the new libopts, syslog_level and opts (suu)
+ * @param invocation the originating D-Bus call - returning a value to it before terminating the current process.
+ */
 static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
   char *libopts;
   u_int32_t syslog_level;
@@ -340,7 +387,14 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
   exit(0);
 }
 
-
+/**
+ * @brief Implements the DdcutilService Detect method
+ *
+ * Passes a list of display structs back to the invocation.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   u_int32_t flags;
   g_variant_get(parameters, "(u)", &flags);
@@ -396,6 +450,14 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
   free(detect_message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService GetVcp method
+ *
+ * Passes a single VCP value to the invocation.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -434,6 +496,14 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService GetMultipleVcp method
+ *
+ * Passes back an array of VCP values to the invocation.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -487,6 +557,11 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService SetVCP method
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -519,6 +594,14 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService GetCapabilitesString method
+ *
+ * Returns the raw capabilties string to the invocation.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -552,6 +635,14 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService GetCapabilitiesMetadata method
+ *
+ * Passes back a structure of parsed features to the invocation.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -681,6 +772,14 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService GetVcpMetadata method
+ *
+ * Passes back metadata concerning a specific display's VCP code, such as the data-type.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -737,6 +836,14 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService GetSleepMultiplier method
+ *
+ * Passes back a specific display's sleep multiplier.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -767,6 +874,14 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   free(message_text);
 }
 
+/**
+ * @brief Implements the DdcutilService SetSleepMultiplier method
+ *
+ * Sets a specific display's sleep multiplier.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
 static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
   char *hex_edid;
@@ -799,6 +914,24 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   free(message_text);
 }
 
+/**
+ * @brief Vectors DdcutilService D-Bus method calls off to the relevant implementating functions.
+ *
+ * This handler is registered with glib's D-Bus main loop to handle DdcutilService
+ * method calls.
+ *
+ * The handler only acts for the DdcutilService DdcutilInterface, so the only
+ * parameter of much interest is the method_name.
+ *
+ * @param connection
+ * @param sender
+ * @param object_path
+ * @param interface_name
+ * @param method_name the text name used for vectoring
+ * @param parameters
+ * @param invocation
+ * @param user_data
+ */
 static void handle_method_call(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                const gchar *interface_name, const gchar *method_name, GVariant *parameters,
                                GDBusMethodInvocation *invocation, gpointer user_data) {
@@ -825,6 +958,25 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
   }
 }
 
+/**
+ * @brief Handles calls to DdcutilService D-Bus org.freedesktop.DBus.Properties.Get.
+ *
+ * This handler is registered with glib's D-Bus main loop to handle DdcutilService
+ * get-property calls.
+ *
+ * The handler only acts for the DdcutilService DdcutilInterface, so the only
+ * parameter of much interest is the property_name.
+ *
+ * \brief
+ * @param connection
+ * @param sender
+ * @param object_path
+ * @param interface_name
+ * @param property_name property name to obtain the value for
+ * @param error
+ * @param user_data
+ * @return value of the property
+ */
 static GVariant *handle_get_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                      const gchar *interface_name, const gchar *property_name, GError **error,
                                      gpointer user_data) {
@@ -873,6 +1025,26 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   return ret;
 }
 
+/**
+ * @brief Handles calls to DdcutilService D-Bus org.freedesktop.DBus.Properties.Set.
+ *
+ * This handler is registered with glib's D-Bus main loop to handle DdcutilService
+ * set-property calls.
+ *
+ * The handler only acts for the DdcutilService DdcutilInterface, so the only
+ * parameter of much interest is the property_name.
+ *
+ * \brief
+ * @param connection
+ * @param sender
+ * @param object_path
+ * @param interface_name
+ * @param property_name property to set
+ * @param value
+ * @param error
+ * @param user_data
+ * @return TRUE if successfully set
+ */
 static gboolean handle_set_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                     const gchar *interface_name, const gchar *property_name, GVariant *value,
                                     GError **error, gpointer user_data) {
@@ -886,7 +1058,7 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   }
   else if (g_strcmp0(property_name, "OutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_uint32(value));
-    g_message("New output_level=%x", get_service_output_level());
+    g_message("New output_level=%x", ddca_get_output_level());
   }
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
@@ -907,6 +1079,12 @@ static void display_detection_callback(DDCA_Display_Detection_Event event) {
 
 GDBusConnection *dbus_connection = NULL;
 
+/*******************************************
+ * The follow #if enables a main-loop implementation of a main-loop
+ * custom event-source, a GSource.  It defines a polled source that
+ * handles ddcutil displays-changed data and sends signals to
+ * the D-Bus client.
+ */
 #if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE)
 
 /*** Test code that generates a signal conditionally during the g-main-loop ***/
@@ -917,6 +1095,17 @@ struct  Signal_Source {
 };
 typedef struct Signal_Source Signal_Source;
 
+/**
+ * @brief registered with main-loop as a custom prepare event function.
+ *
+ * The main purpose of this function is setting the length of the
+ * next timeout and return FALSE.  If an event happens to be ready the
+ * function can return TRUE instead and the main-loop will act accordingly.
+ *
+ * @param source input source, not of much interest for this implementation
+ * @param timeout output parameter setting the timeout for next call
+ * @return
+ */
 static gboolean signal_prepare(GSource *source, gint *timeout) {
   *timeout = 1000;
   if (dbus_connection == NULL || display_detection_event == NULL) {
@@ -926,6 +1115,14 @@ static gboolean signal_prepare(GSource *source, gint *timeout) {
   return TRUE;
 }
 
+/**
+ * @brief registered with main-loop as a custom check event function.
+ *
+ * Called by the main-loop on timeout to see if an event is ready.
+ *
+ * @param source
+ * @return
+ */
 static gboolean signal_check(GSource *source) {
   if (dbus_connection == NULL || display_detection_event == NULL) {
     return FALSE;
@@ -933,6 +1130,17 @@ static gboolean signal_check(GSource *source) {
   return TRUE;
 }
 
+/**
+ * @brief registered with main-loop as a custom dispatch event function.
+ *
+ * Called by the mainloop if the check function reports that an event
+ * is ready.  This function should emit the signal to the D-Bus client.
+ *
+ * @param source
+ * @param callback
+ * @param user_data
+ * @return
+ */
 static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
   //Signal_Source *signal_source = (Signal_Source *) source;
   GError *local_error = NULL;
@@ -964,7 +1172,21 @@ static gboolean signal_dispatch(GSource *source, GSourceFunc callback, gpointer 
 }
 #endif
 
+
+/*******************************************
+ * The follow #if enables a periodic/polling-timer implementation of
+ * the displays-changed callback to the D-Bus client.
+ */
 #if defined(COMPILE_TIMER_SIGNAL_SOURCE)
+/**
+ * @brief called each time the timer runs out
+ *
+ * This function checks for displays changed data and raises a signal
+ * if any is present.
+ *
+ * @param user_data
+ * @return
+ */
 static gboolean handle_polling_timeout (gpointer user_data) {
   //g_print("Timer ping\n");
   GDBusConnection *connection = G_DBUS_CONNECTION (user_data);
@@ -991,7 +1213,15 @@ static gboolean handle_polling_timeout (gpointer user_data) {
 /* GDBUS service handlers */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
-
+/**
+ * @brief Registered to handle bus aquired events for the DdcutilService
+ *
+ * When the D-Bus is available this function registers the DdcutilService service.
+ *
+ * @param connection
+ * @param name
+ * @param user_data
+ */
 static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
   const char* object_path = "/com/ddcutil/DdcutilObject";
   dbus_connection = connection;
@@ -1012,19 +1242,45 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 #endif
 }
 
+/**
+ * @brief called when the DdcutilService successfully obtains a registration
+ *
+ * Registration may not succeed if the service is already running.
+ *
+ * @param connection
+ * @param name
+ * @param user_data
+ */
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
   g_message("Name acquired %s", name);
 }
 
+/**
+ * @brief called if the DdcutilService cannot be registered.
+ *
+ * The most likely reason this method will be called is if there is another
+ * process already running the service.
+ *
+ * @param connection
+ * @param name
+ * @param user_data
+ */
 static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
   g_critical("Exiting: lost registration - is another instance already registered?");
   exit(1);
 }
 
+/**
+ * @brief Setup the service and start the glib main loop.
+ * @param argc
+ * @param argv
+ * @return
+ */
 int main(int argc, char *argv[]) {
 
   server_executable = argv[0];
-  g_set_prgname("ddcutil-service");
+  g_message("Running %s (%s)", server_executable, PROGRAM_NAME);
+  g_set_prgname(PROGRAM_NAME);
 
   bool version_request = FALSE;
   bool introspect_request = FALSE;
@@ -1035,6 +1291,7 @@ int main(int argc, char *argv[]) {
   gint ddca_init_options = 0;
 #endif
 
+  // Use the glib command line parser...
   const GOptionEntry entries[] = {
     { "version", 'v', 0, G_OPTION_ARG_NONE, &version_request,
 "print ddcutil version, com.ddcutil.DdcUtilInterface version, and exit", NULL },
@@ -1078,16 +1335,17 @@ int main(int argc, char *argv[]) {
   if (introspect_request) {
 #if defined(XML_FROM_INTROSPECTED_DATA)
     GString *formatted_xml = g_string_new("");
-    g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml);
+    g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml); // Create XML from the registered service
 #else
     GString *formatted_xml = g_string_new(introspection_xml);
-    g_string_replace(formatted_xml, ">", ">\n", 0);
+    g_string_replace(formatted_xml, ">", ">\n", 0); // Creat XML from the embedded string constant
 #endif
     g_print("%s\n", formatted_xml->str);
     exit(1);
   }
 
 #if defined(HAS_OPTION_ARGUMENTS)
+  // Handle ddcutil ddc_init() arguments
   char *argv_null_terminated[argc];
   for (int i = 0; i < argc; i++) {
     argv_null_terminated[i] = argv[i + 2];
@@ -1099,9 +1357,8 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if defined(COMPILE_MAIN_LOOP_SIGNAL_SOURCE) || defined(COMPILE_TIMER_SIGNAL_SOURCE)
-  sleep(5);
   if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
-    g_message("Registering display_detection_callback");
+    g_message("Registering DDCA display_detection_callback");
     ddca_register_display_detection_callback(display_detection_callback);
   }
 #endif
