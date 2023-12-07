@@ -192,15 +192,15 @@ static const gchar introspection_xml[] =
     "      <arg type='u' name='flags'/>"
     "    </signal>"
 
-    "    <property type='s' name='DdcutilVersionString' access='read'/>"
-    "    <property type='s' name='InterfaceVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
-    "    <property type='b' name='DdcaVerifyVcpSet' access='readwrite'/>"
-    "    <property type='b' name='DdcaDynamicSleep' access='readwrite'/>"
-    "    <property type='u' name='DdcaOutputLevel' access='readwrite'/>"
+    "    <property type='s' name='DdcutilVersion' access='read'/>"
+    "    <property type='b' name='DdcutilVerifyVcpSet' access='readwrite'/>"
+    "    <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>"
+    "    <property type='u' name='DdcutilOutputLevel' access='readwrite'/>"
+    "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
     "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
-    "    <property type='b' name='SignalDisplayChanges' access='readwrite'/>"
+    "    <property type='b' name='ServiceSignalChanges' access='readwrite'/>"
 
     "  </interface>"
     "</node>";
@@ -1050,16 +1050,16 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
                                      const gchar *interface_name, const gchar *property_name, GError **error,
                                      gpointer user_data) {
   GVariant *ret = NULL;
-  if (g_strcmp0(property_name, "DdcutilVersionString") == 0) {
+  if (g_strcmp0(property_name, "DdcutilVersion") == 0) {
     ret = g_variant_new_string(ddca_ddcutil_extended_version_string());
   }
-  else   if (g_strcmp0(property_name, "InterfaceVersionString") == 0) {
+  else   if (g_strcmp0(property_name, "ServiceInterfaceVersion") == 0) {
     ret = g_variant_new_string(DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
   }
-  else if (g_strcmp0(property_name, "DdcaVerifyVcpSet") == 0) {
+  else if (g_strcmp0(property_name, "DdcutilVerifyVcpSet") == 0) {
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   }
-  else if (g_strcmp0(property_name, "DdcaDynamicSleep") == 0) {
+  else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
 #if defined(HAS_DYNAMIC_SLEEP)
     if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
       ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
@@ -1087,13 +1087,13 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     g_variant_builder_unref(builder);
     ret = value;
   }
-  else if (g_strcmp0(property_name, "DdcaOutputLevel") == 0) {
+  else if (g_strcmp0(property_name, "DdcutilOutputLevel") == 0) {
     ret = g_variant_new_uint32(ddca_get_output_level());
   }
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     ret = g_variant_new_boolean(is_service_info_logging());
   }
-  else if (g_strcmp0(property_name, "SignalDisplayChanges") == 0) {
+  else if (g_strcmp0(property_name, "ServiceSignalChanges") == 0) {
     ret = g_variant_new_boolean(enable_change_signals);
   }
   return ret;
@@ -1122,17 +1122,17 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
 static gboolean handle_set_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                     const gchar *interface_name, const gchar *property_name, GVariant *value,
                                     GError **error, gpointer user_data) {
-  if (g_strcmp0(property_name, "DdcaVerifyVcpSet") == 0) {
+  if (g_strcmp0(property_name, "DdcutilVerifyVcpSet") == 0) {
     ddca_enable_verify(g_variant_get_boolean(value));
   }
-  else if (g_strcmp0(property_name, "DdcaDynamicSleep") == 0) {
+  else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
 #if defined(HAS_DYNAMIC_SLEEP)
     ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
 #else
-    g_error("Dynamic sleep not supported by this version of libddcutil");
+    g_warning("Dynamic sleep not supported by this version of libddcutil");
 #endif
   }
-  else if (g_strcmp0(property_name, "DdcaOutputLevel") == 0) {
+  else if (g_strcmp0(property_name, "DdcutilOutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_uint32(value));
     g_message("New output_level=%x", ddca_get_output_level());
   }
@@ -1140,9 +1140,9 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
     const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
     g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
   }
-  else if (g_strcmp0(property_name, "SignalDisplayChanges") == 0) {
+  else if (g_strcmp0(property_name, "ServiceSignalChanges") == 0) {
     enable_change_signals = g_variant_get_boolean(value);
-    g_message("SignalDisplayChanges %s", enable_change_signals ? "enabled" : "disabled");
+    g_message("ServiceSignalChanges %s", enable_change_signals ? "enabled" : "disabled");
   }
   return *error == NULL;
 }
