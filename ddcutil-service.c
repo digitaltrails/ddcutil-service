@@ -215,7 +215,7 @@ static const char *attributes_returned_from_detect[] = {
   NULL
 };
 
-static bool enable_change_signals = FALSE;
+static bool enable_change_signals = TRUE;
 
 /**
  * Encode the EDID for easy/efficient unmarshalling on clients.
@@ -340,69 +340,6 @@ static DDCA_Status get_display_info(const int display_number, const char *edid_e
     }
     return status;
 }
-
-#if defined(USE_INTERNAL_CHANGE_POLLING)
-static GList *poll_list = NULL;
-typedef struct {
-  gchar * edid_encoded;
-  gboolean live;
-} Poll_List_Item;
-
-static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
-  gchar *target_str = (char *) target;
-  Poll_List_Item *item_right = (Poll_List_Item *) item_ptr;
-  return strcmp(target_str, item_right->edid_encoded);
-}
-
-static gboolean poll_for_changes() {
-  g_debug("Polling now\n");
-  ddca_redetect_displays();
-  DDCA_Display_Info_List *dlist;
-  const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
-  int change_count = 0;
-
-  if (list_status == 0) {
-    for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
-      ((Poll_List_Item *) (ptr->data))->live = FALSE;
-    }
-
-    for (int ndx = 0; ndx < dlist->ct; ndx++) {
-      const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
-      gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
-      GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
-      if (ptr == NULL) {
-        change_count++;
-        Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
-        item->edid_encoded = edid_encoded;
-        item->live = TRUE;
-        g_debug("Poll adding %.30s...\n", item->edid_encoded);
-        poll_list = g_list_append(poll_list, item);
-      }
-      else {
-        ((Poll_List_Item *) (ptr->data))->live = TRUE;
-        g_free(edid_encoded);
-      }
-    }
-
-    for (GList *ptr = poll_list; ptr != NULL;) {
-      GList *next = ptr->next;
-      Poll_List_Item *item = (Poll_List_Item *) ptr->data;
-      if (!item->live) {
-        g_debug("Poll removing %.30s...\n", item->edid_encoded);
-        g_free(item->edid_encoded);
-        g_free(item);
-        poll_list = g_list_delete_link(poll_list, ptr);
-        change_count++;
-      }
-      ptr = next;
-    }
-  }
-  if (change_count > 0) {
-    return TRUE;
-  }
-  return FALSE;
-}
-#endif
 
 extern char** environ;
 
@@ -1279,11 +1216,71 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
  * the D-Bus client.
  */
 
-struct  ConnectedDisplaysChanged_SignalSource {  // Source structure including custom data (if any)
+static GList *poll_list = NULL;  // List of currently detected edids
+typedef struct {
+  gchar * edid_encoded;
+  gboolean live;
+} Poll_List_Item;
+
+static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
+  gchar *target_str = (char *) target;
+  Poll_List_Item *item_right = (Poll_List_Item *) item_ptr;
+  return strcmp(target_str, item_right->edid_encoded);
+}
+
+static gboolean poll_for_changes() {
+  g_debug("Polling now\n");
+  //ddca_redetect_displays();  // TODO Cannot use redetect it is too slow - delays the whole service loop
+  DDCA_Display_Info_List *dlist;
+  const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+  int change_count = 0;
+
+  if (list_status == 0) {
+    for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
+      ((Poll_List_Item *) (ptr->data))->live = FALSE;
+    }
+
+    for (int ndx = 0; ndx < dlist->ct; ndx++) {
+      const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+      gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
+      GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
+      if (ptr == NULL) {
+        change_count++;
+        Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
+        item->edid_encoded = edid_encoded;
+        item->live = TRUE;
+        g_debug("Poll adding %.30s...\n", item->edid_encoded);
+        poll_list = g_list_append(poll_list, item);
+      }
+      else {
+        ((Poll_List_Item *) (ptr->data))->live = TRUE;
+        g_free(edid_encoded);
+      }
+    }
+
+    for (GList *ptr = poll_list; ptr != NULL;) {
+      GList *next = ptr->next;
+      Poll_List_Item *item = (Poll_List_Item *) ptr->data;
+      if (!item->live) {
+        g_debug("Poll removing %.30s...\n", item->edid_encoded);
+        g_free(item->edid_encoded);
+        g_free(item);
+        poll_list = g_list_delete_link(poll_list, ptr);
+        change_count++;
+      }
+      ptr = next;
+    }
+  }
+  if (change_count > 0) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+typedef struct  {  // Source structure including custom data (if any)
   GSource source;
   gchar cdc_data[129];  // do we actually have any data - no, maybe later.
-};
-typedef struct ConnectedDisplaysChanged_SignalSource Poll_SignalSource_t;
+} Poll_SignalSource_t;
 
 /**
  * @brief registered with main-loop as a custom prepare event function.
