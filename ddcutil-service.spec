@@ -71,5 +71,6 @@ install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
 %{_datadir}/%{name}/examples/ddcutil-qtdbus-client.py
 %{_datadir}/%{name}/examples/ddcutil-qtdbus-signal-receiver.py
 %{_datadir}/%{name}/examples/busctl.bash
+%{_datadir}/%{name}/examples/dbus-disable-signals.bash
 
 %changelog
