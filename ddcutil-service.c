@@ -215,7 +215,7 @@ static const char *attributes_returned_from_detect[] = {
   NULL
 };
 
-static bool enable_change_signals = TRUE;
+static bool enable_change_signals = FALSE;
 
 /**
  * Encode the EDID for easy/efficient unmarshalling on clients.

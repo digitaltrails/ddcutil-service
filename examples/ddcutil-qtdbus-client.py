@@ -131,12 +131,12 @@ print(status_values)
 for value, name in status_values.items():
     print(f"  {value}: {name}")
 
-output_level = ddcutil_dbus_props.call("Get", "com.ddcutil.DdcutilInterface", "OutputLevel").arguments()[0]
+output_level = ddcutil_dbus_props.call("Get", "com.ddcutil.DdcutilInterface", "DdcutilOutputLevel").arguments()[0]
 print(f"\n{output_level=}\n")
 ddcutil_dbus_props.call("Set",
                         "com.ddcutil.DdcutilInterface",
-                        "OutputLevel",
+                        "DdcutilOutputLevel",
                         QDBusVariant(QDBusArgument(20, QMetaType.UInt)))
 
-output_level = ddcutil_dbus_props.call("Get", "com.ddcutil.DdcutilInterface", "OutputLevel").arguments()[0]
+output_level = ddcutil_dbus_props.call("Get", "com.ddcutil.DdcutilInterface", "DdcutilOutputLevel").arguments()[0]
 print(f"{output_level=}\n")

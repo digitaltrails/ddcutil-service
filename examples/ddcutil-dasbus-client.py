@@ -39,11 +39,13 @@ ddcutil_proxy = bus.get_proxy(
     "com.ddcutil.DdcutilService",  # The bus name
     "/com/ddcutil/DdcutilObject",  # The object name
 )
-ddcutil_proxy.DynamicSleep = False
-ddcutil_proxy.OutputLevel = 0xff
+ddcutil_proxy.DdcutilDynamicSleep = False
+ddcutil_proxy.DdcutilOutputLevel = 0xff
 
-print(f"\n{ddcutil_proxy.DynamicSleep=}")
-print(f"{ddcutil_proxy.OutputLevel=}")
+print(f"\n{ddcutil_proxy.DdcutilDynamicSleep=}")
+print(f"{ddcutil_proxy.DdcutilOutputLevel=}")
+
+ddcutil_proxy.ServiceSignalChanges = True
 
 # Create a namedtuple that matches the attributes returned by the detect method
 DetectedAttributes = namedtuple("DetectedAttributes", ddcutil_proxy.AttributesReturnedByDetect)
