@@ -1514,6 +1514,9 @@ int main(int argc, char *argv[]) {
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
 #ifdef HAS_DISPLAYS_CHANGED_CALLBACK
+  if (enable_change_signals) {
+    g_message("Using libddcutil change detection");
+  }
   GMainContext* loop_context = g_main_loop_get_context(loop);
   GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
   GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
@@ -1522,6 +1525,9 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifdef USE_INTERNAL_CHANGE_POLLING
+  if (enable_change_signals) {
+    g_message("Using internal change polling");
+  }
   GMainContext* loop_context = g_main_loop_get_context(loop);
   GSourceFuncs source_funcs = { poll_signal_prepare, poll_signal_check, poll_signal_dispatch };
   GSource *source = g_source_new(&source_funcs, sizeof(Poll_SignalSource_t));
