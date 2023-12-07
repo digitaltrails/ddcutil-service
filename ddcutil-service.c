@@ -61,6 +61,7 @@
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
   #define HAS_OPTION_ARGUMENTS
   #define HAS_DDCA_GET_SLEEP_MULTIPLIER
+  #define USE_INTERNAL_CHANGE_POLLING
 #elif DDCUTIL_VMAJOR >= 2
   #define HAS_DISPLAYS_CHANGED_CALLBACK
   #define HAS_OPTION_ARGUMENTS
@@ -68,6 +69,7 @@
   #define HAS_DYNAMIC_SLEEP
 #else
   #define HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
+  #define USE_INTERNAL_CHANGE_POLLING
 #endif
 
 static GDBusNodeInfo *introspection_data = NULL;
@@ -194,10 +196,11 @@ static const gchar introspection_xml[] =
     "    <property type='s' name='InterfaceVersionString' access='read'/>"
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
-    "    <property type='b' name='Verify' access='readwrite'/>"
-    "    <property type='b' name='DynamicSleep' access='readwrite'/>"
-    "    <property type='u' name='OutputLevel' access='readwrite'/>"
+    "    <property type='b' name='DdcaVerifyVcpSet' access='readwrite'/>"
+    "    <property type='b' name='DdcaDynamicSleep' access='readwrite'/>"
+    "    <property type='u' name='DdcaOutputLevel' access='readwrite'/>"
     "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
+    "    <property type='b' name='SignalDisplayChanges' access='readwrite'/>"
 
     "  </interface>"
     "</node>";
@@ -211,6 +214,8 @@ static const char *attributes_returned_from_detect[] = {
   "edid_txt", "binary_serial_number",
   NULL
 };
+
+static bool enable_change_signals = TRUE;
 
 /**
  * Encode the EDID for easy/efficient unmarshalling on clients.
@@ -335,6 +340,69 @@ static DDCA_Status get_display_info(const int display_number, const char *edid_e
     }
     return status;
 }
+
+#if defined(USE_INTERNAL_CHANGE_POLLING)
+static GList *poll_list = NULL;
+typedef struct {
+  gchar * edid_encoded;
+  gboolean live;
+} Poll_List_Item;
+
+static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
+  gchar *target_str = (char *) target;
+  Poll_List_Item *item_right = (Poll_List_Item *) item_ptr;
+  return strcmp(target_str, item_right->edid_encoded);
+}
+
+static gboolean poll_for_changes() {
+  g_debug("Polling now\n");
+  ddca_redetect_displays();
+  DDCA_Display_Info_List *dlist;
+  const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+  int change_count = 0;
+
+  if (list_status == 0) {
+    for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
+      ((Poll_List_Item *) (ptr->data))->live = FALSE;
+    }
+
+    for (int ndx = 0; ndx < dlist->ct; ndx++) {
+      const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+      gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
+      GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
+      if (ptr == NULL) {
+        change_count++;
+        Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
+        item->edid_encoded = edid_encoded;
+        item->live = TRUE;
+        g_debug("Poll adding %.30s...\n", item->edid_encoded);
+        poll_list = g_list_append(poll_list, item);
+      }
+      else {
+        ((Poll_List_Item *) (ptr->data))->live = TRUE;
+        g_free(edid_encoded);
+      }
+    }
+
+    for (GList *ptr = poll_list; ptr != NULL;) {
+      GList *next = ptr->next;
+      Poll_List_Item *item = (Poll_List_Item *) ptr->data;
+      if (!item->live) {
+        g_debug("Poll removing %.30s...\n", item->edid_encoded);
+        g_free(item->edid_encoded);
+        g_free(item);
+        poll_list = g_list_delete_link(poll_list, ptr);
+        change_count++;
+      }
+      ptr = next;
+    }
+  }
+  if (change_count > 0) {
+    return TRUE;
+  }
+  return FALSE;
+}
+#endif
 
 extern char** environ;
 
@@ -988,14 +1056,16 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else   if (g_strcmp0(property_name, "InterfaceVersionString") == 0) {
     ret = g_variant_new_string(DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
   }
-  else if (g_strcmp0(property_name, "Verify") == 0) {
+  else if (g_strcmp0(property_name, "DdcaVerifyVcpSet") == 0) {
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   }
-  else if (g_strcmp0(property_name, "DynamicSleep") == 0) {
+  else if (g_strcmp0(property_name, "DdcaDynamicSleep") == 0) {
 #if defined(HAS_DYNAMIC_SLEEP)
     if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
       ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
     }
+#else
+    ret = g_variant_new_boolean(FALSE);
 #endif
   }
   else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
@@ -1017,11 +1087,14 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     g_variant_builder_unref(builder);
     ret = value;
   }
-  else if (g_strcmp0(property_name, "OutputLevel") == 0) {
+  else if (g_strcmp0(property_name, "DdcaOutputLevel") == 0) {
     ret = g_variant_new_uint32(ddca_get_output_level());
   }
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     ret = g_variant_new_boolean(is_service_info_logging());
+  }
+  else if (g_strcmp0(property_name, "SignalDisplayChanges") == 0) {
+    ret = g_variant_new_boolean(enable_change_signals);
   }
   return ret;
 }
@@ -1049,21 +1122,27 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
 static gboolean handle_set_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                     const gchar *interface_name, const gchar *property_name, GVariant *value,
                                     GError **error, gpointer user_data) {
-  if (g_strcmp0(property_name, "Verify") == 0) {
+  if (g_strcmp0(property_name, "DdcaVerifyVcpSet") == 0) {
     ddca_enable_verify(g_variant_get_boolean(value));
   }
-  else if (g_strcmp0(property_name, "DynamicSleep") == 0) {
+  else if (g_strcmp0(property_name, "DdcaDynamicSleep") == 0) {
 #if defined(HAS_DYNAMIC_SLEEP)
     ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
+#else
+    g_error("Dynamic sleep not supported by this version of libddcutil");
 #endif
   }
-  else if (g_strcmp0(property_name, "OutputLevel") == 0) {
+  else if (g_strcmp0(property_name, "DdcaOutputLevel") == 0) {
     ddca_set_output_level(g_variant_get_uint32(value));
     g_message("New output_level=%x", ddca_get_output_level());
   }
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
     g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
+  }
+  else if (g_strcmp0(property_name, "SignalDisplayChanges") == 0) {
+    enable_change_signals = g_variant_get_boolean(value);
+    g_message("SignalDisplayChanges %s", enable_change_signals ? "enabled" : "disabled");
   }
   return *error == NULL;
 }
@@ -1087,6 +1166,7 @@ static GDBusConnection *dbus_connection = NULL;
  * GDBUS service handler table - passed on registraction of the service
  */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
+
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 
@@ -1115,11 +1195,17 @@ typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
  * @return
  */
 static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
-  *timeout = 1000;
-  if (dbus_connection == NULL || display_detection_event == NULL) {
-    return FALSE;
+  if (enable_change_signals) {
+    *timeout = 5000;
+
+    if (dbus_connection == NULL || display_detection_event == NULL) {
+      return FALSE;
+    }
+    g_debug("cdc display_detection_event ready");
   }
-  g_debug("display_detection_event ready");
+  else {
+    *timeout = 30000;
+  }
   return TRUE;
 }
 
@@ -1132,10 +1218,12 @@ static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
  * @return
  */
 static gboolean cdc_signal_check(GSource *source) {
-  if (dbus_connection == NULL || display_detection_event == NULL) {
-    return FALSE;
+  if (enable_change_signals) {
+    if (dbus_connection != NULL && display_detection_event != NULL) {
+      return TRUE;
+    }
   }
-  return TRUE;
+  return FALSE;
 }
 
 /**
@@ -1154,10 +1242,10 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
     g_warning("cdc_signal_dispatch null D-Bus connection");
-    return FALSE;
+    return TRUE;
   }
   static int count = 0;
-  g_debug("dispatch called");
+  g_debug("cdc dispatch called");
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
   if (count == 0) {
@@ -1176,6 +1264,89 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
                                    &local_error);
     g_free(event_ptr);
   }
+  return TRUE;
+}
+#endif
+
+#if defined(USE_INTERNAL_CHANGE_POLLING)
+
+/*
+ * Internal polling implementation of detecting changes.
+ *
+ * The follow code enables a main-loop implementation of a main-loop
+ * custom event-source, a GSource.  It defines a polled source that
+ * handles ddcutil displays-changed data and sends signals to
+ * the D-Bus client.
+ */
+
+struct  ConnectedDisplaysChanged_SignalSource {  // Source structure including custom data (if any)
+  GSource source;
+  gchar cdc_data[129];  // do we actually have any data - no, maybe later.
+};
+typedef struct ConnectedDisplaysChanged_SignalSource Poll_SignalSource_t;
+
+/**
+ * @brief registered with main-loop as a custom prepare event function.
+ *
+ * The main purpose of this function is setting the length of the
+ * next timeout and return FALSE.
+ *
+ * @param source input source, not of much interest for this implementation
+ * @param timeout output parameter setting the timeout for next call
+ * @return
+ */
+static gboolean poll_signal_prepare(GSource *source, gint *timeout) {
+  if (enable_change_signals) {
+    *timeout = 10000;
+    g_debug("poll prepare");
+  }
+  else {
+    *timeout = 30000;
+  }
+  return FALSE;
+}
+
+/**
+ * @brief registered with main-loop as a custom check event function.
+ *
+ * Called by the main-loop on timeout to poll for changes.
+ *
+ * @param source
+ * @return
+ */
+static gboolean poll_signal_check(GSource *source) {
+  if (enable_change_signals) {
+    if (poll_for_changes()) {
+      g_debug("poll detected changes");
+      return TRUE;
+    }
+    g_debug("poll no changes");
+  }
+  return FALSE;
+}
+
+/**
+ * @brief registered with main-loop to dispatch ConnectedDisplaysChanged signals.
+ *
+ * Called by the mainloop if the check function reports that an event
+ * is ready.  This function should emit the signal to the D-Bus client.
+ *
+ * @param source
+ * @param callback
+ * @param user_data
+ * @return
+ */
+static gboolean poll_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
+  //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
+  GError *local_error = NULL;
+  g_debug("poll emit detected changes");
+  g_dbus_connection_emit_signal (dbus_connection,
+                               NULL,
+                               "/com/ddcutil/DdcutilObject",
+                               "com.ddcutil.DdcutilInterface",
+                               "ConnectedDisplaysChanged",
+                               g_variant_new ("(iu)", 0, 1),
+                               &local_error);
   return TRUE;
 }
 #endif
@@ -1346,6 +1517,14 @@ int main(int argc, char *argv[]) {
   GMainContext* loop_context = g_main_loop_get_context(loop);
   GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
   GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
+  g_source_attach(source, loop_context);
+  g_source_unref(source);
+#endif
+
+#ifdef USE_INTERNAL_CHANGE_POLLING
+  GMainContext* loop_context = g_main_loop_get_context(loop);
+  GSourceFuncs source_funcs = { poll_signal_prepare, poll_signal_check, poll_signal_dispatch };
+  GSource *source = g_source_new(&source_funcs, sizeof(Poll_SignalSource_t));
   g_source_attach(source, loop_context);
   g_source_unref(source);
 #endif
