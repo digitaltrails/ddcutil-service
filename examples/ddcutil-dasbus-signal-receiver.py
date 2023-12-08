@@ -35,8 +35,8 @@ ddcutil_proxy = bus.get_proxy(
     "/com/ddcutil/DdcutilObject",  # The object name
 )
 
-def callback(count: int, flags: int):
-    print("ConnectedDisplaysChanged Callback called", count, flags)
+def callback(edid_encoded: str, event_type: int, flags: int):
+    print(f"ConnectedDisplaysChanged Callback called {event_type=} {flags=} {edid_encoded:.30}...")
 
 print(f"{ddcutil_proxy.ServiceInterfaceVersion=}")
 

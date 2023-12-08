@@ -72,6 +72,20 @@
   #define USE_INTERNAL_CHANGE_POLLING
 #endif
 
+#if !defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+// Earlier version of ddcutil lacking this definition
+typedef enum {
+  DDCA_EVENT_CONNECTED    = 1,
+  DDCA_EVENT_DISCONNETED  = 2,
+  DDCA_EVENT_DPMS_AWAKE   = 4,
+  DDCA_EVENT_DPMS_ASLEEP  = 8,
+} DDCA_Display_Event_Type;
+// Also lacking anything to translate the names of the event types
+char *DDCA_Display_Event_Type_names[] = {
+  G_STRINGIFY(DDCA_EVENT_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISCONNETED),
+  G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP)};
+#endif
+
 static GDBusNodeInfo *introspection_data = NULL;
 
 /* Introspection data for the service we are exporting
@@ -188,12 +202,14 @@ static const gchar introspection_xml[] =
     "    </method>"
 
     "    <signal name='ConnectedDisplaysChanged'>"
-    "      <arg type='i' name='count'/>"
+    "      <arg type='s' name='edid'/>"
+    "      <arg type='i' name='event_type'/>"
     "      <arg type='u' name='flags'/>"
     "    </signal>"
 
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
+    "    <property type='a{is}' name='DisplayEventTypes' access='read'/>"
     "    <property type='s' name='DdcutilVersion' access='read'/>"
     "    <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>"
     "    <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>"
@@ -1024,6 +1040,21 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     g_variant_builder_unref(builder);
     ret = value;
   }
+  else if (g_strcmp0(property_name, "DisplayEventTypes") == 0) {
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
+    const int event_types[] = {DDCA_EVENT_CONNECTED, DDCA_EVENT_DISCONNETED, DDCA_EVENT_DPMS_AWAKE, DDCA_EVENT_DPMS_ASLEEP};
+    const int num_event_types = sizeof(event_types) / sizeof(int);
+    for (int i = 0; i < num_event_types; i++) {
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+      g_variant_builder_add(builder, "{is}", event_types[i], ddca_display_event_type_name(i));
+#else
+      g_variant_builder_add(builder, "{is}", event_types[i], DDCA_Display_Event_Type_names[i]);
+#endif
+    }
+    GVariant *value = g_variant_new("a{is}", builder);
+    g_variant_builder_unref(builder);
+    ret = value;
+  }
   else if (g_strcmp0(property_name, "DdcutilOutputLevel") == 0) {
     ret = g_variant_new_uint32(ddca_get_output_level());
   }
@@ -1181,24 +1212,25 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
     g_warning("cdc_signal_dispatch null D-Bus connection");
     return TRUE;
   }
-  static int count = 0;
   g_debug("cdc dispatch called");
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
-  if (count == 0) {
-    event_ptr = g_malloc(sizeof(DDCA_Display_Detection_Event));
-    event_ptr->event_type = -1; // Just testing
-    count++;
-  }
   if (event_ptr != NULL) {
-    g_debug("cdc_signal_dispatch emit ConnectedDisplaysChanged now");
-    g_dbus_connection_emit_signal (dbus_connection,
-                                   NULL,
-                                   "/com/ddcutil/DdcutilObject",
-                                   "com.ddcutil.DdcutilInterface",
-                                   "ConnectedDisplaysChanged",
-                                   g_variant_new ("(iu)", 0, event_ptr->event_type),
-                                   &local_error);
+    DDCA_Display_Info* dinfo;
+    DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
+    if (status == 0) {  // TODO needs testing
+      g_debug("cdc_signal_dispatch emit ConnectedDisplaysChanged now");
+      gchar *edid_encoded = edid_encode(dinfo->edid_bytes);
+      g_dbus_connection_emit_signal (dbus_connection,
+                                     NULL,
+                                     "/com/ddcutil/DdcutilObject",
+                                     "com.ddcutil.DdcutilInterface",
+                                     "ConnectedDisplaysChanged",
+                                     g_variant_new ("(siu)", edid_encoded, event_ptr->event_type, 0),
+                                     &local_error);
+      ddca_free_display_info(dinfo);
+      g_free(edid_encoded);
+    }
     g_free(event_ptr);
   }
   return TRUE;
@@ -1228,13 +1260,16 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
   return strcmp(target_str, item_right->edid_encoded);
 }
 
-static gboolean poll_for_changes() {
+static gchar *poll_event_edid_encoded = NULL;
+static DDCA_Display_Event_Type poll_event_type = 0;
+
+static bool poll_for_changes() {
   g_debug("Polling now\n");
   //ddca_redetect_displays();  // TODO Cannot use redetect it is too slow - delays the whole service loop
   DDCA_Display_Info_List *dlist;
   const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
   int change_count = 0;
-
+  poll_event_edid_encoded = NULL;
   if (list_status == 0) {
     for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
       ((Poll_List_Item *) (ptr->data))->live = FALSE;
@@ -1249,8 +1284,11 @@ static gboolean poll_for_changes() {
         Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
         item->edid_encoded = edid_encoded;
         item->live = TRUE;
-        g_debug("Poll adding %.30s...\n", item->edid_encoded);
+        g_debug("Poll event - connected %.30s...\n", item->edid_encoded);
         poll_list = g_list_append(poll_list, item);
+        poll_event_edid_encoded = g_strdup(edid_encoded);
+        poll_event_type = DDCA_EVENT_CONNECTED;
+        return TRUE; // Only one event on each poll
       }
       else {
         ((Poll_List_Item *) (ptr->data))->live = TRUE;
@@ -1262,20 +1300,21 @@ static gboolean poll_for_changes() {
       GList *next = ptr->next;
       Poll_List_Item *item = (Poll_List_Item *) ptr->data;
       if (!item->live) {
-        g_debug("Poll removing %.30s...\n", item->edid_encoded);
+        g_debug("Poll event - disconnected %.30s...\n", item->edid_encoded);
+        poll_event_edid_encoded = g_strdup(item->edid_encoded);
+        poll_event_type = DDCA_EVENT_DISCONNETED;
         g_free(item->edid_encoded);
         g_free(item);
         poll_list = g_list_delete_link(poll_list, ptr);
         change_count++;
+        return TRUE;  // Only one event on each poll
       }
       ptr = next;
     }
   }
-  if (change_count > 0) {
-    return TRUE;
-  }
   return FALSE;
 }
+
 
 typedef struct  {  // Source structure including custom data (if any)
   GSource source;
@@ -1336,14 +1375,16 @@ static gboolean poll_signal_check(GSource *source) {
 static gboolean poll_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
   //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
   GError *local_error = NULL;
-  g_debug("poll emit detected changes");
+  g_message("poll emit detected changes event-type=%d edid_ecoded=%s", poll_event_type, poll_event_edid_encoded);
   g_dbus_connection_emit_signal (dbus_connection,
                                NULL,
                                "/com/ddcutil/DdcutilObject",
                                "com.ddcutil.DdcutilInterface",
                                "ConnectedDisplaysChanged",
-                               g_variant_new ("(iu)", 0, 1),
+                               g_variant_new ("(siu)", poll_event_edid_encoded, poll_event_type, 1),
                                &local_error);
+  g_free(poll_event_edid_encoded);
+  poll_event_edid_encoded = NULL;
   return TRUE;
 }
 #endif

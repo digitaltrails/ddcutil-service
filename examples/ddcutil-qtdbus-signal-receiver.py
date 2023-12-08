@@ -43,7 +43,8 @@ class Test(QObject):
 
     @pyqtSlot(QDBusMessage)
     def callback(self, message: QDBusMessage):
-        print("ConnectedDisplaysChanged Callback called", message.arguments())
+        edid_encoded, event_type, flags = message.arguments()
+        print(f"ConnectedDisplaysChanged Callback called {event_type=} {flags=} {edid_encoded:.30}...")
 
 if __name__ == '__main__':
     app = QCoreApplication(sys.argv)
