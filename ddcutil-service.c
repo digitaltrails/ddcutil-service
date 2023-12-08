@@ -1256,15 +1256,14 @@ typedef struct {
 
 static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
   gchar *target_str = (char *) target;
-  Poll_List_Item *item_right = (Poll_List_Item *) item_ptr;
-  return strcmp(target_str, item_right->edid_encoded);
+  Poll_List_Item *item = (Poll_List_Item *) item_ptr;
+  return strcmp(target_str, item->edid_encoded);
 }
 
 static gchar *poll_event_edid_encoded = NULL;
 static DDCA_Display_Event_Type poll_event_type = 0;
 
 static bool poll_for_changes() {
-  g_debug("Polling now\n");
   //ddca_redetect_displays();  // TODO Cannot use redetect it is too slow - delays the whole service loop
   DDCA_Display_Info_List *dlist;
   const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
@@ -1280,6 +1279,7 @@ static bool poll_for_changes() {
       gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
       GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
       if (ptr == NULL) {
+        g_debug("Poll event - new %d %.30s...", ndx + 1, edid_encoded);
         change_count++;
         Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
         item->edid_encoded = edid_encoded;
@@ -1291,6 +1291,7 @@ static bool poll_for_changes() {
         return TRUE; // Only one event on each poll
       }
       else {
+        g_debug("Poll event - found %d set to live %.30s...", ndx + 1, edid_encoded);
         ((Poll_List_Item *) (ptr->data))->live = TRUE;
         g_free(edid_encoded);
       }
@@ -1334,7 +1335,6 @@ typedef struct  {  // Source structure including custom data (if any)
 static gboolean poll_signal_prepare(GSource *source, gint *timeout) {
   if (enable_change_signals) {
     *timeout = 10000;
-    g_debug("poll prepare");
   }
   else {
     *timeout = 30000;
@@ -1352,11 +1352,7 @@ static gboolean poll_signal_prepare(GSource *source, gint *timeout) {
  */
 static gboolean poll_signal_check(GSource *source) {
   if (enable_change_signals) {
-    if (poll_for_changes()) {
-      g_debug("poll detected changes");
-      return TRUE;
-    }
-    g_debug("poll no changes");
+    return poll_for_changes();
   }
   return FALSE;
 }
