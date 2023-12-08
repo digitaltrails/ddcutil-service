@@ -30,11 +30,27 @@ implements the VESA DDC Monitor Control Command Set.  In general,
 most things that can be controlled using a monitor's on-screen
 display can be controlled by this service.
 
-The service is designed to be started the
+.P
+The
+.B ddctuil-service
+is registered as a
+.B session-service
+with the
 .B dbus-daemon
-and normally requires no command line options.
-Several options are provided for use when manually starting
-the daemon while trouble shooting or while developing clients.
+which starts the service on demand.
+Should the service error and terminate, the
+.B dbus-daemon
+will automatically restart it when it is next accessed.  Client
+connections with the service are stateless.
+
+.P
+For startup under
+.B dbus-daemon,
+the service requires no command line options.
+For the purpose of testing and development, the service can be
+manually started and several options are provided to assist with
+such activities.  There are also a few info gathering options which can be
+manually run without causing any interference with the running service.
 
 
 .SS OPTIONS
@@ -44,7 +60,8 @@ the daemon while trouble shooting or while developing clients.
 Enabling log-info will produce info and debug level output.  The
 out put will go to standard-error or, if running from
 .B dbus-daemon, to the journal.
-This option can also be enabled by setting the service's D-Bus
+This option can also be enabled after startup by setting the running
+service's D-Bus
 .B ServiceInfoLogging
 property.
 
@@ -95,7 +112,7 @@ Outputs the XML introspection text for the service and exits.
 
 .SH SERVICE METHODS
 
-.P
+.PP
 The following is a brief summary of the methods provided by the service.
 
 
@@ -144,7 +161,7 @@ sleep multiplier.
 .B Restart
 Restart the service with specific arguments.
 
-.P
+.PP
 For convenience, if a method requires a display-argument, either an integer
 .I display-number
 or a
@@ -153,9 +170,18 @@ can be supplied. Base64-encoded EDIDs are obtained from the
 .B Detect
 method).
 
-See
+Run
 .B ddcutil-service --introspect
-for details on each method's in/out parameters.
+for details on each method's in/out parameters. For even more
+information the
+.B d-feet
+graphical D-Bus debugger provides a very readable
+way to browse and experiment with the service interface, simply start
+.B d-feet,
+select the
+.B Session Bus
+and search for
+.B ddcutil-service.
 
 .SH SERVICE SIGNALS
 
@@ -165,7 +191,7 @@ signal which will raise a signal on the client should a displays connection
 status change.  The utility and reliability of this callback is
 dependent on the vagaries of specific displays, GPUs, desktops (KDE,
 gnome, ...), and display servers (X11, Wayland-implementations).
-.P
+.PP
 Full support for this callback isn't due until
 .B ddcutil 2.0.2+.
 Limited support has been emulated in the service and tested on
@@ -241,24 +267,19 @@ Query the
 version string.
 
 
-.P
+.PP
 Properties can be queried and set using utilities such as
-.B d-feet
+.B busctl,
+.B d-bus-send,
 and
-.B d-bus-send, for example:
-.nf
-
-   dbus-send --session --dest=com.ddcutil.DdcutilService --print-reply \\
-       --type=method_call /com/ddcutil/DdcutilObject org.freedesktop.DBus.Properties.Set \\
-       string:com.ddcutil.DdcutilInterface \\
-       string:ServiceInfoLogging variant:boolean:true
-
-.fi
+.B d-feet,
+see
+.B EXAMPLES.
 
 .SH CONFIG FILES
 
 .B /usr/share/dbus-1/services/com.ddcutil.DdcutilService.service
-.P
+.PP
 The
 .B dbus-daemon
 config file ensures the service is started or restarted on demand.  Typically the
@@ -271,6 +292,48 @@ contents would be as follows
 .fi
 
 .SH EXAMPLES
+.PP
+The systemd utility
+.B bustctl
+can be used from the command line to interact with the service.
+
+.B Summarise the service methods and properties:
+
+.nf
+    busctl --user introspect com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject
+.fi
+
+.B Detect the connected displays:
+
+.nf
+    busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
+        com.ddcutil.DdcutilInterface Detect u 0
+.fi
+
+.B Get the brightness of display-1 (VCP 0x10):
+
+.nf
+    busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
+        com.ddcutil.DdcutilInterface GetVcp isyu 1 "" 0x10 0
+.fi
+
+.B Set brightness of display-1 (VCP 0x10):
+
+.nf
+    busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
+        com.ddcutil.DdcutilInterface SetVcp isyqu 1 "" 16 50 0
+.fi
+
+.B Query or set the service logging level:
+
+.nf
+   busctl --user get-property com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
+       com.ddcutil.DdcutilInterface ServiceInfoLogging
+
+   busctl --user set-property com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
+       com.ddcutil.DdcutilInterface ServiceInfoLogging b true
+.fi
+
 .PP
 The installed service is packaged with several examples of it's use including
 .B dbus-send
