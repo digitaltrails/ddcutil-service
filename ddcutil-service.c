@@ -195,7 +195,7 @@ static const gchar introspection_xml[] =
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
     "    <property type='s' name='DdcutilVersion' access='read'/>"
-    "    <property type='b' name='DdcutilVerifyVcpSet' access='readwrite'/>"
+    "    <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>"
     "    <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>"
     "    <property type='u' name='DdcutilOutputLevel' access='readwrite'/>"
     "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
@@ -818,7 +818,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
           feature_description = metadata_ptr->feature_desc;
         }
         // if (metadata_ptr->sl_values != NULL) {  // TODO - not used, do we need it?
-        //   for (const DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
+        //   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
         // }
         is_read_only = metadata_ptr->feature_flags & DDCA_RO;
         is_write_only = metadata_ptr->feature_flags & DDCA_WO;
@@ -993,7 +993,7 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else   if (g_strcmp0(property_name, "ServiceInterfaceVersion") == 0) {
     ret = g_variant_new_string(DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
   }
-  else if (g_strcmp0(property_name, "DdcutilVerifyVcpSet") == 0) {
+  else if (g_strcmp0(property_name, "DdcutilVerifySetVcp") == 0) {
     ret = g_variant_new_boolean(ddca_is_verify_enabled());
   }
   else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
@@ -1059,7 +1059,7 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
 static gboolean handle_set_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                     const gchar *interface_name, const gchar *property_name, GVariant *value,
                                     GError **error, gpointer user_data) {
-  if (g_strcmp0(property_name, "DdcutilVerifyVcpSet") == 0) {
+  if (g_strcmp0(property_name, "DdcutilVerifySetVcp") == 0) {
     ddca_enable_verify(g_variant_get_boolean(value));
   }
   else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
