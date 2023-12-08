@@ -93,7 +93,107 @@ version and exits.
 
 Outputs the XML introspection text for the service and exits.
 
+.SH SERVICE METHODS
+
+.P
+The following is a brief summary of the methods provided by the service.
+
+
+.TP
+.B Detect
+Return a list of monitors detected along with their properties.
+
+.TP
+.B GetVcp
+Query a displays's settings by VCP code, for example, bightness is VCP code 0x10.
+
+.TP
+.B GetMultipleVcp
+Query multiple VCP codes for a single display.
+
+.TP
+.B SetVcp
+Set a display's settings by VCP code.
+
+.TP
+.B GetCapabiltiesMetadata
+Query a displays capabilities returning a parsed data-structure describing the
+features and permitted values.
+
+.TP
+.B GetCapabilitiesString
+Query a displays capabilities returning a unparsed capabilities string.
+
+.TP
+.B GetVcpMetadata
+Query the metadata describing a specific VCP code for a specific display.
+
+.TP
+.B GetSleepMultiplier
+Get the display specific
+.B ddcutil
+sleep multiplier.
+
+.TP
+.B SetSleepMultiplier
+Set a display specific
+.B ddcutil
+sleep multiplier.
+
+.TP
+.B Restart
+Restart the service with specific arguments.
+
+.P
+For convenience, if a method requires a display-argument, either an integer
+.I display-number
+or a
+.I base64-encoded EDID
+can be supplied. Base64-encoded EDIDs are obtained from the
+.B Detect
+method).
+
+See
+.B ddcutil-service --introspect
+for details on each method's in/out parameters.
+
+.SH SERVICE SIGNALS
+
+The service provides a
+.B ConnectedDisplaysChanged
+signal which will raise a signal on the client should a displays connection
+status change.  The utility and reliability of this callback is
+dependent on the vagaries of specific displays, GPUs, desktops (KDE,
+gnome, ...), and display servers (X11, Wayland-implementations).
+.P
+Full support for this callback isn't due until
+.B ddcutil 2.0.2+.
+Limited support has been emulated in the service and tested on
+.B ddcutil 1.4.1+
+(at time of writing it probably only detects
+the physical unplugging of a monitors data cable).
+
 .SH SERVICE PROPERTIES
+
+.TP
+.B AttributesReturnedByDetect
+Query the fieldnames returned from the
+.B Detect
+method.  Lists the names of the fields in the order they are
+found in each struct returned from
+.B Detect.
+
+.TP
+.B StatusValues
+Query the list of status values returned by
+.B libddcutil
+along with their text names.
+
+.TP
+.B DisplayEventTypes
+Query the event-types sent with the
+.B ConnectedDisplaysChanged
+signal along with their text names.
 
 The service provides several D-Bus accessible properties for querying
 and adjusting its operation and
@@ -101,36 +201,45 @@ and adjusting its operation and
 internal settings.
 
 .TP
-.B InterfaceVersionString
-Query the service interface version.
-
-.TP
-.B DdcutilVersionString
-Query the
-.B libddcutil
-version string.
-
-.TP
 .B ServiceInfoLogging
 Enable/disable the service's diagnostic level output to include info and debug messages.
 
 .TP
-.B OutputLevel
-Read/write the
-.B libddcutil
-output level.
+.B ServiceInterfaceVersion
+Query the service interface version.
 
 .TP
-.B OutputLevel
+.B ServiceSignalChanges
+Enable/disable the
+.B ConnectedDisplaysChanged
+signal for monitoring changes to the connected VDU's
+(connect, disconnect, DPMS-sleep, DPMS-awake).  Also see
+.B DisplayEventTypes.
+
+.TP
+.B DdcutilDynamicSleep
 Enable/disable
 .B libddcutil
 dynamic-sleep adjustment of DDC timings.
 
 .TP
-.B Verify
+.B DdcutilOutputLevel
+Read/write the
+.B libddcutil
+output level.
+
+.TP
+.B DdcutilVerifySetVcp
 Enable/disable
 .B libddcutil
-extra DDC calls to check wheter monitor settings were actually applied by the monitor.
+extra DDC calls to check whether VCP settings were actually applied by the monitor.
+
+.TP
+.B DdcutilVersion
+Query the
+.B libddcutil
+version string.
+
 
 .P
 Properties can be queried and set using utilities such as
@@ -192,11 +301,10 @@ Michael Hamilton (michael@actrix.gen.nz)
 
 .SH ACKNOWLEDGEMENTS
 
-I like to thank
+I'd like to thank
 .B Sanford Rockowitz
 for
-.B libddcutil
-,
+.B libddcutil,
 .B ddcutil
 and all the assistance and advice while working on this service.
 

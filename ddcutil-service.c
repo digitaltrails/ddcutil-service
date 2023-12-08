@@ -1551,7 +1551,7 @@ int main(int argc, char *argv[]) {
 
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-#ifdef HAS_DISPLAYS_CHANGED_CALLBACK
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (enable_change_signals) {
     g_message("Using libddcutil change detection");
   }
@@ -1562,7 +1562,7 @@ int main(int argc, char *argv[]) {
   g_source_unref(source);
 #endif
 
-#ifdef USE_INTERNAL_CHANGE_POLLING
+#if defined(USE_INTERNAL_CHANGE_POLLING)
   if (enable_change_signals) {
     g_message("Using internal change polling");
   }
