@@ -563,8 +563,8 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
           g_variant_builder_add(value_array_builder, "(yqqs)", vcp_code, current_value, max_value, formatted_value);
           free(formatted_value);
         }
-        else {
-          g_warning("GetMultipleVcp failed to get value for display %d vcp_code %d", display_number, vcp_code);
+        else {  // Probably just asleep or turned off
+          g_info("GetMultipleVcp failed to get value for display %d vcp_code %d", display_number, vcp_code);
         }
       }
       ddca_close_display(disp_handle);
@@ -1221,13 +1221,16 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
     if (status == 0) {  // TODO needs testing
       g_debug("cdc_signal_dispatch emit ConnectedDisplaysChanged now");
       gchar *edid_encoded = edid_encode(dinfo->edid_bytes);
-      g_dbus_connection_emit_signal (dbus_connection,
-                                     NULL,
-                                     "/com/ddcutil/DdcutilObject",
-                                     "com.ddcutil.DdcutilInterface",
-                                     "ConnectedDisplaysChanged",
-                                     g_variant_new ("(siu)", edid_encoded, event_ptr->event_type, 0),
-                                     &local_error);
+      if (!g_dbus_connection_emit_signal(dbus_connection,
+                                         NULL,
+                                         "/com/ddcutil/DdcutilObject",
+                                         "com.ddcutil.DdcutilInterface",
+                                         "ConnectedDisplaysChanged",
+                                         g_variant_new ("(siu)", edid_encoded, event_ptr->event_type, 0),
+                                         &local_error)) {
+        g_warning("cdc_signal_dispatch failed %s", local_error != NULL ? local_error->message : "");
+        g_free(local_error);
+      }
       ddca_free_display_info(dinfo);
       g_free(edid_encoded);
     }
@@ -1370,15 +1373,19 @@ static gboolean poll_signal_check(GSource *source) {
  */
 static gboolean poll_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
   //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
-  GError *local_error = NULL;
+  GError *local_error;
+  local_error = NULL;
   g_message("poll emit detected changes event-type=%d edid_ecoded=%s", poll_event_type, poll_event_edid_encoded);
-  g_dbus_connection_emit_signal (dbus_connection,
-                               NULL,
-                               "/com/ddcutil/DdcutilObject",
-                               "com.ddcutil.DdcutilInterface",
-                               "ConnectedDisplaysChanged",
-                               g_variant_new ("(siu)", poll_event_edid_encoded, poll_event_type, 1),
-                               &local_error);
+  if (!g_dbus_connection_emit_signal(dbus_connection,
+                                     NULL,
+                                     "/com/ddcutil/DdcutilObject",
+                                     "com.ddcutil.DdcutilInterface",
+                                     "ConnectedDisplaysChanged",
+                                     g_variant_new ("(siu)", poll_event_edid_encoded, poll_event_type, 1),
+                                     &local_error)) {
+    g_warning("poll emit detected changes signal failed: %s", local_error != NULL ? local_error->message : "");
+    g_free(local_error);
+  }
   g_free(poll_event_edid_encoded);
   poll_event_edid_encoded = NULL;
   return TRUE;
