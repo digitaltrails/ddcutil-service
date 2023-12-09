@@ -29,6 +29,8 @@ Several bash and python scripts that demonstrate using the service are included 
 folder.  They cover the use of the `dbus-send` command line utiltity
 and the python `dasbus` and `QtDBus` libraries. 
 
+Also see the [ddcutil-service.1](https://htmlpreview.github.io/?raw.githubusercontent.com/digitaltrails/ddcutil-dbus/master/docs/html/ddcutil-service.html)
+man page.
 
 ### Installing the DdcutilService as a dbus-daemon auto-started service
 
