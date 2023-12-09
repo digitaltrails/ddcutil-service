@@ -1,6 +1,6 @@
 # ddcutil-qtdbus-client.py
 # ------------------------
-# Python Qt QtDBus example of using ddcutil-dbus-server
+# Python Qt QtDBus example of using ddcutil-service
 #
 # Copyright (C) 2023, Michael Hamilton
 #

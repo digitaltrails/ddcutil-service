@@ -1,6 +1,6 @@
 # ddcutil-qtdbus-signal-receiver.py
 # ---------------------------------
-# Python Qt QtDBus example of receiving signals from ddcutil-dbus-server
+# Python Qt QtDBus example of receiving signals from ddcutil-service
 #
 # Copyright (C) 2023, Michael Hamilton
 #

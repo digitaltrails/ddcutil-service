@@ -1,6 +1,6 @@
 # ddcutil-dasbus-client.py
 # ----------------------
-# Python dasbus example of using ddcutil-dbus-server
+# Python dasbus example of using ddcutil-service
 #
 # Copyright (C) 2023, Michael Hamilton
 #
