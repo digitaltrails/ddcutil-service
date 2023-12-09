@@ -1,0 +1,285 @@
+                                ddcutil-service
+
+NAME
+SYNOPSIS
+DESCRIPTION
+OPTIONS
+SERVICE METHODS
+SERVICE SIGNALS
+SERVICE PROPERTIES
+CONFIG FILES
+EXAMPLES
+BUGS AND LIMITATIONS
+AUTHOR
+ACKNOWLEDGEMENTS
+COPYRIGHT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NAME
+
+ddcutil-service − D-Bus service for libddcutil VESA DDC Monitor Virtual Control
+Panel
+
+SYNOPSIS
+
+ddcutil-service
+ddcutil-service --log_info | --ddca-syslog-level=N | --ddca-init-options=M -- [
+libddcutil ddc_init options ]
+ddcutil-service --help | --version | --introspect
+
+DESCRIPTION
+
+ddcutil-service ddcutil-service is D-Bus service wrapper for libddcutil which
+implements the VESA DDC Monitor Control Command Set. In general, most things
+that can be controlled using a monitor’s on-screen display can be controlled by
+this service.
+
+The ddctuil-service is registered as a session-service with the dbus-daemon
+which starts the service on demand. Should the service error and terminate, the
+dbus-daemon will automatically restart it when it is next accessed. Client
+connections with the service are stateless.
+
+For startup under dbus-daemon, the service requires no command line options.
+For the purpose of testing and development, the service can be manually started
+and several options are provided to assist with such activities. There are also
+a few info gathering options which can be manually run without causing any
+interference with the running service.
+
+OPTIONS
+
+--log_info
+
+Enabling log-info will produce info and debug level output. The out put will go
+to standard-error or, if running from dbus-daemon, to the journal. This option
+can also be enabled after startup by setting the running service’s D-Bus
+ServiceInfoLogging property.
+
+--ddca-syslog-level N
+
+The DDCA syslog level numerical value is passed to libddutil’s ddca_init()
+function at startup to enable logging from within the library. It’s only
+available for libddutil 2.0.1+.
+
+--ddca-init-options N
+
+The DDCA init option is a numerical value is passed to libddutil’s ddca_init()
+function at startup to enable/disable various options with the library. It’s
+only available for libddutil 2.0.1+.
+
+-- [ libddcutil ddc_init options ]
+
+The libddcutil library also supports a set of init options, any following the
+-- will be passed as a string to the ddc_init() function when it’s called at
+startup.
+
+        --help
+
+
+Outputs options-help and exits.
+
+--version
+
+Outputs the service interface version and the .libddutil version and exits.
+
+--introspect
+
+Outputs the XML introspection text for the service and exits.
+
+SERVICE METHODS
+
+The following is a brief summary of the methods provided by the service.
+
+        Detect   Return a list of monitors detected along with their
+                 properties.
+
+        GetVcp   Query a displays’s settings by VCP code, for example,
+                 bightness is VCP code 0x10.
+
+
+GetMultipleVcp
+
+Query multiple VCP codes for a single display.
+
+        SetVcp   Set a display’s settings by VCP
+                 code.
+
+
+GetCapabiltiesMetadata
+
+Query a displays capabilities returning a parsed data-structure describing the
+features and permitted values.
+
+GetCapabilitiesString
+
+Query a displays capabilities returning a unparsed capabilities string.
+
+GetVcpMetadata
+
+Query the metadata describing a specific VCP code for a specific display.
+
+GetSleepMultiplier
+
+Get the display specific ddcutil sleep multiplier.
+
+SetSleepMultiplier
+
+Set a display specific ddcutil sleep multiplier.
+
+Restart
+
+Restart the service with specific arguments.
+
+For convenience, if a method requires a display-argument, either an integer
+display-number or a base64-encoded EDID can be supplied. Base64-encoded EDIDs
+are obtained from the Detect method).
+
+Run ddcutil-service --introspect for details on each method’s in/out
+parameters. For even more information the d-feet graphical D-Bus debugger
+provides a very readable way to browse and experiment with the service
+interface, simply start d-feet, select the Session Bus and search for
+ddcutil-service.
+
+SERVICE SIGNALS
+
+The service provides a ConnectedDisplaysChanged signal which will raise a
+signal on the client should a displays connection status change. The utility
+and reliability of this callback is dependent on the vagaries of specific
+displays, GPUs, desktops (KDE, gnome, ...), and display servers (X11,
+Wayland-implementations).
+
+Full support for this callback isn’t due until ddcutil 2.0.2+. Limited support
+has been emulated in the service and tested on ddcutil 1.4.1+ (at time of
+writing it probably only detects the physical unplugging of a monitors data
+cable).
+
+SERVICE PROPERTIES
+
+AttributesReturnedByDetect
+
+Query the fieldnames returned from the Detect method. Lists the names of the
+fields in the order they are found in each struct returned from Detect.
+
+StatusValues
+
+Query the list of status values returned by libddcutil along with their text
+names.
+
+DisplayEventTypes
+
+Query the event-types sent with the ConnectedDisplaysChanged signal along with
+their text names.
+
+The service provides several D-Bus accessible properties for querying and
+adjusting its operation and libddcutil internal settings.
+
+ServiceInfoLogging
+
+Enable/disable the service’s diagnostic level output to include info and debug
+messages.
+
+ServiceInterfaceVersion
+
+Query the service interface version.
+
+ServiceSignalChanges
+
+Enable/disable the ConnectedDisplaysChanged signal for monitoring changes to
+the connected VDU’s (connect, disconnect, DPMS-sleep, DPMS-awake). Also see
+DisplayEventTypes.
+
+DdcutilDynamicSleep
+
+Enable/disable libddcutil dynamic-sleep adjustment of DDC timings.
+
+DdcutilOutputLevel
+
+Read/write the libddcutil output level.
+
+DdcutilVerifySetVcp
+
+Enable/disable libddcutil extra DDC calls to check whether VCP settings were
+actually applied by the monitor.
+
+DdcutilVersion
+
+Query the libddcutil version string.
+
+Properties can be queried and set using utilities such as busctl, d-bus-send,
+and d-feet, see EXAMPLES.
+
+CONFIG FILES
+
+/usr/share/dbus-1/services/com.ddcutil.DdcutilService.service
+
+The dbus-daemon config file ensures the service is started or restarted on
+demand. Typically the contents would be as follows
+
+[D-BUS Service]
+Name=com.ddcutil.DdcutilService
+Exec=/usr/bin/ddcutil-service
+
+EXAMPLES
+
+The systemd utility bustctl can be used from the command line to interact with
+the service.
+
+Summarise the service methods and properties:
+
+busctl --user introspect com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject
+
+Detect the connected displays:
+
+busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
+com.ddcutil.DdcutilInterface Detect u 0
+
+Get the brightness of display-1 (VCP 0x10):
+
+busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
+com.ddcutil.DdcutilInterface GetVcp isyu 1 "" 0x10 0
+
+Set brightness of display-1 (VCP 0x10):
+
+busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
+com.ddcutil.DdcutilInterface SetVcp isyqu 1 "" 16 50 0
+
+Query or set the service logging level:
+
+busctl --user get-property com.ddcutil.DdcutilService /com/ddcutil/
+DdcutilObject \
+com.ddcutil.DdcutilInterface ServiceInfoLogging
+
+busctl --user set-property com.ddcutil.DdcutilService /com/ddcutil/
+DdcutilObject \
+com.ddcutil.DdcutilInterface ServiceInfoLogging b true
+
+The installed service is packaged with several examples of it’s use including
+dbus-send scripts and python3 clients for D-Bus dasbus and QtDBus APIs.
+
+The examples would normally be installed in: /usr/share/ddcutil-service/
+examples/
+
+BUGS AND LIMITATIONS
+
+This code is definitely a work in progress and is under active development
+along with supporting amendments to libddcutil by Sanford Rockowitz.
+
+Please send any bug reports to michael@actrix.gen.nz.
+
+AUTHOR
+
+Michael Hamilton (michael@actrix.gen.nz)
+
+ACKNOWLEDGEMENTS
+
+I’d like to thank Sanford Rockowitz for libddcutil, ddcutil and all the
+assistance and advice while working on this service.
+
+COPYRIGHT
+
+Copyright (C) 2033 Michael Hamilton.
+
+ddcutil-service is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation; either version 2, or (at your option) any later version.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
