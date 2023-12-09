@@ -22,9 +22,16 @@ Version:        1.0.0
 Release:        0
 Summary:        D-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 License:        GPL-2.0+
-Group:          System/GUI/Other
-URL:            https://github.com/digitaltrails/ddcutil-dbus
-Source0:        https://github.com/digitaltrails/ddcutil-dbus/archive/refs/tags/v1.0.0.tar.gz#/%{name}-%{version}.tar.gz
+
+%if %{defined fedora_version}
+Group: Hardware/Other
+%endif
+%if %{defined suse_version}
+Group: System/GUI/Other
+%endif
+
+URL:            https://github.com/digitaltrails/ddcutil-service
+Source0:        https://github.com/digitaltrails/ddcutil-service/archive/refs/tags/v1.0.0.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires: make
 BuildRequires: gcc-c++
 BuildRequires: pkgconfig(glib-2.0)   >= 2.40
