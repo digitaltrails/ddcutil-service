@@ -1,8 +1,11 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<!-- saved from url=(0043)file:///tmp/hmanrrOja1/ddcutil-service.html -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<!-- Creator     : groff version 1.23.0 -->
+<!-- CreationDate: Sun Dec 10 08:36:53 2023 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
 <meta name="generator" content="groff -Thtml, see www.gnu.org">
-
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <meta name="Content-Style" content="text/css">
 <style type="text/css">
        p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
@@ -17,19 +20,19 @@
 
 <h1 align="center">ddcutil-service</h1>
 
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#NAME">NAME</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#SYNOPSIS">SYNOPSIS</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#DESCRIPTION">DESCRIPTION</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#OPTIONS">OPTIONS</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#SERVICE%20METHODS">SERVICE METHODS</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#SERVICE%20SIGNALS">SERVICE SIGNALS</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#SERVICE%20PROPERTIES">SERVICE PROPERTIES</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#CONFIG%20FILES">CONFIG FILES</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#EXAMPLES">EXAMPLES</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#BUGS%20AND%20LIMITATIONS">BUGS AND LIMITATIONS</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#AUTHOR">AUTHOR</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#ACKNOWLEDGEMENTS">ACKNOWLEDGEMENTS</a><br>
-<a href="file:///tmp/hmanrrOja1/ddcutil-service.html#COPYRIGHT">COPYRIGHT</a><br>
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#SERVICE METHODS">SERVICE METHODS</a><br>
+<a href="#SERVICE SIGNALS">SERVICE SIGNALS</a><br>
+<a href="#SERVICE PROPERTIES">SERVICE PROPERTIES</a><br>
+<a href="#CONFIG FILES">CONFIG FILES</a><br>
+<a href="#EXAMPLES">EXAMPLES</a><br>
+<a href="#BUGS AND LIMITATIONS">BUGS AND LIMITATIONS</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+<a href="#ACKNOWLEDGEMENTS">ACKNOWLEDGEMENTS</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
 
 <hr>
 
@@ -40,7 +43,7 @@
 
 
 <p style="margin-left:9%; margin-top: 1em">ddcutil-service
-&#8722; D-Bus service for libddcutil VESA DDC Monitor
+&minus; D-Bus service for libddcutil VESA DDC Monitor
 Virtual Control Panel</p>
 
 <h2>SYNOPSIS
@@ -67,7 +70,7 @@ ddcutil-service</b> <i>--help</i> | <i>--version</i> |
 ddcutil-service is D-Bus service wrapper for libddcutil
 which implements the VESA DDC Monitor Control Command Set.
 In general, most things that can be controlled using a
-monitor’s on-screen display can be controlled by this
+monitor&rsquo;s on-screen display can be controlled by this
 service.</p>
 
 <p style="margin-left:9%; margin-top: 1em">The
@@ -100,16 +103,16 @@ log-info will produce info and debug level output. The out
 put will go to standard-error or, if running from
 <b>dbus-daemon,</b> to the journal. This option can also be
 toggled after startup by using B-Bus to alter the
-service’s <b>ServiceInfoLogging</b> property (see
+service&rsquo;s <b>ServiceInfoLogging</b> property (see
 <b>EXAMPLES</b> below).</p>
 
 <p style="margin-left:9%;"><b>--ddca-syslog-level</b>
 <i>N</i></p>
 
 <p style="margin-left:18%; margin-top: 1em">The DDCA syslog
-level numerical value is passed to <b>libddutil’s
+level numerical value is passed to <b>libddutil&rsquo;s
 ddca_init()</b> function at startup to enable logging from
-within the library. It’s only available for
+within the library. It&rsquo;s only available for
 <b>libddutil 2.0.1+.</b></p>
 
 <p style="margin-left:9%;"><b>--ddca-init-options</b>
@@ -117,8 +120,8 @@ within the library. It’s only available for
 
 <p style="margin-left:18%; margin-top: 1em">The DDCA init
 option is a numerical value is passed to
-<b>libddutil’s ddca_init()</b> function at startup to
-enable/disable various options with the library. It’s
+<b>libddutil&rsquo;s ddca_init()</b> function at startup to
+enable/disable various options with the library. It&rsquo;s
 only available for <b>libddutil 2.0.1+.</b></p>
 
 <p style="margin-left:9%;"><b>-- [ libddcutil ddc_init
@@ -127,11 +130,12 @@ options ]</b></p>
 <p style="margin-left:18%;">The <b>libddcutil</b> library
 also supports a set of init options, any following the
 <b>--</b> will be passed as a string to the
-<b>ddc_init()</b> function when it’s called at
+<b>ddc_init()</b> function when it&rsquo;s called at
 startup.</p>
 
-<table width="100%" border="0" rules="none" frame="void" cellspacing="0" cellpadding="0">
-<tbody><tr valign="top" align="left">
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
 <td width="9%"></td>
 <td width="8%">
 
@@ -139,12 +143,13 @@ startup.</p>
 <p><b>--help</b></p></td>
 <td width="83%">
 </td></tr>
-</tbody></table>
+</table>
 
 <p style="margin-left:18%; margin-top: 1em">Outputs
 options-help and exits.</p>
 
-<p style="margin-left:9%;"><b>--version</b></p>
+
+<p style="margin-left:9%;"><b>&acirc;&acirc;version</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Outputs the
 service interface version and the <b>.libddutil</b> version
@@ -163,8 +168,9 @@ introspection text for the service and exits.</p>
 <p style="margin-left:9%; margin-top: 1em">The following is
 a brief summary of the methods provided by the service.</p>
 
-<table width="100%" border="0" rules="none" frame="void" cellspacing="0" cellpadding="0">
-<tbody><tr valign="top" align="left">
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
 <td width="9%"></td>
 <td width="8%">
 
@@ -186,17 +192,18 @@ properties.</p> </td></tr>
 <td width="82%">
 
 
-<p>Query a displays’s settings by VCP code, for
+<p>Query a displays&rsquo;s settings by VCP code, for
 example, bightness is VCP code 0x10.</p></td></tr>
-</tbody></table>
+</table>
 
 <p style="margin-left:9%;"><b>GetMultipleVcp</b></p>
 
 <p style="margin-left:18%;">Query multiple VCP codes for a
 single display.</p>
 
-<table width="100%" border="0" rules="none" frame="void" cellspacing="0" cellpadding="0">
-<tbody><tr valign="top" align="left">
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
 <td width="9%"></td>
 <td width="8%">
 
@@ -206,10 +213,10 @@ single display.</p>
 <td width="47%">
 
 
-<p>Set a display’s settings by VCP code.</p></td>
+<p>Set a display&rsquo;s settings by VCP code.</p></td>
 <td width="35%">
 </td></tr>
-</tbody></table>
+</table>
 
 
 <p style="margin-left:9%;"><b>GetCapabiltiesMetadata</b></p>
@@ -252,7 +259,7 @@ supplied. Base64-encoded EDIDs are obtained from the
 
 <p style="margin-left:9%; margin-top: 1em">Run
 <b>ddcutil-service --introspect</b> for details on each
-method’s in/out parameters. For even more information
+method&rsquo;s in/out parameters. For even more information
 the <b>d-feet</b> graphical D-Bus debugger provides a very
 readable way to browse and experiment with the service
 interface, simply start <b>d-feet,</b> select the <b>Session
@@ -272,7 +279,7 @@ desktops (KDE, gnome, ...), and display servers (X11,
 Wayland-implementations).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Full support for
-this callback isn’t due until <b>ddcutil
+this callback isn&rsquo;t due until <b>ddcutil
 2.0.2+.</b></p>
 
 <h2>SERVICE PROPERTIES
@@ -308,7 +315,7 @@ settings.</p>
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 
 <p style="margin-left:18%;">Enable/disable the
-service’s diagnostic level output to include info and
+service&rsquo;s diagnostic level output to include info and
 debug messages.</p>
 
 
@@ -321,7 +328,7 @@ version.</p>
 
 <p style="margin-left:18%;">Enable/disable the
 <b>ConnectedDisplaysChanged</b> signal for monitoring
-changes to the connected VDU’s (connect, disconnect,
+changes to the connected VDU&rsquo;s (connect, disconnect,
 DPMS-sleep, DPMS-awake). Also see
 <b>DisplayEventTypes.</b></p>
 
@@ -404,7 +411,7 @@ brightness of display-1 (VCP 0x10):</b></p>
 <p style="margin-left:9%; margin-top: 1em">busctl --user
 call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
 <br>
-com.ddcutil.DdcutilInterface GetVcp isyu 1 "" 0x10
+com.ddcutil.DdcutilInterface GetVcp isyu 1 &quot;&quot; 0x10
 0</p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>Set
@@ -413,7 +420,7 @@ brightness of display-1 (VCP 0x10):</b></p>
 <p style="margin-left:9%; margin-top: 1em">busctl --user
 call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
 <br>
-com.ddcutil.DdcutilInterface SetVcp isyqu 1 "" 16
+com.ddcutil.DdcutilInterface SetVcp isyqu 1 &quot;&quot; 16
 50 0</p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>Query or set
@@ -430,7 +437,7 @@ set-property com.ddcutil.DdcutilService
 com.ddcutil.DdcutilInterface ServiceInfoLogging b true</p>
 
 <p style="margin-left:9%; margin-top: 1em">The installed
-service is packaged with several examples of it’s use,
+service is packaged with several examples of it&rsquo;s use,
 including <b>dbus-send</b> scripts and <b>python3</b>
 clients for D-Bus <b>dasbus</b> and <b>QtDBus</b> APIs. The
 examples are normally be installed in:
@@ -443,7 +450,7 @@ examples are normally be installed in:
 
 <p style="margin-left:9%; margin-top: 1em">Should the
 service exit unexpectedly, it relies on <b>daebus-deamon</b>
-for on-demand restart. For that reason, it’s not
+for on-demand restart. For that reason, it&rsquo;s not
 suitable for running in production as a stand-alone
 daemon.</p>
 
@@ -451,7 +458,7 @@ daemon.</p>
 can only be changed at process startup, if they need to be
 changed the service will require a manual restart, either by
 killing it with a UNIX signal, or by invoking the
-service’s <b>Restart</b> menthod.</p>
+service&rsquo;s <b>Restart</b> menthod.</p>
 
 <p style="margin-left:9%; margin-top: 1em">The
 <b>ConnectedDisplaysChanged</b> signal is incomplete pending
@@ -499,6 +506,5 @@ under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2,
 or (at your option) any later version.</p>
 <hr>
-
-
-</body></html>
+</body>
+</html>
