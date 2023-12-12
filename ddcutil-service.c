@@ -510,14 +510,13 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
       ddca_close_display(disp_handle);
     }
   }
-  if (formatted_value == NULL) {
-    formatted_value = g_strdup("");
-  }
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
-  free(formatted_value);
+  if (formatted_value != NULL) {
+    free(formatted_value);
+  }
   free(hex_edid);
   free(message_text);
 }
