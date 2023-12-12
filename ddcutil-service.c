@@ -498,15 +498,20 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
-    ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    static DDCA_Non_Table_Vcp_Value valrec;
-    status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == 0) {
-      current_value = valrec.sh << 8 | valrec.sl;
-      max_value = valrec.mh << 8 | valrec.ml;
-      status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+      static DDCA_Non_Table_Vcp_Value valrec;
+      status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
+      if (status == 0) {
+        current_value = valrec.sh << 8 | valrec.sl;
+        max_value = valrec.mh << 8 | valrec.ml;
+        status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+      }
+      ddca_close_display(disp_handle);
     }
-    ddca_close_display(disp_handle);
+  }
+  if (formatted_value == NULL) {
+    formatted_value = g_strdup("");
   }
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
