@@ -531,13 +531,13 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
  */
 static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   u_int32_t flags;
 
   GVariantIter *vcp_code_iter;
-  g_variant_get(parameters, "(isayu)", &display_number, &hex_edid, &vcp_code_iter, &flags);
+  g_variant_get(parameters, "(isayu)", &display_number, &edid_encoded, &vcp_code_iter, &flags);
 
-  g_info("GetMultipleVcp display_num=%d, edid=%.30s...", display_number, hex_edid);
+  g_info("GetMultipleVcp display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
   const int number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
   const u_int8_t vcp_codes[number_of_vcp_codes];
@@ -550,7 +550,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -564,11 +564,13 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
           const uint16_t max_value = valrec.mh << 8 | valrec.ml;
           char *formatted_value;
           status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
-          g_variant_builder_add(value_array_builder, "(yqqs)", vcp_code, current_value, max_value, formatted_value);
+          g_variant_builder_add(value_array_builder, "(yqqs)",
+            vcp_code, current_value, max_value, formatted_value);
           free(formatted_value);
         }
         else {  // Probably just asleep or turned off
-          g_info("GetMultipleVcp failed to get value for display %d vcp_code %d", display_number, vcp_code);
+          g_info("GetMultipleVcp failed for vcp_code=%d display_num=%d edid=%.30s...",
+             vcp_code, display_number,edid_encoded);
         }
       }
       ddca_close_display(disp_handle);
@@ -578,7 +580,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   GVariant *result = g_variant_new("(a(yqqs)is)", value_array_builder, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
-  g_free(hex_edid);
+  g_free(edid_encoded);
   free(message_text);
 }
 
@@ -589,18 +591,18 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
  */
 static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   uint8_t vcp_code;
   uint16_t new_value;
   u_int32_t flags;
 
-  g_variant_get(parameters, "(isyqu)", &display_number, &hex_edid, &vcp_code, &new_value, &flags);
+  g_variant_get(parameters, "(isyqu)", &display_number, &edid_encoded, &vcp_code, &new_value, &flags);
 
-  g_info("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...", vcp_code, new_value, display_number, hex_edid);
+  g_info("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...", vcp_code, new_value, display_number, edid_encoded);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -611,11 +613,15 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
       ddca_close_display(disp_handle);
     }
   }
+  if (status != 0) {  // Probably just asleep or turned off
+    g_info("SetVcp failed for vcp_code=%d value=%d display_num=%d edid=%.30s...",
+       vcp_code, new_value, display_number, edid_encoded);
+  }
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(is)", status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
-  g_free(hex_edid);
+  g_free(edid_encoded);
   free(message_text);
 }
 
