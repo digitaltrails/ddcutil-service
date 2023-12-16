@@ -61,7 +61,7 @@
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
   #define HAS_OPTION_ARGUMENTS
   #define HAS_DDCA_GET_SLEEP_MULTIPLIER
-  #define USE_INTERNAL_CHANGE_POLLING
+  #undef USE_INTERNAL_CHANGE_POLLING
 #elif DDCUTIL_VMAJOR >= 2
   #define HAS_DISPLAYS_CHANGED_CALLBACK
   #define HAS_OPTION_ARGUMENTS
@@ -69,7 +69,7 @@
   #define HAS_DYNAMIC_SLEEP
 #else
   #define HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
-  #define USE_INTERNAL_CHANGE_POLLING
+  #undef USE_INTERNAL_CHANGE_POLLING
 #endif
 
 #if !defined(HAS_DISPLAYS_CHANGED_CALLBACK)
@@ -81,7 +81,7 @@ typedef enum {
   DDCA_EVENT_DPMS_ASLEEP  = 8,
 } DDCA_Display_Event_Type;
 // Also lacking anything to translate the names of the event types
-char *DDCA_Display_Event_Type_names[] = {
+char *Local_Event_Type_names[] = {
   G_STRINGIFY(DDCA_EVENT_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISCONNETED),
   G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP)};
 #endif
@@ -1057,8 +1057,8 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     for (int i = 0; i < num_event_types; i++) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
       g_variant_builder_add(builder, "{is}", event_types[i], ddca_display_event_type_name(i));
-#else
-      g_variant_builder_add(builder, "{is}", event_types[i], DDCA_Display_Event_Type_names[i]);
+#elif defined(USE_INTERNAL_CHANGE_POLLING)
+      g_variant_builder_add(builder, "{is}", event_types[i], Local_Event_Type_names[i]);
 #endif
     }
     GVariant *value = g_variant_new("a{is}", builder);
