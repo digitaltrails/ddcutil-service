@@ -1056,7 +1056,7 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     const int num_event_types = sizeof(event_types) / sizeof(int);
     for (int i = 0; i < num_event_types; i++) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-      g_variant_builder_add(builder, "{is}", event_types[i], ddca_display_event_type_name(i));
+      g_variant_builder_add(builder, "{is}", event_types[i], ddca_display_event_type_name(event_types[i]));
 #elif defined(USE_INTERNAL_CHANGE_POLLING)
       g_variant_builder_add(builder, "{is}", event_types[i], Local_Event_Type_names[i]);
 #endif
