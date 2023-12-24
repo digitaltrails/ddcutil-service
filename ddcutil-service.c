@@ -443,7 +443,8 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     gchar *safe_model = sanitize_utf8(vdu_info->model_name);//"xxxxwww\xF0\xA4\xADiii" );
     gchar *safe_sn = sanitize_utf8(vdu_info->sn);
     gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
-    g_info("Detected %s %s %s", safe_mfg_id, safe_model, safe_sn);
+    g_info("Detected %s %s %s display_num=%d edid=%.30s...",
+           safe_mfg_id, safe_model, safe_sn, vdu_info->dispno, edid_encoded);
 
     g_variant_builder_add(
       detected_displays_builder,
