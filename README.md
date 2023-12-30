@@ -34,6 +34,11 @@ man page.
 
 ### Installing the DdcutilService as a dbus-daemon auto-started service
 
+#### Experimental OpenSUSE RPM
+
+I have build an unofficial experimental RPM for OpenSUSE Tumbeweed, see 
+[https://software.opensuse.org/package/ddcutil-service](https://software.opensuse.org/package/ddcutil-service)
+
 #### Installation via Makefile
 
 Check the install PREFIX in the `Makefile` and make any changes required 
