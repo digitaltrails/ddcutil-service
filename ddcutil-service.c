@@ -61,7 +61,6 @@
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
   #define HAS_OPTION_ARGUMENTS
   #define HAS_DDCA_GET_SLEEP_MULTIPLIER
-  #undef USE_INTERNAL_CHANGE_POLLING
 #elif DDCUTIL_VMAJOR >= 2
   #define HAS_DISPLAYS_CHANGED_CALLBACK
   #define HAS_OPTION_ARGUMENTS
@@ -69,7 +68,6 @@
   #define HAS_DYNAMIC_SLEEP
 #else
   #define HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
-  #undef USE_INTERNAL_CHANGE_POLLING
 #endif
 
 #if !defined(HAS_DISPLAYS_CHANGED_CALLBACK)
@@ -1058,8 +1056,6 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
     for (int i = 0; i < num_event_types; i++) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
       g_variant_builder_add(builder, "{is}", event_types[i], ddca_display_event_type_name(event_types[i]));
-#elif defined(USE_INTERNAL_CHANGE_POLLING)
-      g_variant_builder_add(builder, "{is}", event_types[i], Local_Event_Type_names[i]);
 #endif
     }
     GVariant *value = g_variant_new("a{is}", builder);
@@ -1262,159 +1258,6 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
 }
 #endif
 
-#if defined(USE_INTERNAL_CHANGE_POLLING)
-
-/*
- * Internal polling implementation of detecting changes.
- *
- * The follow code enables a main-loop implementation of a main-loop
- * custom event-source, a GSource.  It defines a polled source that
- * handles ddcutil displays-changed data and sends signals to
- * the D-Bus client.
- */
-
-static GList *poll_list = NULL;  // List of currently detected edids
-typedef struct {
-  gchar * edid_encoded;
-  gboolean live;
-} Poll_List_Item;
-
-static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
-  gchar *target_str = (char *) target;
-  Poll_List_Item *item = (Poll_List_Item *) item_ptr;
-  return strcmp(target_str, item->edid_encoded);
-}
-
-static gchar *poll_event_edid_encoded = NULL;
-static DDCA_Display_Event_Type poll_event_type = 0;
-
-static bool poll_for_changes() {
-  //ddca_redetect_displays();  // TODO Cannot use redetect it is too slow - delays the whole service loop
-  DDCA_Display_Info_List *dlist;
-  const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
-  int change_count = 0;
-  poll_event_edid_encoded = NULL;
-  if (list_status == 0) {
-    for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
-      ((Poll_List_Item *) (ptr->data))->live = FALSE;
-    }
-
-    for (int ndx = 0; ndx < dlist->ct; ndx++) {
-      const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
-      gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
-      GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
-      if (ptr == NULL) {
-        g_debug("Poll event - new %d %.30s...", ndx + 1, edid_encoded);
-        change_count++;
-        Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
-        item->edid_encoded = edid_encoded;
-        item->live = TRUE;
-        g_debug("Poll event - connected %.30s...\n", item->edid_encoded);
-        poll_list = g_list_append(poll_list, item);
-        poll_event_edid_encoded = g_strdup(edid_encoded);
-        poll_event_type = DDCA_EVENT_CONNECTED;
-        return TRUE; // Only one event on each poll
-      }
-      else {
-        g_debug("Poll event - found %d set to live %.30s...", ndx + 1, edid_encoded);
-        ((Poll_List_Item *) (ptr->data))->live = TRUE;
-        g_free(edid_encoded);
-      }
-    }
-
-    for (GList *ptr = poll_list; ptr != NULL;) {
-      GList *next = ptr->next;
-      Poll_List_Item *item = (Poll_List_Item *) ptr->data;
-      if (!item->live) {
-        g_debug("Poll event - disconnected %.30s...\n", item->edid_encoded);
-        poll_event_edid_encoded = g_strdup(item->edid_encoded);
-        poll_event_type = DDCA_EVENT_DISCONNETED;
-        g_free(item->edid_encoded);
-        g_free(item);
-        poll_list = g_list_delete_link(poll_list, ptr);
-        change_count++;
-        return TRUE;  // Only one event on each poll
-      }
-      ptr = next;
-    }
-  }
-  return FALSE;
-}
-
-
-typedef struct  {  // Source structure including custom data (if any)
-  GSource source;
-  gchar cdc_data[129];  // do we actually have any data - no, maybe later.
-} Poll_SignalSource_t;
-
-/**
- * @brief registered with main-loop as a custom prepare event function.
- *
- * The main purpose of this function is setting the length of the
- * next timeout and return FALSE.
- *
- * @param source input source, not of much interest for this implementation
- * @param timeout output parameter setting the timeout for next call
- * @return
- */
-static gboolean poll_signal_prepare(GSource *source, gint *timeout) {
-  if (enable_change_signals) {
-    *timeout = 10000;
-  }
-  else {
-    *timeout = 30000;
-  }
-  return FALSE;
-}
-
-/**
- * @brief registered with main-loop as a custom check event function.
- *
- * Called by the main-loop on timeout to poll for changes.
- *
- * @param source
- * @return
- */
-static gboolean poll_signal_check(GSource *source) {
-  if (enable_change_signals) {
-    return poll_for_changes();
-  }
-  return FALSE;
-}
-
-/**
- * @brief registered with main-loop to dispatch ConnectedDisplaysChanged signals.
- *
- * Called by the mainloop if the check function reports that an event
- * is ready.  This function should emit the signal to the D-Bus client.
- *
- * @param source
- * @param callback
- * @param user_data
- * @return
- */
-static gboolean poll_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
-  //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
-  GError *local_error;
-  local_error = NULL;
-  g_message("poll emit detected changes event-type=%d edid_ecoded=%s", poll_event_type, poll_event_edid_encoded);
-  if (!g_dbus_connection_emit_signal(dbus_connection,
-                                     NULL,
-                                     "/com/ddcutil/DdcutilObject",
-                                     "com.ddcutil.DdcutilInterface",
-                                     "ConnectedDisplaysChanged",
-                                     g_variant_new ("(siu)", poll_event_edid_encoded, poll_event_type, 1),
-                                     &local_error)) {
-    g_warning("poll emit detected changes signal failed: %s", local_error != NULL ? local_error->message : "");
-    g_free(local_error);
-  }
-  g_free(poll_event_edid_encoded);
-  poll_event_edid_encoded = NULL;
-  return TRUE;
-}
-#endif
-
-
 /**
  * @brief registered callback for when GD-Bus is ready to accept service registrations.
  *
@@ -1583,17 +1426,6 @@ int main(int argc, char *argv[]) {
   GMainContext* loop_context = g_main_loop_get_context(loop);
   GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
   GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
-  g_source_attach(source, loop_context);
-  g_source_unref(source);
-#endif
-
-#if defined(USE_INTERNAL_CHANGE_POLLING)
-  if (enable_change_signals) {
-    g_message("Using internal change polling");
-  }
-  GMainContext* loop_context = g_main_loop_get_context(loop);
-  GSourceFuncs source_funcs = { poll_signal_prepare, poll_signal_check, poll_signal_dispatch };
-  GSource *source = g_source_new(&source_funcs, sizeof(Poll_SignalSource_t));
   g_source_attach(source, loop_context);
   g_source_unref(source);
 #endif
