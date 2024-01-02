@@ -1226,27 +1226,38 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
   g_debug("cdc dispatch called");
   DDCA_Display_Detection_Event *event_ptr = display_detection_event;
   display_detection_event = NULL;
+  gchar *edid_encoded = g_strdup("");
+  int event_type = DDCA_EVENT_DISCONNETED;
+
   if (event_ptr != NULL) {
     DDCA_Display_Info* dinfo;
     DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
     if (status == 0) {  // TODO needs testing
-      g_debug("cdc_signal_dispatch emit ConnectedDisplaysChanged now");
-      gchar *edid_encoded = edid_encode(dinfo->edid_bytes);
-      if (!g_dbus_connection_emit_signal(dbus_connection,
-                                         NULL,
-                                         "/com/ddcutil/DdcutilObject",
-                                         "com.ddcutil.DdcutilInterface",
-                                         "ConnectedDisplaysChanged",
-                                         g_variant_new ("(siu)", edid_encoded, event_ptr->event_type, 0),
-                                         &local_error)) {
-        g_warning("cdc_signal_dispatch failed %s", local_error != NULL ? local_error->message : "");
-        g_free(local_error);
-      }
-      ddca_free_display_info(dinfo);
-      g_free(edid_encoded);
+      g_debug("cdc_signal_dispatch emit signal ConnectedDisplaysChanged now");
+      edid_encoded = edid_encode(dinfo->edid_bytes);
+      event_type = event_ptr->event_type;
+      g_free(event_ptr);
     }
-    g_free(event_ptr);
+    ddca_free_display_info(dinfo);
   }
+  else {
+     g_debug("cdc_signal_dispatch null event - assume DDCA_EVENT_DISCONNETED");
+  }
+
+  if (!g_dbus_connection_emit_signal(dbus_connection,
+                                     NULL,
+                                     "/com/ddcutil/DdcutilObject",
+                                     "com.ddcutil.DdcutilInterface",
+                                     "ConnectedDisplaysChanged",
+                                     g_variant_new ("(siu)", edid_encoded, event_type, 0),
+                                     &local_error)) {
+    g_warning("cdc_signal_dispatch emit signal failed %s", local_error != NULL ? local_error->message : "");
+    g_free(local_error);
+  }
+  else {
+    g_debug("cdc_signal_dispatch emit signal succeeded");
+  }
+  g_free(edid_encoded);
   return TRUE;
 }
 #endif
