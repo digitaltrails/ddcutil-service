@@ -1127,8 +1127,9 @@ static DDCA_Display_Detection_Event *display_detection_event = NULL;
 
 static void display_detection_callback(DDCA_Display_Detection_Event event) {
   g_debug("Triggered display_detection_callback %d", event.event_type);
-  display_detection_event = g_malloc(sizeof(DDCA_Display_Detection_Event));
-  *display_detection_event = event;
+  DDCA_Display_Detection_Event *event_copy = g_malloc(sizeof(DDCA_Display_Detection_Event));
+  *event_copy = event;
+  g_atomic_pointer_set(&display_detection_event, event_copy);
 }
 #endif
 
@@ -1172,8 +1173,7 @@ typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
 static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
   if (enable_change_signals) {
     *timeout = 5000;
-
-    if (dbus_connection == NULL || display_detection_event == NULL) {
+    if (dbus_connection == NULL || g_atomic_pointer_get(&display_detection_event) == NULL) {
       return FALSE;
     }
     g_debug("cdc display_detection_event ready");
@@ -1194,7 +1194,7 @@ static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
  */
 static gboolean cdc_signal_check(GSource *source) {
   if (enable_change_signals) {
-    if (dbus_connection != NULL && display_detection_event != NULL) {
+    if (dbus_connection != NULL && g_atomic_pointer_get(&display_detection_event) != NULL) {
       return TRUE;
     }
   }
@@ -1216,28 +1216,35 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
   //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
-    g_warning("cdc_signal_dispatch null D-Bus connection");
+    g_warning("cdc_signal_dispatch: null D-Bus connection");
     return TRUE;
   }
-  g_debug("cdc dispatch called");
-  DDCA_Display_Detection_Event *event_ptr = display_detection_event;
-  display_detection_event = NULL;
+  DDCA_Display_Detection_Event *event_ptr = g_atomic_pointer_get(&display_detection_event);
+  g_info("cdc_signal_dispatch: processing event - obtained %s", event_ptr == NULL ? "NULL event pointer" : "event pointer");
+  if (g_atomic_pointer_compare_and_exchange(&display_detection_event, display_detection_event, NULL)) {
+    g_debug("cdc_signal_dispatch: reset display_detection_event to NULL ready for next event.");
+  }
+  else {
+    g_warning("cdc_signal_dispatch: failed to reset display_detection_event to NULL - maybe another event was delivered?");
+  }
   gchar *edid_encoded = g_strdup("");
   int event_type = DDCA_EVENT_DISCONNETED;
-
   if (event_ptr != NULL) {
     DDCA_Display_Info* dinfo;
     DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
-    if (status == 0) {  // TODO needs testing
-      g_debug("cdc_signal_dispatch emit signal ConnectedDisplaysChanged now");
+    if (status == 0) {  // I think DDCA_Status is unavailable for DDCA_EVENT_DISCONNETED events
+      g_debug("cdc_signal_dispatch: emit signal ConnectedDisplaysChanged now");
       edid_encoded = edid_encode(dinfo->edid_bytes);
       event_type = event_ptr->event_type;
       g_free(event_ptr);
     }
+    else {
+      g_info("cdc_signal_dispatch: ddca_get_display_info failed - assume DDCA_EVENT_DISCONNETED.");
+    }
     ddca_free_display_info(dinfo);
   }
-  else {
-     g_debug("cdc_signal_dispatch null event - assume DDCA_EVENT_DISCONNETED");
+  else {  // Not sure if this can ever be reached.
+     g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNETED");
   }
 
   if (!g_dbus_connection_emit_signal(dbus_connection,
@@ -1247,11 +1254,11 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
                                      "ConnectedDisplaysChanged",
                                      g_variant_new ("(siu)", edid_encoded, event_type, 0),
                                      &local_error)) {
-    g_warning("cdc_signal_dispatch emit signal failed %s", local_error != NULL ? local_error->message : "");
+    g_warning("cdc_signal_dispatch: emit signal failed %s", local_error != NULL ? local_error->message : "");
     g_free(local_error);
   }
   else {
-    g_debug("cdc_signal_dispatch emit signal succeeded");
+    g_debug("cdc_signal_dispatch: emit signal succeeded");
   }
   g_free(edid_encoded);
   return TRUE;
