@@ -1237,11 +1237,11 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
       edid_encoded = edid_encode(dinfo->edid_bytes);
       event_type = event_ptr->event_type;
       g_free(event_ptr);
+      ddca_free_display_info(dinfo);
     }
     else {
       g_info("cdc_signal_dispatch: ddca_get_display_info failed - assume DDCA_EVENT_DISCONNETED.");
     }
-    ddca_free_display_info(dinfo);
   }
   else {  // Not sure if this can ever be reached.
      g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNETED");
