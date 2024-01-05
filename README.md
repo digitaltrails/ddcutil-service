@@ -67,6 +67,6 @@ without the service file being installed.
 
 ### Use with `vdu_controls`
 
-The `vdu_controls` GUI has been branched and modified to optionally use the service, see:
-https://github.com/digitaltrails/vdu_controls/tree/d-bus
+The `vdu_controls` GUI has been modified to use the service by default, see:
+https://github.com/digitaltrails/vdu_controls
 
