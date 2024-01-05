@@ -49,6 +49,7 @@
 #include <glib/gprintf.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <spawn.h>
 
 #include <ddcutil_c_api.h>
@@ -1051,11 +1052,12 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   }
   else if (g_strcmp0(property_name, "DisplayEventTypes") == 0) {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
-    const int event_types[] = {DDCA_EVENT_CONNECTED, DDCA_EVENT_DISCONNETED, DDCA_EVENT_DPMS_AWAKE, DDCA_EVENT_DPMS_ASLEEP};
+    const int event_types[] = {0, 1, 2};
+    const char *event_type_names[] = { "HOTPLUG", "SLEEP", "WAKE"};
     const int num_event_types = sizeof(event_types) / sizeof(int);
     for (int i = 0; i < num_event_types; i++) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-      g_variant_builder_add(builder, "{is}", event_types[i], ddca_display_event_type_name(event_types[i]));
+      g_variant_builder_add(builder, "{is}", event_types[i], event_type_names[i]);
 #endif
     }
     GVariant *value = g_variant_new("a{is}", builder);
@@ -1123,13 +1125,37 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
 }
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-static DDCA_Display_Detection_Event *display_detection_event = NULL;
 
-static void display_detection_callback(DDCA_Display_Detection_Event event) {
-  g_debug("Triggered display_detection_callback %d", event.event_type);
-  DDCA_Display_Detection_Event *event_copy = g_malloc(sizeof(DDCA_Display_Detection_Event));
-  *event_copy = event;
-  g_atomic_pointer_set(&display_detection_event, event_copy);
+enum Event_Type_Enum {
+  HOTPLUG,
+  SLEEP,
+};
+
+typedef struct {
+  enum Event_Type_Enum event_type;
+  union {
+    DDCA_Display_Hotplug_Event hotplug_event;
+    DDCA_Display_Sleep_Event sleep_event;
+  };
+} Signal_Event;
+
+static Signal_Event *signal_event = NULL;
+
+static void hotplug_callback(DDCA_Display_Hotplug_Event hotplug_event) {
+  g_debug("Triggered hotplug_callback");
+  Signal_Event *generic_event = g_malloc(sizeof(Signal_Event));
+  generic_event->event_type = HOTPLUG;
+  generic_event->hotplug_event = hotplug_event;
+  g_atomic_pointer_set(&signal_event, generic_event);
+}
+
+static void display_sleep_callback(DDCA_Display_Sleep_Event sleep_event) {
+  g_debug("Triggered display_sleep_callback");
+  g_debug("Triggered hotplug_callback");
+  Signal_Event *generic_event = g_malloc(sizeof(Signal_Event));
+  generic_event->event_type = SLEEP;
+  generic_event->sleep_event = sleep_event;
+  g_atomic_pointer_set(&signal_event, generic_event);
 }
 #endif
 
@@ -1173,10 +1199,10 @@ typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
 static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
   if (enable_change_signals) {
     *timeout = 5000;
-    if (dbus_connection == NULL || g_atomic_pointer_get(&display_detection_event) == NULL) {
+    if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event) == NULL) {
       return FALSE;
     }
-    g_debug("cdc display_detection_event ready");
+    g_debug("cdc signal_event ready type=%d", signal_event->event_type);
   }
   else {
     *timeout = 30000;
@@ -1194,7 +1220,7 @@ static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
  */
 static gboolean cdc_signal_check(GSource *source) {
   if (enable_change_signals) {
-    if (dbus_connection != NULL && g_atomic_pointer_get(&display_detection_event) != NULL) {
+    if (dbus_connection != NULL && g_atomic_pointer_get(&signal_event) != NULL) {
       return TRUE;
     }
   }
@@ -1219,34 +1245,42 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
     g_warning("cdc_signal_dispatch: null D-Bus connection");
     return TRUE;
   }
-  DDCA_Display_Detection_Event *event_ptr = g_atomic_pointer_get(&display_detection_event);
+  Signal_Event *event_ptr = g_atomic_pointer_get(&signal_event);
   g_info("cdc_signal_dispatch: processing event - obtained %s", event_ptr == NULL ? "NULL event pointer" : "event pointer");
-  if (g_atomic_pointer_compare_and_exchange(&display_detection_event, display_detection_event, NULL)) {
-    g_debug("cdc_signal_dispatch: reset display_detection_event to NULL ready for next event.");
+  if (g_atomic_pointer_compare_and_exchange(&signal_event, signal_event, NULL)) {
+    g_debug("cdc_signal_dispatch: reset signal_event to NULL ready for next event.");
   }
   else {
-    g_warning("cdc_signal_dispatch: failed to reset display_detection_event to NULL - maybe another event was delivered?");
+    g_warning("cdc_signal_dispatch: failed to reset signal_event to NULL - maybe another event was delivered?");
   }
-  gchar *edid_encoded = g_strdup("");
-  int event_type = DDCA_EVENT_DISCONNETED;
+  gchar *edid_encoded;
+  int event_type;
   if (event_ptr != NULL) {
-    DDCA_Display_Info* dinfo;
-    DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
-    if (status == 0) {  // I think DDCA_Status is unavailable for DDCA_EVENT_DISCONNETED events
-      g_debug("cdc_signal_dispatch: emit signal ConnectedDisplaysChanged now");
-      edid_encoded = edid_encode(dinfo->edid_bytes);
-      event_type = event_ptr->event_type;
-      g_free(event_ptr);
-      ddca_free_display_info(dinfo);
-    }
-    else {
-      g_info("cdc_signal_dispatch: ddca_get_display_info failed - assume DDCA_EVENT_DISCONNETED.");
+    switch (event_ptr->event_type) {
+      case SLEEP:
+        DDCA_Display_Info* dinfo;
+        DDCA_Status status = ddca_get_display_info(event_ptr->sleep_event.dref, &dinfo);
+        if (status == 0) {
+          g_debug("cdc_signal_dispatch: emit signal ConnectedDisplaysChanged now");
+          edid_encoded = edid_encode(dinfo->edid_bytes);
+          event_type = event_ptr->sleep_event.asleep ? 1 : 2;
+          ddca_free_display_info(dinfo);
+          break;
+        }
+        // Fall through
+      case HOTPLUG:;
+        // Fall through
+      default:
+        edid_encoded = g_strdup("");
+        event_type = 0;
+        break;
     }
   }
   else {  // Not sure if this can ever be reached.
-     g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNETED");
+    edid_encoded = g_strdup("");
+    event_type = 0;
+    g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNETED");
   }
-
   if (!g_dbus_connection_emit_signal(dbus_connection,
                                      NULL,
                                      "/com/ddcutil/DdcutilObject",
@@ -1328,6 +1362,8 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
  */
 int main(int argc, char *argv[]) {
 
+  openlog("ddcutil-service", LOG_PERROR, 0);
+
   server_executable = argv[0];
   g_message("Running %s (%s)", server_executable, PROGRAM_NAME);
   g_set_prgname(PROGRAM_NAME);
@@ -1338,7 +1374,7 @@ int main(int argc, char *argv[]) {
 
 #if defined(HAS_OPTION_ARGUMENTS)
   gint ddca_syslog_level = 0;
-  gint ddca_init_options = 0;
+  gint ddca_init_options = 0;  // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
 #endif
 
   // Use the glib command line parser...
@@ -1404,14 +1440,17 @@ int main(int argc, char *argv[]) {
   }
   argv_null_terminated[argc - 1] = NULL;
   char *arg_string = g_strjoinv(" ", argv_null_terminated);
+  ddca_init_options |= DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG;
   g_message("Calling ddca_init %d %d '%s'", ddca_syslog_level, ddca_init_options, arg_string);
   ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
 #endif
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
-    g_message("Registering DDCA display_detection_callback");
-    ddca_register_display_detection_callback(display_detection_callback);
+    g_message("Registering DDCA hotplug_callback");
+    ddca_register_display_hotplug_callback(hotplug_callback);
+    g_message("Registering DDCA sleep_callback");
+    ddca_register_display_sleep_event_callback(display_sleep_callback);
   }
 #endif
 
