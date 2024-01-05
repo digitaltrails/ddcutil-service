@@ -489,13 +489,13 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
  */
 static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   uint8_t vcp_code;
   u_int32_t flags;
 
-  g_variant_get(parameters, "(isyu)", &display_number, &hex_edid, &vcp_code, &flags);
+  g_variant_get(parameters, "(isyu)", &display_number, &edid_encoded, &vcp_code, &flags);
 
-  g_info("GetVcp vcp_code=%d display_num=%d, edid=%.30s...", vcp_code, display_number, hex_edid);
+  g_info("GetVcp vcp_code=%d display_num=%d, edid=%.30s...", vcp_code, display_number, edid_encoded);
 
   uint16_t current_value = 0;
   uint16_t max_value = 0;
@@ -503,7 +503,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -525,7 +525,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   if (formatted_value != NULL) {
     free(formatted_value);
   }
-  free(hex_edid);
+  free(edid_encoded);
   free(message_text);
 }
 
@@ -643,18 +643,18 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
  */
 static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   char *caps_text = NULL;
   u_int32_t flags;
 
-  g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
+  g_variant_get(parameters, "(isu)", &display_number, &edid_encoded, &flags);
 
-  g_info("GetCapabilitiesString display_num=%d, edid=%.30s...", display_number, hex_edid);
+  g_info("GetCapabilitiesString display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Display_Handle disp_handle;
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
 
   if (status == 0) {
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -670,7 +670,7 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result
   ddca_free_display_info_list(info_list);
   free(caps_text);
-  g_free(hex_edid);
+  g_free(edid_encoded);
   free(message_text);
 }
 
@@ -684,19 +684,19 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
  */
 static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   char *caps_text = NULL;
   u_int32_t flags;
 
-  g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
+  g_variant_get(parameters, "(isu)", &display_number, &edid_encoded, &flags);
 
-  g_info("GetCapabilitiesMetadata display_num=%d, edid=%.30s...", display_number, hex_edid);
+  g_info("GetCapabilitiesMetadata display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Display_Handle disp_handle;
   DDCA_Capabilities *parsed_capabilities_ptr = NULL;
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
 
   uint8_t mccs_version_major = 0, mccs_version_minor = 0;
   char * vdu_model = "model";
@@ -807,7 +807,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   ddca_free_display_info_list(info_list);
   ddca_free_parsed_capabilities(parsed_capabilities_ptr);
   free(caps_text);
-  g_free(hex_edid);
+  g_free(edid_encoded);
   free(message_text);
 }
 
@@ -821,16 +821,16 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
  */
 static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   uint8_t vcp_code;
   u_int32_t flags;
 
-  g_variant_get(parameters, "(isyu)", &display_number, &hex_edid, &vcp_code, &flags);
-  g_info("GetVcpMetadata display_num=%d, edid=%.30s...vcp_code=%d", display_number, hex_edid, vcp_code);
+  g_variant_get(parameters, "(isyu)", &display_number, &edid_encoded, &vcp_code, &flags);
+  g_info("GetVcpMetadata display_num=%d, edid=%.30s...vcp_code=%d", display_number, edid_encoded, vcp_code);
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
   char *feature_name = "";
   char *feature_description= "";
   bool is_read_only = false;
@@ -871,14 +871,14 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result
   ddca_free_display_info_list(info_list);
   ddca_free_feature_metadata(metadata_ptr);
-  g_free(hex_edid);
+  g_free(edid_encoded);
   free(message_text);
 }
 
 /**
  * @brief Implements the DdcutilService GetDisplayState method
  *
- * Passes a state back to the invocation.
+ * Passes Connection and DPMS state back to the invocation in the status and message.
  *
  * @param parameters inbound parameters
  * @param invocation originating D-Bus method call
@@ -921,13 +921,13 @@ static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invoc
  */
 static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   u_int32_t flags;
   DDCA_Status status = 0;
 
-  g_variant_get(parameters, "(isu)", &display_number, &hex_edid, &flags);
+  g_variant_get(parameters, "(isu)", &display_number, &edid_encoded, &flags);
 
-  g_info("GetSleepMultiplier display_num=%d, edid=%.30s...", display_number, hex_edid);
+  g_info("GetSleepMultiplier display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
   double multiplier;
 #if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
@@ -937,7 +937,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
   if (status == 0) {
     status = ddca_get_current_display_sleep_multiplier(vdu_info->dref, &multiplier);
   }
@@ -946,7 +946,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(dis)", multiplier, status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
-  free(hex_edid);
+  free(edid_encoded);
   free(message_text);
 }
 
@@ -960,15 +960,15 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
  */
 static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* invocation) {
   int display_number;
-  char *hex_edid;
+  char *edid_encoded;
   u_int32_t flags;
   double new_multiplier;
   DDCA_Status status = 0;
 
-  g_variant_get(parameters, "(isdu)", &display_number, &hex_edid, &new_multiplier, &flags);
+  g_variant_get(parameters, "(isdu)", &display_number, &edid_encoded, &new_multiplier, &flags);
 
   g_info("SetSleepMultiplier value=%f display_num=%d edid=%.30s...",
-         new_multiplier, display_number, hex_edid);
+         new_multiplier, display_number, edid_encoded);
 
 #if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
   ddca_set_sleep_multiplier(new_multiplier);
@@ -977,7 +977,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  status = get_display_info(display_number, hex_edid, &info_list, &vdu_info);
+  status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
   if (status == 0) {
     status = ddca_set_display_sleep_multiplier(vdu_info->dref, new_multiplier);
   }
@@ -986,7 +986,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   char *message_text = get_status_message(status);
   GVariant *result = g_variant_new("(is)", status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
-  g_free(hex_edid);
+  g_free(edid_encoded);
   free(message_text);
 }
 
@@ -1197,7 +1197,6 @@ static void hotplug_callback(DDCA_Display_Hotplug_Event hotplug_event) {
 
 static void display_sleep_callback(DDCA_Display_Sleep_Event sleep_event) {
   g_debug("Triggered display_sleep_callback");
-  g_debug("Triggered hotplug_callback");
   Signal_Event *generic_event = g_malloc(sizeof(Signal_Event));
   generic_event->event_type = SLEEP;
   generic_event->sleep_event = sleep_event;
