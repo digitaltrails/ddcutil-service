@@ -182,6 +182,14 @@ static const gchar introspection_xml[] =
     "      <arg name='error_message' type='s' direction='out'/>"
     "    </method>"
 
+    "    <method name='GetDisplayState'>"
+    "      <arg name='display_number' type='i' direction='in'/>"
+    "      <arg name='edid_txt' type='s' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
+
     "    <method name='GetSleepMultiplier'>"
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_txt' type='s' direction='in'/>"
@@ -868,6 +876,42 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
 }
 
 /**
+ * @brief Implements the DdcutilService GetDisplayState method
+ *
+ * Passes a state back to the invocation.
+ *
+ * @param parameters inbound parameters
+ * @param invocation originating D-Bus method call
+ */
+static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  int display_number;
+  char *edid_encoded;
+  u_int32_t flags;
+
+  g_variant_get(parameters, "(isu)", &display_number, &edid_encoded, &flags);
+
+  g_info("GetDisplayState display_num=%d, edid=%.30s...", display_number, edid_encoded);
+
+  DDCA_Display_Info_List *info_list = NULL;
+  DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  if (status == 0) {
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+    status = ddca_dref_state(vdu_info->dref);
+#else
+    status = DDCRC_UNIMPLEMENTED;
+#endif
+  }
+  char *message_text = get_status_message(status);
+  GVariant *result = g_variant_new("(is)", status, message_text);
+  g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
+  ddca_free_display_info_list(info_list);
+  free(edid_encoded);
+  free(message_text);
+}
+
+
+/**
  * @brief Implements the DdcutilService GetSleepMultiplier method
  *
  * Passes back a specific display's sleep multiplier.
@@ -975,6 +1019,8 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     get_multiple_vcp(parameters, invocation);
   } else if (g_strcmp0(method_name, "SetVcp") == 0) {
     set_vcp(parameters, invocation);
+  } else if (g_strcmp0(method_name, "GetDisplayState") == 0) {
+    get_display_state(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetVcpMetadata") == 0) {
     get_vcp_metadata(parameters, invocation);
   } else if (g_strcmp0(method_name, "GetSleepMultiplier") == 0) {
@@ -1053,10 +1099,10 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else if (g_strcmp0(property_name, "DisplayEventTypes") == 0) {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
     const int event_types[] = {0, 1, 2};
-    const char *event_type_names[] = { "HOTPLUG", "SLEEP", "WAKE"};
     const int num_event_types = sizeof(event_types) / sizeof(int);
     for (int i = 0; i < num_event_types; i++) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+      const char *event_type_names[] = { "HOTPLUG", "SLEEP", "WAKE"};
       g_variant_builder_add(builder, "{is}", event_types[i], event_type_names[i]);
 #endif
     }
