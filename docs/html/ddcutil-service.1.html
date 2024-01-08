@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sun Dec 10 09:19:36 2023 -->
+<!-- CreationDate: Tue Jan  9 09:51:22 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -251,11 +251,16 @@ specific VCP code for a specific display.</p>
 <p style="margin-left:18%;">Restart the service with
 specific arguments.</p>
 
-<p style="margin-left:9%; margin-top: 1em">For convenience,
-if a method requires a display-argument, either an integer
+<p style="margin-left:9%; margin-top: 1em">If a method
+requires a display-argument, either an integer
 <i>display-number</i> or a <i>base64-encoded EDID</i> can be
 supplied. Base64-encoded EDIDs are obtained from the
-<b>Detect</b> method).</p>
+<b>Detect</b> method. If a EDID is supplied, a
+method&rsquo;s <b>flags</b> option can be set to
+<b>EDID_PREFIX</b> (1), this indicates a unique prefix of an
+EDID has been passed rather than the entire string (this
+makes using edids from the command line a little
+easier).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Run
 <b>ddcutil-service --introspect</b> for details on each
@@ -303,7 +308,7 @@ names.</p>
 
 <p style="margin-left:9%;"><b>DisplayEventTypes</b></p>
 
-<p style="margin-left:18%;">Query the event-types sent with
+<p style="margin-left:18%;">List the event-types sent by
 the <b>ConnectedDisplaysChanged</b> signal along with their
 text names.</p>
 
@@ -324,12 +329,20 @@ debug messages.</p>
 <p style="margin-left:18%;">Query the service interface
 version.</p>
 
-<p style="margin-left:9%;"><b>ServiceSignalChanges</b></p>
+<p style="margin-left:9%;"><b>ServiceFlagOptions</b></p>
 
-<p style="margin-left:18%;">Enable/disable the
-<b>ConnectedDisplaysChanged</b> signal for monitoring
-changes to the connected VDU&rsquo;s (connect, disconnect,
-DPMS-sleep, DPMS-awake). Also see
+<p style="margin-left:18%;">List the available flag option
+values that can be passed to service methods. No all options
+are applicable to all methods.</p>
+
+
+<p style="margin-left:9%;"><b>ServiceDetectsDisplayEvents</b></p>
+
+<p style="margin-left:18%;">Indicates that this version of
+<b>libddcutil</b> supports monitoring the connected
+VDU&rsquo;s for connect, disconnect, DPMS-sleep, and
+DPMS-awake. The service will forward these events by raising
+the <b>ConnectedDisplaysChanged</b> signal. Also see
 <b>DisplayEventTypes.</b></p>
 
 <p style="margin-left:9%;"><b>DdcutilDynamicSleep</b></p>

@@ -71,23 +71,67 @@
   #define HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
 
-#if !defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-// Earlier version of ddcutil lacking this definition
-typedef enum {
-  DDCA_EVENT_CONNECTED    = 1,
-  DDCA_EVENT_DISCONNETED  = 2,
-  DDCA_EVENT_DPMS_AWAKE   = 4,
-  DDCA_EVENT_DPMS_ASLEEP  = 8,
-} DDCA_Display_Event_Type;
-// Also lacking anything to translate the names of the event types
-char *Local_Event_Type_names[] = {
-  G_STRINGIFY(DDCA_EVENT_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISCONNETED),
-  G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP)};
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+/**
+ * Enable/disable D-Bus signal callbacks for display changes
+ */
+static bool has_change_signals = TRUE;
+
+/**
+ * List of DDCA events numbers and names that can be iterated over (for return from a service property).
+ */
+static const int event_types[] = {
+  DDCA_EVENT_CONNECTOR_ATTACHED, DDCA_EVENT_CONNECTOR_DETACHED,
+  DDCA_EVENT_CONNECTED, DDCA_EVENT_DISCONNECTED, DDCA_EVENT_DPMS_AWAKE,
+  DDCA_EVENT_DPMS_ASLEEP,};
+static const char *event_type_names[] = {
+  G_STRINGIFY(DDCA_EVENT_CONNECTOR_ATTACHED),  G_STRINGIFY(DDCA_EVENT_CONNECTOR_DETACHED),
+  G_STRINGIFY(DDCA_EVENT_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISCONNECTED), G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE),
+  G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),};
+
+/**
+ * Custom signal event data - used by the service's custom signal source
+ */
+typedef DDCA_Display_Status_Event Event_Data_Type;
+
+/**
+ * Global data value - held for dispatch - accessed/updated atomically.
+ */
+static Event_Data_Type *signal_event_data = NULL;
+
+#else
+
+static bool has_change_signals = FALSE;  // Turn off unecessary custom source
+
 #endif
+
+/**
+ * List of fields returned in by the Detect service method (for return from a service property).
+ */
+static const char *attributes_returned_from_detect[] = {
+  "display_number", "usb_bus", "usb_device",
+  "manufacturer_id", "model_name", "serial_number", "product_code",
+  "edid_txt", "binary_serial_number",
+  NULL
+};
+
+/**
+ * Boolean flags that can be passed in the service method flags argument.
+ */
+typedef enum {
+  EDID_PREFIX = 1,  // Inidicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
+} Flags_Enum_Type;
+
+/**
+ * Iterable definitions of Flags_Enum_Type values/names (for return from a service property).
+ */
+const int flag_options[] = {EDID_PREFIX,};
+const char *flag_options_names[] = { G_STRINGIFY(EDID_PREFIX),};
 
 static GDBusNodeInfo *introspection_data = NULL;
 
-/* Introspection data for the service we are exporting
+/**
+ * Introspection data for the service we are exporting
  * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
  * TODO Needs Documentation, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
  */
@@ -223,7 +267,8 @@ static const gchar introspection_xml[] =
     "    <property type='u' name='DdcutilOutputLevel' access='readwrite'/>"
     "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
     "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
-    "    <property type='b' name='ServiceSignalChanges' access='readwrite'/>"
+    "    <property type='b' name='ServiceDetectsDisplayEvents' access='read'/>"
+    "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
 
     "  </interface>"
     "</node>";
@@ -231,17 +276,8 @@ static const gchar introspection_xml[] =
 /* ----------------------------------------------------------------------------------------------------
  */
 
-static const char *attributes_returned_from_detect[] = {
-  "display_number", "usb_bus", "usb_device",
-  "manufacturer_id", "model_name", "serial_number", "product_code",
-  "edid_txt", "binary_serial_number",
-  NULL
-};
-
-static bool enable_change_signals = TRUE;
-
 /**
- * Encode the EDID for easy/efficient unmarshalling on clients.
+ * @brief Encode the EDID for easy/efficient unmarshalling on clients.
  * @param edid binary EDID
  * @return a relatively compact character string encoded edid
  */
@@ -261,7 +297,7 @@ static uint32_t edid_to_binary_serial_number(const uint8_t *edid_bytes) {
 }
 
 /**
- * Create a new string with invalid utf-8 edited out (replaced with ?)
+ * @brief Create a new string with invalid utf-8 edited out (replaced with ?)
  * @param text suspect text
  * @return g_malloced text with invalid utf-8 edited out
  */
@@ -280,7 +316,7 @@ static gchar *sanitize_utf8(const char *text) {
 }
 
 /**
- * Enable logging of info and debug level messages for this service.
+ * @brief Enable logging of info and debug level messages for this service.
  * @param enable whether to log or not
  * @param overwrite whether to overwrite any existing setting
  * @return the new enabled state
@@ -338,7 +374,7 @@ static char *get_status_message(const DDCA_Status status) {
  * @return success status
  */
 static DDCA_Status get_display_info(const int display_number, const char *edid_encoded,
-                                    DDCA_Display_Info_List **dlist, DDCA_Display_Info **dinfo) {
+                                    DDCA_Display_Info_List **dlist, DDCA_Display_Info **dinfo, bool edid_is_prefix) {
   *dinfo = NULL;
   DDCA_Status status = ddca_get_display_info_list2(0, dlist);
 
@@ -349,10 +385,16 @@ static DDCA_Status get_display_info(const int display_number, const char *edid_e
           break;
         }
         gchar *dlist_edid_encoded = edid_encode((*dlist)->info[ndx].edid_bytes);
-        if (edid_encoded != NULL && strcmp(edid_encoded, dlist_edid_encoded) == 0) {
-          *dinfo = &((*dlist)->info[ndx]);
-          g_free(dlist_edid_encoded);
-          break;
+        if (edid_encoded != NULL) {
+          const bool edit_matched =
+            edid_is_prefix ?
+              (strncmp(edid_encoded, dlist_edid_encoded, strlen(edid_encoded)) == 0) :
+              (strcmp(edid_encoded, dlist_edid_encoded) == 0);
+          if (edit_matched) {
+            *dinfo = &((*dlist)->info[ndx]);
+            g_free(dlist_edid_encoded);
+            break;
+          }
         }
         g_free(dlist_edid_encoded);
       }
@@ -503,7 +545,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -558,7 +600,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -610,7 +652,7 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -654,7 +696,7 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Display_Handle disp_handle;
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
 
   if (status == 0) {
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -696,7 +738,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Display_Handle disp_handle;
   DDCA_Capabilities *parsed_capabilities_ptr = NULL;
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
 
   uint8_t mccs_version_major = 0, mccs_version_minor = 0;
   char * vdu_model = "model";
@@ -830,7 +872,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   char *feature_name = "";
   char *feature_description= "";
   bool is_read_only = false;
@@ -894,7 +936,7 @@ static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invoc
 
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
     status = ddca_dref_state(vdu_info->dref);
@@ -937,7 +979,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
     status = ddca_get_current_display_sleep_multiplier(vdu_info->dref, &multiplier);
   }
@@ -977,7 +1019,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
-  status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info);
+  status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
     status = ddca_set_display_sleep_multiplier(vdu_info->dref, new_multiplier);
   }
@@ -1055,6 +1097,7 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
  * @param user_data
  * @return value of the property
  */
+static void display_status_event_callback(DDCA_Display_Status_Event event);
 static GVariant *handle_get_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                      const gchar *interface_name, const gchar *property_name, GError **error,
                                      gpointer user_data) {
@@ -1098,14 +1141,11 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   }
   else if (g_strcmp0(property_name, "DisplayEventTypes") == 0) {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
-    const int event_types[] = {0, 1, 2};
-    const int num_event_types = sizeof(event_types) / sizeof(int);
-    for (int i = 0; i < num_event_types; i++) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-      const char *event_type_names[] = { "HOTPLUG", "SLEEP", "WAKE"};
+    for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
       g_variant_builder_add(builder, "{is}", event_types[i], event_type_names[i]);
-#endif
     }
+#endif
     GVariant *value = g_variant_new("a{is}", builder);
     g_variant_builder_unref(builder);
     ret = value;
@@ -1116,8 +1156,17 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     ret = g_variant_new_boolean(is_service_info_logging());
   }
-  else if (g_strcmp0(property_name, "ServiceSignalChanges") == 0) {
-    ret = g_variant_new_boolean(enable_change_signals);
+  else if (g_strcmp0(property_name, "ServiceDetectsDisplayEvents") == 0) {
+    ret = g_variant_new_boolean(has_change_signals);
+  }
+  else if (g_strcmp0(property_name, "ServiceFlagOptions") == 0) {
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
+    for (int i = 0; i < sizeof(flag_options) / sizeof(int); i++) {
+      g_variant_builder_add(builder, "{is}", flag_options[i], flag_options_names[i]);
+    }
+    GVariant *value = g_variant_new("a{is}", builder);
+    g_variant_builder_unref(builder);
+    ret = value;
   }
   return ret;
 }
@@ -1163,46 +1212,8 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
     const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
     g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
   }
-  else if (g_strcmp0(property_name, "ServiceSignalChanges") == 0) {
-    enable_change_signals = g_variant_get_boolean(value);
-    g_message("ServiceSignalChanges %s", enable_change_signals ? "enabled" : "disabled");
-  }
   return *error == NULL;
 }
-
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-
-enum Event_Type_Enum {
-  HOTPLUG,
-  SLEEP,
-};
-
-typedef struct {
-  enum Event_Type_Enum event_type;
-  union {
-    DDCA_Display_Hotplug_Event hotplug_event;
-    DDCA_Display_Sleep_Event sleep_event;
-  };
-} Signal_Event;
-
-static Signal_Event *signal_event = NULL;
-
-static void hotplug_callback(DDCA_Display_Hotplug_Event hotplug_event) {
-  g_debug("Triggered hotplug_callback");
-  Signal_Event *generic_event = g_malloc(sizeof(Signal_Event));
-  generic_event->event_type = HOTPLUG;
-  generic_event->hotplug_event = hotplug_event;
-  g_atomic_pointer_set(&signal_event, generic_event);
-}
-
-static void display_sleep_callback(DDCA_Display_Sleep_Event sleep_event) {
-  g_debug("Triggered display_sleep_callback");
-  Signal_Event *generic_event = g_malloc(sizeof(Signal_Event));
-  generic_event->event_type = SLEEP;
-  generic_event->sleep_event = sleep_event;
-  g_atomic_pointer_set(&signal_event, generic_event);
-}
-#endif
 
 /*
  * Our service connection - Will be set the the running connection when the bus is aquired.
@@ -1242,16 +1253,11 @@ typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
  * @return
  */
 static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
-  if (enable_change_signals) {
-    *timeout = 5000;
-    if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event) == NULL) {
-      return FALSE;
-    }
-    g_debug("cdc signal_event ready type=%d", signal_event->event_type);
+  *timeout = 5000;
+  if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
+    return FALSE;
   }
-  else {
-    *timeout = 30000;
-  }
+  g_debug("cdc signal_event ready type=%d", signal_event_data->event_type);
   return TRUE;
 }
 
@@ -1264,10 +1270,8 @@ static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
  * @return
  */
 static gboolean cdc_signal_check(GSource *source) {
-  if (enable_change_signals) {
-    if (dbus_connection != NULL && g_atomic_pointer_get(&signal_event) != NULL) {
-      return TRUE;
-    }
+  if (dbus_connection != NULL && g_atomic_pointer_get(&signal_event_data) != NULL) {
+    return TRUE;
   }
   return FALSE;
 }
@@ -1284,54 +1288,60 @@ static gboolean cdc_signal_check(GSource *source) {
  * @return
  */
 static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
-  //ConnectedDisplaysChanged_SignalSource *signal_source = (ConnectedDisplaysChanged_SignalSource *) source;
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
     g_warning("cdc_signal_dispatch: null D-Bus connection");
     return TRUE;
   }
-  Signal_Event *event_ptr = g_atomic_pointer_get(&signal_event);
+  Event_Data_Type *event_ptr = g_atomic_pointer_get(&signal_event_data);
   g_info("cdc_signal_dispatch: processing event - obtained %s", event_ptr == NULL ? "NULL event pointer" : "event pointer");
-  if (g_atomic_pointer_compare_and_exchange(&signal_event, signal_event, NULL)) {
+  if (g_atomic_pointer_compare_and_exchange(&signal_event_data, signal_event_data, NULL)) {
     g_debug("cdc_signal_dispatch: reset signal_event to NULL ready for next event.");
   }
   else {
     g_warning("cdc_signal_dispatch: failed to reset signal_event to NULL - maybe another event was delivered?");
   }
   gchar *edid_encoded;
-  int event_type;
+  int int_event_type = DDCA_EVENT_DISCONNECTED;
   if (event_ptr != NULL) {
+    int_event_type = event_ptr->event_type;
     switch (event_ptr->event_type) {
-      case SLEEP:
+      case DDCA_EVENT_DPMS_AWAKE:
+      case DDCA_EVENT_DPMS_ASLEEP:
         DDCA_Display_Info* dinfo;
-        DDCA_Status status = ddca_get_display_info(event_ptr->sleep_event.dref, &dinfo);
+        DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
         if (status == 0) {
-          g_debug("cdc_signal_dispatch: emit signal ConnectedDisplaysChanged now");
           edid_encoded = edid_encode(dinfo->edid_bytes);
-          event_type = event_ptr->sleep_event.asleep ? 1 : 2;
           ddca_free_display_info(dinfo);
           break;
         }
         // Fall through
-      case HOTPLUG:;
+      case DDCA_EVENT_CONNECTOR_ATTACHED:
+      case DDCA_EVENT_CONNECTOR_DETACHED:
+      case DDCA_EVENT_CONNECTED:
+      case DDCA_EVENT_DISCONNECTED:
         // Fall through
       default:
         edid_encoded = g_strdup("");
-        event_type = 0;
         break;
     }
+    // TODO Should these be passed in the callback - at least log for now
+    const int io_mode = event_ptr->io_path.io_mode;
+    const int io_path = event_ptr->io_path.path.hiddev_devno;  // Union of ints
+    g_info("cdc_signal_dispatch: origin io_mode=%s io_path=%d", (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
+    g_free(event_ptr);
   }
-  else {  // Not sure if this can ever be reached.
+  else {  // Not sure if this can ever be reached - maybe if a concurrency issue causes the event_ptr to be NULL.
     edid_encoded = g_strdup("");
-    event_type = 0;
-    g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNETED");
+    g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNECTED");
   }
+
   if (!g_dbus_connection_emit_signal(dbus_connection,
                                      NULL,
                                      "/com/ddcutil/DdcutilObject",
                                      "com.ddcutil.DdcutilInterface",
                                      "ConnectedDisplaysChanged",
-                                     g_variant_new ("(siu)", edid_encoded, event_type, 0),
+                                     g_variant_new ("(siu)", edid_encoded, int_event_type, 0),
                                      &local_error)) {
     g_warning("cdc_signal_dispatch: emit signal failed %s", local_error != NULL ? local_error->message : "");
     g_free(local_error);
@@ -1342,6 +1352,14 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
   g_free(edid_encoded);
   return TRUE;
 }
+
+static void display_status_event_callback(DDCA_Display_Status_Event event) {
+  g_debug("DDCA event triggered display_status_event_callback");
+  Event_Data_Type *event_copy = g_malloc(sizeof(Event_Data_Type));
+  *event_copy = event;
+  g_atomic_pointer_set(&signal_event_data, event_copy);
+}
+
 #endif
 
 /**
@@ -1490,15 +1508,6 @@ int main(int argc, char *argv[]) {
   ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
 #endif
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-  if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
-    g_message("Registering DDCA hotplug_callback");
-    ddca_register_display_hotplug_callback(hotplug_callback);
-    g_message("Registering DDCA sleep_callback");
-    ddca_register_display_sleep_event_callback(display_sleep_callback);
-  }
-#endif
-
   const guint owner_id = g_bus_own_name(
     G_BUS_TYPE_SESSION,
     "com.ddcutil.DdcutilService",
@@ -1511,14 +1520,18 @@ int main(int argc, char *argv[]) {
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-  if (enable_change_signals) {
-    g_message("Using libddcutil change detection");
+  if (has_change_signals) {
+    g_message("Using libddcutil change detection, forwarding as D-BUS signals");
+    if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
+      g_message("Registering DDCA display_status_event_callback");
+      ddca_register_display_status_callback(display_status_event_callback);
+    }
+    GMainContext* loop_context = g_main_loop_get_context(loop);
+    GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
+    GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
+    g_source_attach(source, loop_context);
+    g_source_unref(source);
   }
-  GMainContext* loop_context = g_main_loop_get_context(loop);
-  GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
-  GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
-  g_source_attach(source, loop_context);
-  g_source_unref(source);
 #endif
 
   g_main_loop_run(loop);
