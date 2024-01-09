@@ -81,13 +81,13 @@ static bool has_change_signals = TRUE;
  * List of DDCA events numbers and names that can be iterated over (for return from a service property).
  */
 static const int event_types[] = {
-  DDCA_EVENT_CONNECTOR_ATTACHED, DDCA_EVENT_CONNECTOR_DETACHED,
-  DDCA_EVENT_CONNECTED, DDCA_EVENT_DISCONNECTED, DDCA_EVENT_DPMS_AWAKE,
-  DDCA_EVENT_DPMS_ASLEEP,};
+  DDCA_EVENT_CONNECTOR_ADDED, DDCA_EVENT_CONNECTOR_REMOVED,
+  DDCA_EVENT_DISPLAY_CONNECTED, DDCA_EVENT_DISPLAY_DISCONNECTED,
+  DDCA_EVENT_DPMS_AWAKE, DDCA_EVENT_DPMS_ASLEEP,};
 static const char *event_type_names[] = {
-  G_STRINGIFY(DDCA_EVENT_CONNECTOR_ATTACHED),  G_STRINGIFY(DDCA_EVENT_CONNECTOR_DETACHED),
-  G_STRINGIFY(DDCA_EVENT_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISCONNECTED), G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE),
-  G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),};
+  G_STRINGIFY(DDCA_EVENT_CONNECTOR_ADDED), G_STRINGIFY(DDCA_EVENT_CONNECTOR_REMOVED),
+  G_STRINGIFY(DDCA_EVENT_DISPLAY_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISPLAY_DISCONNECTED),
+  G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),};
 
 /**
  * Custom signal event data - used by the service's custom signal source
@@ -247,6 +247,14 @@ static const gchar introspection_xml[] =
     "      <arg name='display_number' type='i' direction='in'/>"
     "      <arg name='edid_txt' type='s' direction='in'/>"
     "      <arg name='new_multiplier' type='d' direction='in'/>"
+    "      <arg name='flags' type='u' direction='in'/>"
+    "      <arg name='error_status' type='i' direction='out'/>"
+    "      <arg name='error_message' type='s' direction='out'/>"
+    "    </method>"
+
+    "    <method name='ServiceTest'>"
+    "      <arg name='key' type='s' direction='in'/>"
+    "      <arg name='value' type='s' direction='in'/>"
     "      <arg name='flags' type='u' direction='in'/>"
     "      <arg name='error_status' type='i' direction='out'/>"
     "      <arg name='error_message' type='s' direction='out'/>"
@@ -455,6 +463,35 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
   pid_t spawn_pid;
   posix_spawn(&spawn_pid, server_executable, NULL, NULL, argv,environ);
   exit(0);
+}
+
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+static void display_status_event_callback(DDCA_Display_Status_Event event);
+#endif
+
+static void service_test(GVariant* parameters, GDBusMethodInvocation* invocation) {
+  char *key;
+  char *value;
+  u_int32_t flags;
+
+  g_variant_get(parameters, "(ssu)", &key, &value, &flags);
+
+  g_info("ServiceTest key=%s value=%s flags=%d", key, value, flags);
+  int final_status = 0;
+  char *final_message_text = "OK";
+#if defined (HAS_DISPLAYS_CHANGED_CALLBACK)
+  if (strcmp(key, "create_event") == 0) {  // For testing signalling without libddcutil
+    DDCA_Display_Status_Event event;
+    event.dref = NULL;
+    event.event_type = flags == 0 ? DDCA_EVENT_DISPLAY_DISCONNECTED : flags;
+    event.io_path.io_mode = 0;
+    event.io_path.path.hiddev_devno = 2;
+    display_status_event_callback(event);
+  }
+#endif
+  GVariant *result = g_variant_new("(is)", final_status, final_message_text);
+
+  g_dbus_method_invocation_return_value(invocation, result);
 }
 
 /**
@@ -939,7 +976,7 @@ static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invoc
   DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
   if (status == 0) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-    status = ddca_dref_state(vdu_info->dref);
+    status = ddca_validate_display_ref(vdu_info->dref, TRUE);
 #else
     status = DDCRC_UNIMPLEMENTED;
 #endif
@@ -1075,6 +1112,8 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
     get_capabilities_metadata(parameters, invocation);
   } else if (g_strcmp0(method_name, "Restart") == 0) {
     restart(parameters, invocation);
+  } else if (g_strcmp0(method_name, "ServiceTest") == 0) {
+    service_test(parameters, invocation);
   }
 }
 
@@ -1097,7 +1136,6 @@ static void handle_method_call(GDBusConnection *connection, const gchar *sender,
  * @param user_data
  * @return value of the property
  */
-static void display_status_event_callback(DDCA_Display_Status_Event event);
 static GVariant *handle_get_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
                                      const gchar *interface_name, const gchar *property_name, GError **error,
                                      gpointer user_data) {
@@ -1294,15 +1332,15 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
     return TRUE;
   }
   Event_Data_Type *event_ptr = g_atomic_pointer_get(&signal_event_data);
-  g_info("cdc_signal_dispatch: processing event - obtained %s", event_ptr == NULL ? "NULL event pointer" : "event pointer");
+  g_info("cdc_signal_dispatch: processing event, obtained %s", event_ptr == NULL ? "NULL event data" : "event data");
   if (g_atomic_pointer_compare_and_exchange(&signal_event_data, signal_event_data, NULL)) {
-    g_debug("cdc_signal_dispatch: reset signal_event to NULL ready for next event.");
+    g_debug("cdc_signal_dispatch: cleared event data, ready for next event.");
   }
   else {
-    g_warning("cdc_signal_dispatch: failed to reset signal_event to NULL - maybe another event was delivered?");
+    g_warning("cdc_signal_dispatch: failed to clear event data, maybe new event data was delivered?");
   }
   gchar *edid_encoded;
-  int int_event_type = DDCA_EVENT_DISCONNECTED;
+  int int_event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
   if (event_ptr != NULL) {
     int_event_type = event_ptr->event_type;
     switch (event_ptr->event_type) {
@@ -1316,11 +1354,6 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
           break;
         }
         // Fall through
-      case DDCA_EVENT_CONNECTOR_ATTACHED:
-      case DDCA_EVENT_CONNECTOR_DETACHED:
-      case DDCA_EVENT_CONNECTED:
-      case DDCA_EVENT_DISCONNECTED:
-        // Fall through
       default:
         edid_encoded = g_strdup("");
         break;
@@ -1333,7 +1366,7 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
   }
   else {  // Not sure if this can ever be reached - maybe if a concurrency issue causes the event_ptr to be NULL.
     edid_encoded = g_strdup("");
-    g_warning("cdc_signal_dispatch: null event - assume DDCA_EVENT_DISCONNECTED");
+    g_warning("cdc_signal_dispatch: unexpected null event data, assume DDCA_EVENT_DISCONNECTED");
   }
 
   if (!g_dbus_connection_emit_signal(dbus_connection,
@@ -1343,11 +1376,11 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
                                      "ConnectedDisplaysChanged",
                                      g_variant_new ("(siu)", edid_encoded, int_event_type, 0),
                                      &local_error)) {
-    g_warning("cdc_signal_dispatch: emit signal failed %s", local_error != NULL ? local_error->message : "");
+    g_warning("cdc_signal_dispatch: failed %s", local_error != NULL ? local_error->message : "");
     g_free(local_error);
   }
   else {
-    g_debug("cdc_signal_dispatch: emit signal succeeded");
+    g_debug("cdc_signal_dispatch: succeeded");
   }
   g_free(edid_encoded);
   return TRUE;
