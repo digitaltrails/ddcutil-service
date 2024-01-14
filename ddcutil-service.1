@@ -80,13 +80,13 @@ The DDCA syslog level numerical value is passed to
 .B libddutil's ddca_init()
 function at startup to enable logging from within the library.
 It's only available for
-.B libddutil 2.0.1+.
+.B libddutil version 2.1.0 and up.
 
 .TP
 .B "--ddca-init-options" \fIN\fP
 
 The DDCA init option is a numerical value is passed to
-.B libddutil's ddca_init()
+.B libddutil ddca_init()
 function at startup to enable/disable various options with the library.
 It's only available for
 .B libddutil 2.0.1+.
@@ -98,7 +98,7 @@ The
 library also supports a set of init options, any following the
 .B --
 will be passed as a string to the
-.B ddc_init()
+.B libddutil ddca_init()
 function when it's called at startup.
 
 .TP
