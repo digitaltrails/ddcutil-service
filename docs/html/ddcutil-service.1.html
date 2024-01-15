@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jan 15 12:58:06 2024 -->
+<!-- CreationDate: Mon Jan 15 13:55:45 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -122,7 +122,7 @@ within the library. It&rsquo;s only available for
 option is a numerical value is passed to <b>libddutil
 ddca_init()</b> function at startup to enable/disable
 various options with the library. It&rsquo;s only available
-for <b>libddutil 2.0.1+.</b></p>
+for <b>libddutil 2.1.0+.</b></p>
 
 <p style="margin-left:9%;"><b>-- [ libddcutil ddc_init
 options ]</b></p>
@@ -274,17 +274,21 @@ Bus</b> and search for <b>ddcutil-service.</b></p>
 </h2>
 
 
-<p style="margin-left:9%; margin-top: 1em">The service
-provides a <b>ConnectedDisplaysChanged</b> signal which will
-raise a signal on the client should a displays connection
-status change. The utility and reliability of this callback
-is dependent on the vagaries of specific displays, GPUs,
-desktops (KDE, gnome, ...), and display servers (X11,
-Wayland-implementations).</p>
+<p style="margin-left:9%; margin-top: 1em">The service may
+raise a <b>ConnectedDisplaysChanged</b> D-Bus signal when a
+display undergoes a connection status change.</p>
 
-<p style="margin-left:9%; margin-top: 1em">Full support for
-this callback isn&rsquo;t due until <b>ddcutil
-2.0.2+.</b></p>
+<p style="margin-left:9%; margin-top: 1em">Not all
+monitors, GPU&rsquo;s, GPU-drivers, or cabling, provide the
+necessary support for this feature. Results may also vary
+depending on the mix of desktop components, such as KDE,
+Gnome, X11, and Wayland. Depending on all of these factors,
+status changes may be signaled for all/some/none of
+display-cable connect/disconnect, power on/off, and DPMS
+wake/sleep.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Support for this
+callback requires <b>ddcutil/libddcutil 2.1.0.</b></p>
 
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>

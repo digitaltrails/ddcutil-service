@@ -89,7 +89,7 @@ The DDCA init option is a numerical value is passed to
 .B libddutil ddca_init()
 function at startup to enable/disable various options with the library.
 It's only available for
-.B libddutil 2.0.1+.
+.B libddutil 2.1.0+.
 
 .TP
 .B -- [ libddcutil ddc_init options ]
@@ -199,15 +199,18 @@ and search for
 
 .SH SERVICE SIGNALS
 
-The service provides a
+The service may raise a
 .B ConnectedDisplaysChanged
-signal which will raise a signal on the client should a displays connection
-status change.  The utility and reliability of this callback is
-dependent on the vagaries of specific displays, GPUs, desktops (KDE,
-gnome, ...), and display servers (X11, Wayland-implementations).
+D-Bus signal when a display undergoes a connection status change.
 .PP
-Full support for this callback isn't due until
-.B ddcutil 2.0.2+.
+Not all monitors, GPU's, GPU-drivers, or cabling, provide the necessary support
+for this feature.  Results may also vary depending on the mix of desktop components,
+such as KDE, Gnome, X11, and Wayland.  Depending on all of these factors,
+status changes may be signaled for all/some/none of display-cable connect/disconnect,
+power on/off, and DPMS wake/sleep.
+.PP
+Support for this callback requires
+.B ddcutil/libddcutil 2.1.0.
 
 .SH SERVICE PROPERTIES
 
