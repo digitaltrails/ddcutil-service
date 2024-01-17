@@ -1467,7 +1467,7 @@ int main(int argc, char *argv[]) {
   bool log_info = FALSE;
 
 #if defined(HAS_OPTION_ARGUMENTS)
-  gint ddca_syslog_level = 0;
+  gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
   gint ddca_init_options = 0;  // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
 #endif
 
