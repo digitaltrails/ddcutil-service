@@ -45,8 +45,6 @@ ddcutil_proxy.DdcutilOutputLevel = 0xff
 print(f"\n{ddcutil_proxy.DdcutilDynamicSleep=}")
 print(f"{ddcutil_proxy.DdcutilOutputLevel=}")
 
-ddcutil_proxy.ServiceSignalChanges = True
-
 # Create a namedtuple that matches the attributes returned by the detect method
 DetectedAttributes = namedtuple("DetectedAttributes", ddcutil_proxy.AttributesReturnedByDetect)
 
