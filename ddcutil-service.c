@@ -596,7 +596,8 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
     }
   }
   char *message_text = get_status_message(status);
-  GVariant *result = g_variant_new("(qqsis)", current_value, max_value, formatted_value, status, message_text);
+  GVariant *result = g_variant_new(
+    "(qqsis)", current_value, max_value, formatted_value ? formatted_value: "", status, message_text);
   g_dbus_method_invocation_return_value(invocation, result);   // Think this frees the result
   ddca_free_display_info_list(info_list);
   if (formatted_value != NULL) {
