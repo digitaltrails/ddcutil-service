@@ -55,10 +55,9 @@ make
 install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_mandir}/man1/ \
                    %{buildroot}%{_datadir}/%{name}/examples \
-                   %{buildroot}%{_datadir}/dbus-1 \
                    %{buildroot}%{_datadir}/dbus-1/services
 install -m 0755 %{name} %{buildroot}/%{_bindir}/%{name}
-install -m 0755 com.ddcutil.DdcutilService.service %{buildroot}%{_datadir}/dbus-1/services/
+install -m 0644 com.ddcutil.DdcutilService.service %{buildroot}%{_datadir}/dbus-1/services/
 install -m 0755 examples/* %{buildroot}%{_datadir}/%{name}/examples/
 install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
 
@@ -66,6 +65,8 @@ install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
 %license COPYING
 %dir %{_datadir}/%{name}
 %dir %{_datadir}/%{name}/examples
+%dir %{_datadir}/dbus-1
+%dir %{_datadir}/dbus-1/services
 %{_bindir}/%{name}
 %{_datadir}/dbus-1/services/com.ddcutil.DdcutilService.service
 %{_mandir}/man1/%{name}.1%{?ext_man}
