@@ -1563,7 +1563,7 @@ int main(int argc, char *argv[]) {
     else {
       char *message_text = get_status_message(status);
       g_message("libddcutil change detection unavailable: non-DRM GPU? (status=%d - %s)", status, message_text);
-      g_warning("Disabled ConnectDisplaysChanged signal - libddcutil change detection unavailable: ");
+      g_warning("Disabled ConnectDisplaysChanged signal - libddcutil change detection unavailable for this GPU");
       free(message_text);
     }
   }
@@ -1571,7 +1571,7 @@ int main(int argc, char *argv[]) {
     g_message("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
   }
 #else
-  g_message("ConnectDisplaysChanged signal unavailable: change detection unsupported by this version of libddcutil" );
+  g_message("Disabled ConnectDisplaysChanged signal - change detection unsupported by this version of libddcutil" );
 #endif
 
   g_main_loop_run(loop);
