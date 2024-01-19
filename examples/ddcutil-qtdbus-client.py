@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # ddcutil-qtdbus-client.py
 # ------------------------
 # Python Qt QtDBus example of using ddcutil-service

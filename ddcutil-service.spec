@@ -35,14 +35,13 @@ Source0:        https://github.com/digitaltrails/ddcutil-service/archive/refs/ta
 BuildRequires: make
 BuildRequires: gcc-c++
 BuildRequires: pkgconfig(glib-2.0)   >= 2.40
-BuildRequires: libddcutil4 >= 1.4.0
 BuildRequires: libddcutil-devel >= 1.4.0
 
 Requires: dbus-1-daemon
 
 %description
 ddcutil-service is D-Bus service wrapper for libddcutil which
-implements the VESA DDC Monitor Control Command Set.  In general,
+implements the VESA DDC Monitor Control Command Set. In general,
 most things that can be controlled using a monitor's on-screen
 display can be controlled by this service.
 
@@ -56,13 +55,12 @@ make
 install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_mandir}/man1/ \
                    %{buildroot}%{_datadir}/%{name}/examples \
+                   %{buildroot}%{_datadir}/dbus-1 \
                    %{buildroot}%{_datadir}/dbus-1/services
 install -m 0755 %{name} %{buildroot}/%{_bindir}/%{name}
 install -m 0755 com.ddcutil.DdcutilService.service %{buildroot}%{_datadir}/dbus-1/services/
 install -m 0755 examples/* %{buildroot}%{_datadir}/%{name}/examples/
 install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
-
-%post
 
 %files
 %license COPYING

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # ddcutil-dasbus-client.py
 # ----------------------
 # Python dasbus example of using ddcutil-service

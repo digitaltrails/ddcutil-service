@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # ddcutil-qtdbus-signal-receiver.py
 # ---------------------------------
 # Python Qt QtDBus example of receiving signals from ddcutil-service

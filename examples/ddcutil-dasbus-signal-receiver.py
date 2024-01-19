@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # ddcutil-dasbus-signal-receiver.py
 # ---------------------------------
 # Python dasbus example of receiving signals from ddcutil-service
