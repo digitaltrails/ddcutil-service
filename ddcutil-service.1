@@ -8,6 +8,8 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 .B ddcutil-service
 .I --log_info
 |
+.I --disable-signals
+|
 .I --ddca-syslog-level=N
 |
 .I --ddca-init-options=M
@@ -72,6 +74,14 @@ service's
 property (see
 .B EXAMPLES
 below).
+
+.TP
+.B "--disable-signals"
+
+By default, the service enables monitoring for
+display connectivity changes or display power-state changes,
+any changes are forwarded via the ConnectDisplaysChanged
+signal.  This flag disables all monitoring threads and signals.
 
 .TP
 .B "--ddca-syslog-level" \fIN\fP

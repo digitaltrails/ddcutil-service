@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jan 15 13:55:45 2024 -->
+<!-- CreationDate: Sat Jan 20 10:44:00 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -55,8 +55,9 @@ Virtual Control Panel</p>
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service
 <br>
 ddcutil-service</b> <i>--log_info</i> |
-<i>--ddca-syslog-level=N</i> | <i>--ddca-init-options=M</i>
--- [ <i>libddcutil ddc_init options</i> ] <b><br>
+<i>--disable-signals</i> | <i>--ddca-syslog-level=N</i> |
+<i>--ddca-init-options=M</i> -- [ <i>libddcutil ddc_init
+options</i> ] <b><br>
 ddcutil-service</b> <i>--help</i> | <i>--version</i> |
 <i>--introspect</i></p>
 
@@ -105,6 +106,14 @@ put will go to standard-error or, if running from
 toggled after startup by using B-Bus to alter the
 service&rsquo;s <b>ServiceInfoLogging</b> property (see
 <b>EXAMPLES</b> below).</p>
+
+<p style="margin-left:9%;"><b>--disable-signals</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">By default, the
+service enables monitoring for display connectivity changes
+or display power-state changes, any changes are forwarded
+via the ConnectDisplaysChanged signal. This flag disables
+all monitoring threads and signals.</p>
 
 <p style="margin-left:9%;"><b>--ddca-syslog-level</b>
 <i>N</i></p>

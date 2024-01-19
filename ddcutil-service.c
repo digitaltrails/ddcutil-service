@@ -1466,6 +1466,7 @@ int main(int argc, char *argv[]) {
   bool version_request = FALSE;
   bool introspect_request = FALSE;
   bool log_info = FALSE;
+  bool disable_signals = FALSE;
 
 #if defined(HAS_OPTION_ARGUMENTS)
   gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
@@ -1480,6 +1481,8 @@ int main(int argc, char *argv[]) {
 "print introspection xml and exit", NULL },
     { "log-info", 'l', 0, G_OPTION_ARG_NONE, &log_info,
 "log service info and debug messages", NULL },
+      { "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_signals,
+"disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL },
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
       "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL },
@@ -1552,18 +1555,29 @@ int main(int argc, char *argv[]) {
   GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-  if (has_change_signals) {
-    g_message("Using libddcutil change detection, forwarding as D-BUS signals");
-    if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
-      g_message("Registering DDCA display_status_event_callback");
+  if (has_change_signals && !disable_signals) {
+    int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+    if (status == DDCRC_OK) {
+      g_message("Using libddcutil change detection, enabled D-BUS ConnectDisplaysChanged signal");
       ddca_register_display_status_callback(display_status_event_callback);
+      GMainContext* loop_context = g_main_loop_get_context(loop);
+      GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
+      GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
+      g_source_attach(source, loop_context);
+      g_source_unref(source);
     }
-    GMainContext* loop_context = g_main_loop_get_context(loop);
-    GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
-    GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
-    g_source_attach(source, loop_context);
-    g_source_unref(source);
+    else {
+      char *message_text = get_status_message(status);
+      g_message("libddcutil change detection unavailable: non-DRM GPU? (status=%d - %s)", status, message_text);
+      g_warning("libddcutil change detection unavailable: disabled ConnectDisplaysChanged signal");
+      free(message_text);
+    }
   }
+  else {
+    g_message("libddcutil change detection unavailable or disabled");
+  }
+#else
+  g_message("ConnectDisplaysChanged signal unavailable: change detection unsupported by this version of libddcutil" );
 #endif
 
   g_main_loop_run(loop);
