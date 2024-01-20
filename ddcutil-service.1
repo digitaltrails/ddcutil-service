@@ -266,8 +266,10 @@ No all options are applicable to all methods.
 .B ServiceDetectsDisplayEvents
 Indicates that this version of
 .B libddcutil
-supports monitoring the connected VDU's for connect, disconnect, DPMS-sleep, and DPMS-awake.
-The service will forward these events by raising the
+supports monitoring this GPU for VDU connection events.
+Depending on the GPU and GPU-driver, some of connect, disconnect, DPMS-sleep, and
+DPMS-awake may be detected.
+The service will forward connection events by emitting the
 .B ConnectedDisplaysChanged
 signal.   Also see
 .B DisplayEventTypes.
@@ -388,35 +390,31 @@ APIs.  The examples are normally be installed in:
 
 .fi
 
-.SH BUGS AND LIMITATIONS
+.SH LIMITATIONS
 
-Should the service exit unexpectedly, it relies on
-.B daebus-deamon
-for on-demand restart.  For that reason, it's not suitable for
-running in production as a stand-alone daemon.
+Support for the
+.B ConnectedDisplaysChanged
+signal depends on features within the GPU and GPU-Driver.
+
+Some GPU drivers and VDUs have buggy DDC implementations. If you have the choice,
+a DisplayPort to DisplayPort connection may work more reliably than DVI or HDMI.
 
 Some
 .libddcutil
-parameters can only be changed at process startup, if they need
-to be changed the service will require a manual restart, either by
-killing it with a UNIX signal, or by invoking the service's
+parameters can only be changed at process startup.  The service can be
+restarted either by killing it with a UNIX signal, or by invoking the
+service's
 .B Restart
 menthod.
 
-The
-.B ConnectedDisplaysChanged
-signal is incomplete pending future enhancements to libddcutil.
 
-The service is currently under active development along
-with supporting amendments to libddcutil by Sanford Rockowitz.
-.PP
-Please raise any bug reports as issues at
+.SH REPORTING BUGS
+
 .I https://github.com/digitaltrails/ddcutil-service/issues
-or by email to
-.I michael@actrix.gen.nz.
+
 
 .SH AUTHOR
-Michael Hamilton (michael@actrix.gen.nz)
+Michael Hamilton
 
 .SH ACKNOWLEDGEMENTS
 
@@ -425,7 +423,7 @@ Thanks go out to
 for
 .B libddcutil,
 .B ddcutil
-and all the assistance and advice while working on this service.
+and all the assistance and advice provided during the development of this service.
 
 .SH COPYRIGHT
 Copyright (C) 2033 Michael Hamilton.

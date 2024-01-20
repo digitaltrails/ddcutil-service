@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sat Jan 20 10:44:00 2024 -->
+<!-- CreationDate: Sun Jan 21 08:40:31 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -29,7 +29,8 @@
 <a href="#SERVICE PROPERTIES">SERVICE PROPERTIES</a><br>
 <a href="#CONFIG FILES">CONFIG FILES</a><br>
 <a href="#EXAMPLES">EXAMPLES</a><br>
-<a href="#BUGS AND LIMITATIONS">BUGS AND LIMITATIONS</a><br>
+<a href="#LIMITATIONS">LIMITATIONS</a><br>
+<a href="#REPORTING BUGS">REPORTING BUGS</a><br>
 <a href="#AUTHOR">AUTHOR</a><br>
 <a href="#ACKNOWLEDGEMENTS">ACKNOWLEDGEMENTS</a><br>
 <a href="#COPYRIGHT">COPYRIGHT</a><br>
@@ -297,7 +298,7 @@ display-cable connect/disconnect, power on/off, and DPMS
 wake/sleep.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Support for this
-callback requires <b>ddcutil/libddcutil 2.1.0.</b></p>
+callback requires <b>ddcutil/libddcutil 2.1.0+.</b></p>
 
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>
@@ -351,11 +352,12 @@ are applicable to all methods.</p>
 <p style="margin-left:9%;"><b>ServiceDetectsDisplayEvents</b></p>
 
 <p style="margin-left:18%;">Indicates that this version of
-<b>libddcutil</b> supports monitoring the connected
-VDU&rsquo;s for connect, disconnect, DPMS-sleep, and
-DPMS-awake. The service will forward these events by raising
-the <b>ConnectedDisplaysChanged</b> signal. Also see
-<b>DisplayEventTypes.</b></p>
+<b>libddcutil</b> supports monitoring this GPU for VDU
+connection events. Depending on the GPU and GPU-driver, some
+of connect, disconnect, DPMS-sleep, and DPMS-awake may be
+detected. The service will forward connection events by
+emitting the <b>ConnectedDisplaysChanged</b> signal. Also
+see <b>DisplayEventTypes.</b></p>
 
 <p style="margin-left:9%;"><b>DdcutilDynamicSleep</b></p>
 
@@ -468,43 +470,40 @@ clients for D-Bus <b>dasbus</b> and <b>QtDBus</b> APIs. The
 examples are normally be installed in:
 <b>/usr/share/ddcutil-service/examples/</b></p>
 
-<h2>BUGS AND LIMITATIONS
-<a name="BUGS AND LIMITATIONS"></a>
+<h2>LIMITATIONS
+<a name="LIMITATIONS"></a>
 </h2>
 
 
-<p style="margin-left:9%; margin-top: 1em">Should the
-service exit unexpectedly, it relies on <b>daebus-deamon</b>
-for on-demand restart. For that reason, it&rsquo;s not
-suitable for running in production as a stand-alone
-daemon.</p>
+<p style="margin-left:9%; margin-top: 1em">Support for the
+<b>ConnectedDisplaysChanged</b> signal depends on features
+within the GPU and GPU-Driver.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Some GPU drivers
+and VDUs have buggy DDC implementations. If you have the
+choice, a DisplayPort to DisplayPort connection may work
+more reliably than DVI or HDMI.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some parameters
-can only be changed at process startup, if they need to be
-changed the service will require a manual restart, either by
-killing it with a UNIX signal, or by invoking the
-service&rsquo;s <b>Restart</b> menthod.</p>
+can only be changed at process startup. The service can be
+restarted either by killing it with a UNIX signal, or by
+invoking the service&rsquo;s <b>Restart</b> menthod.</p>
 
-<p style="margin-left:9%; margin-top: 1em">The
-<b>ConnectedDisplaysChanged</b> signal is incomplete pending
-future enhancements to libddcutil.</p>
+<h2>REPORTING BUGS
+<a name="REPORTING BUGS"></a>
+</h2>
 
-<p style="margin-left:9%; margin-top: 1em">The service is
-currently under active development along with supporting
-amendments to libddcutil by Sanford Rockowitz.</p>
 
-<p style="margin-left:9%; margin-top: 1em">Please raise any
-bug reports as issues at
-<i>https://github.com/digitaltrails/ddcutil-service/issues</i>
-or by email to <i>michael@actrix.gen.nz.</i></p>
+
+<p style="margin-left:9%; margin-top: 1em"><i>https://github.com/digitaltrails/ddcutil-service/issues</i></p>
 
 <h2>AUTHOR
 <a name="AUTHOR"></a>
 </h2>
 
 
-<p style="margin-left:9%; margin-top: 1em">Michael Hamilton
-(michael@actrix.gen.nz)</p>
+<p style="margin-left:9%; margin-top: 1em">Michael
+Hamilton</p>
 
 <h2>ACKNOWLEDGEMENTS
 <a name="ACKNOWLEDGEMENTS"></a>
@@ -513,8 +512,8 @@ or by email to <i>michael@actrix.gen.nz.</i></p>
 
 <p style="margin-left:9%; margin-top: 1em">Thanks go out to
 <b>Sanford Rockowitz</b> for <b>libddcutil, ddcutil</b> and
-all the assistance and advice while working on this
-service.</p>
+all the assistance and advice provided during the
+development of this service.</p>
 
 <h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
