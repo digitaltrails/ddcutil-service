@@ -1267,9 +1267,9 @@ static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle
 
 struct  ConnectedDisplaysChanged_SignalSource {  // Source structure including custom data (if any)
   GSource source;
-  gchar cdc_data[129];  // do we actually have any data - no, maybe later.
+  gchar chg_data[129];  // do we actually have any data - no, maybe later.
 };
-typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
+typedef struct ConnectedDisplaysChanged_SignalSource Chg_SignalSource_t;
 
 /**
  * @brief registered with main-loop as a custom prepare event function.
@@ -1282,7 +1282,7 @@ typedef struct ConnectedDisplaysChanged_SignalSource CDC_SignalSource_t;
  * @param timeout output parameter setting the timeout for next call
  * @return
  */
-static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
+static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   *timeout = 5000;
   if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
     return FALSE;
@@ -1299,7 +1299,7 @@ static gboolean cdc_signal_prepare(GSource *source, gint *timeout) {
  * @param source
  * @return
  */
-static gboolean cdc_signal_check(GSource *source) {
+static gboolean chg_signal_check(GSource *source) {
   if (dbus_connection != NULL && g_atomic_pointer_get(&signal_event_data) != NULL) {
     return TRUE;
   }
@@ -1317,19 +1317,19 @@ static gboolean cdc_signal_check(GSource *source) {
  * @param user_data
  * @return
  */
-static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
+static gboolean chg_signal_dispatch(GSource *source, GSourceFunc callback, gpointer user_data) {
   GError *local_error = NULL;
   if (dbus_connection == NULL) {
-    g_warning("cdc_signal_dispatch: null D-Bus connection");
+    g_warning("chg_signal_dispatch: null D-Bus connection");
     return TRUE;
   }
   Event_Data_Type *event_ptr = g_atomic_pointer_get(&signal_event_data);
-  g_info("cdc_signal_dispatch: processing event, obtained %s", event_ptr == NULL ? "NULL event data" : "event data");
+  g_info("chg_signal_dispatch: processing event, obtained %s", event_ptr == NULL ? "NULL event data" : "event data");
   if (g_atomic_pointer_compare_and_exchange(&signal_event_data, signal_event_data, NULL)) {
-    g_debug("cdc_signal_dispatch: cleared event data, ready for next event.");
+    g_debug("chg_signal_dispatch: cleared event data, ready for next event.");
   }
   else {
-    g_warning("cdc_signal_dispatch: failed to clear event data, maybe new event data was delivered?");
+    g_warning("chg_signal_dispatch: failed to clear event data, maybe new event data was delivered?");
   }
   gchar *edid_encoded;
   int int_event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
@@ -1353,12 +1353,12 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
     // TODO Should these be passed in the callback - at least log for now
     const int io_mode = event_ptr->io_path.io_mode;
     const int io_path = event_ptr->io_path.path.hiddev_devno;  // Union of ints
-    g_info("cdc_signal_dispatch: origin io_mode=%s io_path=%d", (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
+    g_info("chg_signal_dispatch: origin io_mode=%s io_path=%d", (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
     g_free(event_ptr);
   }
   else {  // Not sure if this can ever be reached - maybe if a concurrency issue causes the event_ptr to be NULL.
     edid_encoded = g_strdup("");
-    g_warning("cdc_signal_dispatch: unexpected null event data, assume DDCA_EVENT_DISCONNECTED");
+    g_warning("chg_signal_dispatch: unexpected null event data, assume DDCA_EVENT_DISCONNECTED");
   }
 
   if (!g_dbus_connection_emit_signal(dbus_connection,
@@ -1368,11 +1368,11 @@ static gboolean cdc_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
                                      "ConnectedDisplaysChanged",
                                      g_variant_new ("(siu)", edid_encoded, int_event_type, 0),
                                      &local_error)) {
-    g_warning("cdc_signal_dispatch: failed %s", local_error != NULL ? local_error->message : "");
+    g_warning("chg_signal_dispatch: failed %s", local_error != NULL ? local_error->message : "");
     g_free(local_error);
   }
   else {
-    g_debug("cdc_signal_dispatch: succeeded");
+    g_debug("chg_signal_dispatch: succeeded");
   }
   g_free(edid_encoded);
   return TRUE;
@@ -1554,8 +1554,8 @@ int main(int argc, char *argv[]) {
       g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
       ddca_register_display_status_callback(display_status_event_callback);
       GMainContext* loop_context = g_main_loop_get_context(loop);
-      GSourceFuncs source_funcs = { cdc_signal_prepare, cdc_signal_check, cdc_signal_dispatch };
-      GSource *source = g_source_new(&source_funcs, sizeof(CDC_SignalSource_t));
+      GSourceFuncs source_funcs = { chg_signal_prepare, chg_signal_check, chg_signal_dispatch };
+      GSource *source = g_source_new(&source_funcs, sizeof(Chg_SignalSource_t));
       g_source_attach(source, loop_context);
       g_source_unref(source);
       change_detection_enabled = TRUE;
