@@ -1271,6 +1271,100 @@ struct  ConnectedDisplaysChanged_SignalSource {  // Source structure including c
 };
 typedef struct ConnectedDisplaysChanged_SignalSource Chg_SignalSource_t;
 
+
+#define ENABLE_INTERNAL_CHANGE_POLLING_OPTION
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+
+static bool enable_polling = FALSE;
+
+/*
+ * Internal polling implementation of detecting changes.
+ *
+ */
+
+static long last_poll_time = 0;
+
+static GList *poll_list = NULL;  // List of currently detected edids
+typedef struct {
+  gchar * edid_encoded;
+  gboolean live;
+} Poll_List_Item;
+
+static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
+  gchar *target_str = (char *) target;
+  Poll_List_Item *item = (Poll_List_Item *) item_ptr;
+  return strcmp(target_str, item->edid_encoded);
+}
+
+static gchar *poll_event_edid_encoded = NULL;
+static DDCA_Display_Event_Type poll_event_type = 0;
+
+static bool poll_for_changes() {
+  long now = g_get_monotonic_time();
+  if (now < last_poll_time + 1000000 * 10) {  // TODO make this configurable.
+    return FALSE;
+  }
+  g_debug("internal display connection changes polling check");
+  last_poll_time = now;
+  ddca_redetect_displays();  // Cannot do this too frequenntly - delays the whole service loop
+  DDCA_Display_Info_List *dlist;
+  const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+  int change_count = 0;
+  poll_event_edid_encoded = NULL;
+  if (list_status == 0) {
+    for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
+      ((Poll_List_Item *) (ptr->data))->live = FALSE;
+    }
+
+    for (int ndx = 0; ndx < dlist->ct; ndx++) {
+      const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+      gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
+      GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
+      if (ptr == NULL) {
+        g_debug("Poll event - new %d %.30s...", ndx + 1, edid_encoded);
+        change_count++;
+        Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
+        item->edid_encoded = edid_encoded;
+        item->live = TRUE;
+        g_debug("Poll event - connected %.30s...\n", item->edid_encoded);
+        poll_list = g_list_append(poll_list, item);
+        Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
+        event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
+        g_atomic_pointer_set(&signal_event_data, event);
+        poll_event_edid_encoded = g_strdup(edid_encoded);
+        poll_event_type = DDCA_EVENT_DISPLAY_CONNECTED;
+        return TRUE; // Only one event on each poll
+      }
+      else {
+        g_debug("Poll event - found %d set to live %.30s...", ndx + 1, edid_encoded);
+        ((Poll_List_Item *) (ptr->data))->live = TRUE;
+        g_free(edid_encoded);
+      }
+    }
+
+    for (GList *ptr = poll_list; ptr != NULL;) {
+      GList *next = ptr->next;
+      Poll_List_Item *item = (Poll_List_Item *) ptr->data;
+      if (!item->live) {
+        g_debug("Poll event - disconnected %.30s...\n", item->edid_encoded);
+        poll_event_edid_encoded = g_strdup(item->edid_encoded);
+        Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
+        event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
+        g_atomic_pointer_set(&signal_event_data, event);
+        g_free(item->edid_encoded);
+        g_free(item);
+        poll_list = g_list_delete_link(poll_list, ptr);
+        change_count++;
+        return TRUE;  // Only one event on each poll
+      }
+      ptr = next;
+    }
+  }
+  return FALSE;
+}
+
+#endif
+
 /**
  * @brief registered with main-loop as a custom prepare event function.
  *
@@ -1284,6 +1378,11 @@ typedef struct ConnectedDisplaysChanged_SignalSource Chg_SignalSource_t;
  */
 static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   *timeout = 5000;
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+  if (enable_polling) {
+      poll_for_changes();
+  }
+#endif
   if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
     return FALSE;
   }
@@ -1376,6 +1475,17 @@ static gboolean chg_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
   }
   g_free(edid_encoded);
   return TRUE;
+}
+
+static GSourceFuncs chg_source_funcs = { chg_signal_prepare, chg_signal_check, chg_signal_dispatch };
+
+static void enable_custom_source(GMainLoop* loop) {
+  g_message("Enabling custom g_main_loop event source");
+  GMainContext* loop_context = g_main_loop_get_context(loop);
+  GSource *source = g_source_new(&chg_source_funcs, sizeof(Chg_SignalSource_t));
+  g_source_attach(source, loop_context);
+  g_source_unref(source);
+  change_detection_enabled = TRUE;
 }
 
 static void display_status_event_callback(DDCA_Display_Status_Event event) {
@@ -1476,6 +1586,10 @@ int main(int argc, char *argv[]) {
 "log service info and debug messages", NULL },
       { "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_signals,
 "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL },
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+    { "enable-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_polling,
+"instead of using libddcutil internally poll for display connection changes", NULL },
+#endif
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
       "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL },
@@ -1545,26 +1659,30 @@ int main(int argc, char *argv[]) {
     on_name_lost, NULL,
     NULL);
 
-  GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+  GMainLoop *main_loop = g_main_loop_new(NULL, FALSE);
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (!disable_signals) {
-    int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
-    if (status == DDCRC_OK) {
-      g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
-      ddca_register_display_status_callback(display_status_event_callback);
-      GMainContext* loop_context = g_main_loop_get_context(loop);
-      GSourceFuncs source_funcs = { chg_signal_prepare, chg_signal_check, chg_signal_dispatch };
-      GSource *source = g_source_new(&source_funcs, sizeof(Chg_SignalSource_t));
-      g_source_attach(source, loop_context);
-      g_source_unref(source);
-      change_detection_enabled = TRUE;
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+    if (enable_polling) {
+      g_message("Enabled ConnectDisplaysChanged signal - using internal polling for change detection");
+      enable_custom_source(main_loop);
     }
-    else {
-      char *message_text = get_status_message(status);
-      g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status, message_text);
-      g_warning("Disabled ConnectDisplaysChanged signal - libddcutil change detection unavailable for this GPU");
-      free(message_text);
+    else
+#endif
+    {
+      int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+      if (status == DDCRC_OK) {
+        g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
+        ddca_register_display_status_callback(display_status_event_callback);
+        enable_custom_source(main_loop);
+      }
+      else {
+        char *message_text = get_status_message(status);
+        g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status, message_text);
+        g_warning("Disabled ConnectDisplaysChanged signal - libddcutil change detection unavailable for this GPU");
+        free(message_text);
+      }
     }
   }
   else {
@@ -1574,7 +1692,7 @@ int main(int argc, char *argv[]) {
   g_message("Disabled ConnectDisplaysChanged signal - change detection unsupported by this version of libddcutil" );
 #endif
 
-  g_main_loop_run(loop);
+  g_main_loop_run(main_loop);
   g_bus_unown_name(owner_id);
   g_dbus_node_info_unref(introspection_data);
   return 0;
