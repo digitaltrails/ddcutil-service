@@ -1275,14 +1275,20 @@ typedef struct ConnectedDisplaysChanged_SignalSource Chg_SignalSource_t;
 #define ENABLE_INTERNAL_CHANGE_POLLING_OPTION
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
 
-static bool enable_polling = FALSE;
+static bool enable_internal_polling = FALSE;
 
 /*
  * Internal polling implementation of detecting changes.
  *
+ * The function poll_for_changes() should be called from the GMainLoop custom
+ * event source.  It will set the global signal_event_data when it detects
+ * an event (just like the libddcutil implementation).
+ *
+ * Only detects connect/disconnect events.
  */
 
 static long last_poll_time = 0;
+static long poll_interval_milli_seconds = 10 * 1000000;
 
 static GList *poll_list = NULL;  // List of currently detected edids
 typedef struct {
@@ -1296,71 +1302,64 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
   return strcmp(target_str, item->edid_encoded);
 }
 
-static gchar *poll_event_edid_encoded = NULL;
-static DDCA_Display_Event_Type poll_event_type = 0;
-
 static bool poll_for_changes() {
-  long now = g_get_monotonic_time();
-  if (now < last_poll_time + 1000000 * 10) {  // TODO make this configurable.
-    return FALSE;
-  }
-  g_debug("internal display connection changes polling check");
-  last_poll_time = now;
-  ddca_redetect_displays();  // Cannot do this too frequenntly - delays the whole service loop
-  DDCA_Display_Info_List *dlist;
-  const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
-  int change_count = 0;
-  poll_event_edid_encoded = NULL;
-  if (list_status == 0) {
-    for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
-      ((Poll_List_Item *) (ptr->data))->live = FALSE;
-    }
+  const long now = g_get_monotonic_time();
+  bool event_is_ready = FALSE;
+  if (now >= last_poll_time + poll_interval_milli_seconds) {  // TODO make this configurable.
+    g_debug("Poll for display connection changes");
+    ddca_redetect_displays();  // Cannot do this too frequenntly - delays the whole service loop
+    DDCA_Display_Info_List *dlist;
+    const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+    if (list_status == 0) {
+      for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
+        ((Poll_List_Item *) (ptr->data))->live = FALSE;
+      }
 
-    for (int ndx = 0; ndx < dlist->ct; ndx++) {
-      const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
-      gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
-      GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
-      if (ptr == NULL) {
-        g_debug("Poll event - new %d %.30s...", ndx + 1, edid_encoded);
-        change_count++;
-        Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
-        item->edid_encoded = edid_encoded;
-        item->live = TRUE;
-        g_debug("Poll event - connected %.30s...\n", item->edid_encoded);
-        poll_list = g_list_append(poll_list, item);
-        Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
-        event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
-        g_atomic_pointer_set(&signal_event_data, event);
-        poll_event_edid_encoded = g_strdup(edid_encoded);
-        poll_event_type = DDCA_EVENT_DISPLAY_CONNECTED;
-        return TRUE; // Only one event on each poll
+      for (int ndx = 0; ndx < dlist->ct; ndx++) {
+        const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+        gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
+        GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
+        if (ptr == NULL) {
+          Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
+          item->edid_encoded = edid_encoded;
+          item->live = TRUE;
+          poll_list = g_list_append(poll_list, item);
+          if (last_poll_time) {  // Not first time through
+            g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
+            Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
+            event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
+            g_atomic_pointer_set(&signal_event_data, event);
+            event_is_ready = TRUE;
+            break; // Only one event on each poll
+          }
+        }
+        else {
+          // g_debug("Poll check - found %d set to live %.30s...", ndx + 1, edid_encoded);
+          ((Poll_List_Item *) (ptr->data))->live = TRUE;
+          g_free(edid_encoded);
+        }
       }
-      else {
-        g_debug("Poll event - found %d set to live %.30s...", ndx + 1, edid_encoded);
-        ((Poll_List_Item *) (ptr->data))->live = TRUE;
-        g_free(edid_encoded);
-      }
-    }
 
-    for (GList *ptr = poll_list; ptr != NULL;) {
-      GList *next = ptr->next;
-      Poll_List_Item *item = (Poll_List_Item *) ptr->data;
-      if (!item->live) {
-        g_debug("Poll event - disconnected %.30s...\n", item->edid_encoded);
-        poll_event_edid_encoded = g_strdup(item->edid_encoded);
-        Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
-        event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
-        g_atomic_pointer_set(&signal_event_data, event);
-        g_free(item->edid_encoded);
-        g_free(item);
-        poll_list = g_list_delete_link(poll_list, ptr);
-        change_count++;
-        return TRUE;  // Only one event on each poll
+      for (GList *ptr = poll_list; ptr != NULL;) {
+        GList *next = ptr->next;
+        Poll_List_Item *item = (Poll_List_Item *) ptr->data;
+        if (!item->live) {
+          g_message("Poll signal event - disconnected %.30s...\n", item->edid_encoded);
+          Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
+          event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
+          g_atomic_pointer_set(&signal_event_data, event);
+          g_free(item->edid_encoded);
+          g_free(item);
+          poll_list = g_list_delete_link(poll_list, ptr);
+          event_is_ready = TRUE;
+          break; // Only one event on each poll
+        }
+        ptr = next;
       }
-      ptr = next;
     }
+    last_poll_time = now;
   }
-  return FALSE;
+  return event_is_ready;
 }
 
 #endif
@@ -1379,7 +1378,7 @@ static bool poll_for_changes() {
 static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   *timeout = 5000;
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-  if (enable_polling) {
+  if (enable_internal_polling) {
       poll_for_changes();
   }
 #endif
@@ -1587,8 +1586,8 @@ int main(int argc, char *argv[]) {
       { "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_signals,
 "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL },
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-    { "enable-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_polling,
-"instead of using libddcutil internally poll for display connection changes", NULL },
+    { "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_internal_polling,
+"prefer polling internally for display connection changes", NULL },
 #endif
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
@@ -1664,8 +1663,8 @@ int main(int argc, char *argv[]) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (!disable_signals) {
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-    if (enable_polling) {
-      g_message("Enabled ConnectDisplaysChanged signal - using internal polling for change detection");
+    if (enable_internal_polling) {
+      g_message("Enabled ConnectDisplaysChanged signal - prefering internal polling for change detection");
       enable_custom_source(main_loop);
     }
     else
@@ -1680,10 +1679,21 @@ int main(int argc, char *argv[]) {
       else {
         char *message_text = get_status_message(status);
         g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status, message_text);
-        g_warning("Disabled ConnectDisplaysChanged signal - libddcutil change detection unavailable for this GPU");
+        g_warning("libddcutil change detection unavailable for this GPU");
         free(message_text);
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+        g_message("Falling back to using internal polling for change detection");
+        enable_internal_polling = TRUE;
+#endif
       }
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+      if (enable_internal_polling) {
+        g_message("Enabled ConnectDisplaysChanged signal - using internal polling for change detection");
+        enable_custom_source(main_loop);
+      }
+#endif
     }
+
   }
   else {
     g_warning("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
