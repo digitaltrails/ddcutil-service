@@ -1287,7 +1287,7 @@ static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
     return FALSE;
   }
-  g_debug("cdc signal_event ready type=%d", signal_event_data->event_type);
+  g_debug("chg signal_event ready type=%d", signal_event_data->event_type);
   return TRUE;
 }
 
