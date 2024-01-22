@@ -408,7 +408,7 @@ static DDCA_Status get_display_info(const int display_number, const char *edid_e
   *dinfo = NULL;
   DDCA_Status status = ddca_get_display_info_list2(0, dlist);
 
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       for (int ndx = 0; ndx < (*dlist)->ct; ndx++) {
         if (display_number == (*dlist)->info[ndx].dispno) {
           *dinfo = &((*dlist)->info[ndx]);
@@ -499,8 +499,8 @@ static void service_test(GVariant* parameters, GDBusMethodInvocation* invocation
   g_variant_get(parameters, "(ssu)", &key, &value, &flags);
 
   g_info("ServiceTest key=%s value=%s flags=%d", key, value, flags);
-  int final_status = 0;
-  char *final_message_text = "OK";
+  const int final_status = 0;
+  const char *final_message_text = "OK";
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (strcmp(key, "create_event") == 0) {  // For testing signalling without libddcutil
     DDCA_Display_Status_Event event;
@@ -508,6 +508,7 @@ static void service_test(GVariant* parameters, GDBusMethodInvocation* invocation
     event.event_type = flags == 0 ? DDCA_EVENT_DISPLAY_DISCONNECTED : flags;
     event.io_path.io_mode = 0;
     event.io_path.path.hiddev_devno = 2;
+    event.timestamp_nanos = 0;
     display_status_event_callback(event);
   }
 #endif
@@ -605,13 +606,13 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       static DDCA_Non_Table_Vcp_Value valrec;
       status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
-      if (status == 0) {
+      if (status == DDCRC_OK) {
         current_value = valrec.sh << 8 | valrec.sl;
         max_value = valrec.mh << 8 | valrec.ml;
         status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
@@ -661,15 +662,15 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       for (int i = 0; i < number_of_vcp_codes; i++) {
         const u_int8_t vcp_code = vcp_codes[i];
         static DDCA_Non_Table_Vcp_Value valrec;
         status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
-        if (status == 0) {
+        if (status == DDCRC_OK) {
           const uint16_t current_value = valrec.sh << 8 | valrec.sl;
           const uint16_t max_value = valrec.mh << 8 | valrec.ml;
           char *formatted_value;
@@ -713,10 +714,10 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       const uint8_t low_byte = new_value & 0x00ff;
       const uint8_t high_byte = new_value >> 8;
       status = ddca_set_non_table_vcp_value(disp_handle, vcp_code, high_byte, low_byte);
@@ -758,9 +759,9 @@ static void get_capabilities_string(GVariant* parameters, GDBusMethodInvocation*
   DDCA_Display_Handle disp_handle;
   DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
 
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       status = ddca_get_capabilities_string(disp_handle, &caps_text);
       ddca_close_display(disp_handle);
     }
@@ -811,15 +812,15 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
   GVariantBuilder *feature_dict_builder = &feature_dict_builder_instance;
   g_variant_builder_init(feature_dict_builder, G_VARIANT_TYPE("a{y(ssa{ys})}"));
 
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     vdu_model = vdu_info->model_name;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       status = ddca_get_capabilities_string(disp_handle, &caps_text);
-      if (status == 0) {
+      if (status == DDCRC_OK) {
         status = ddca_parse_capabilities_string(caps_text, &parsed_capabilities_ptr);
 
-        if (status == 0) {
+        if (status == DDCRC_OK) {
           const DDCA_Cap_Vcp *vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
 
           g_debug("vcp_code_ct=%d", parsed_capabilities_ptr->vcp_code_ct);
@@ -842,7 +843,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
 
             // TODO valgrind complains
             status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true, &metadata_ptr);
-            if (status == 0) {
+            if (status == DDCRC_OK) {
               g_debug("FeatureDef: %x %s %s",
                       metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
               GVariantBuilder value_dict_builder_instance;  // Allocate on the stack for easier memory management.
@@ -941,12 +942,12 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   bool is_complex = false;
   bool is_continuous = false;
   DDCA_Feature_Metadata *metadata_ptr = NULL;
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     DDCA_Display_Handle disp_handle;
     status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
-    if (status == 0) {
+    if (status == DDCRC_OK) {
       status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);  // TODO valgrind complains
-      if (status == 0) {
+      if (status == DDCRC_OK) {
         if (metadata_ptr->feature_name != NULL) {
           feature_name = metadata_ptr->feature_name;
         }
@@ -969,7 +970,7 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
   GVariant *result = g_variant_new("(ssbbbbbis)",
                                    feature_name, feature_description,
                                    is_read_only, is_write_only, is_rw, is_complex, is_continuous,
-                                   status, status == 0 ? "OK" : message_text);
+                                   status, status == DDCRC_OK ? "OK" : message_text);
   g_dbus_method_invocation_return_value(invocation, result);  // Think this frees the result
   ddca_free_display_info_list(info_list);
   ddca_free_feature_metadata(metadata_ptr);
@@ -997,7 +998,7 @@ static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invoc
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-  if (status == 0) {
+  if (status == DDCRC_OK) {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
     status = ddca_validate_display_ref(vdu_info->dref, TRUE);
 #else
@@ -1040,7 +1041,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     status = ddca_get_current_display_sleep_multiplier(vdu_info->dref, &multiplier);
   }
   ddca_free_display_info_list(info_list);
@@ -1080,7 +1081,7 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
   DDCA_Display_Info_List *info_list = NULL;
   DDCA_Display_Info *vdu_info = NULL;  // pointer into info_list
   status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-  if (status == 0) {
+  if (status == DDCRC_OK) {
     status = ddca_set_display_sleep_multiplier(vdu_info->dref, new_multiplier);
   }
   ddca_free_display_info_list(info_list);
@@ -1337,8 +1338,8 @@ typedef struct {
 } Poll_List_Item;
 
 static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
-  gchar *target_str = (char *) target;
-  Poll_List_Item *item = (Poll_List_Item *) item_ptr;
+  const gchar *target_str = (char *) target;
+  const Poll_List_Item *item = (Poll_List_Item *) item_ptr;
   return strcmp(target_str, item->edid_encoded);
 }
 
@@ -1350,14 +1351,14 @@ static bool poll_for_changes() {
     ddca_redetect_displays();  // Cannot do this too frequenntly - delays the whole service loop
     DDCA_Display_Info_List *dlist;
     const DDCA_Status info_status = ddca_get_display_info_list2(1, &dlist);
-    if (info_status == 0) {
-      for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {  // Mark all past displays as disconnected.
+    if (info_status == DDCRC_OK) {
+      for (const GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {  // Mark all past displays as disconnected.
         ((Poll_List_Item *) (ptr->data))->connected = FALSE;
       }
       for (int ndx = 0; ndx < dlist->ct; ndx++) {  // Check all displays, mark existing ones as connected, add new ones.
         const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
         gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
-        GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
+        const GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
         if (ptr != NULL) {  // Found it, mark it as connected
           // g_debug("Poll check - found %d set to connected %.30s...", ndx + 1, edid_encoded);
           ((Poll_List_Item *) (ptr->data))->connected = TRUE;
@@ -1415,7 +1416,7 @@ static bool poll_for_changes() {
  */
 static gboolean chg_signal_prepare(GSource *source, gint *timeout_millis) {
   // g_debug("prepare");
-  *timeout_millis = 5000;  // This doesn't appear to be strict, and after an event it doesn't seem to apply for a while???
+  *timeout_millis = 5000;  // This doesn't appear to be strict, after an event it doesn't seem to apply for a while???
   if (mute_signals) {
     return FALSE;
   }
@@ -1481,8 +1482,8 @@ static gboolean chg_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
       case DDCA_EVENT_DPMS_AWAKE:
       case DDCA_EVENT_DPMS_ASLEEP:
         DDCA_Display_Info* dinfo;
-        DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
-        if (status == 0) {
+        const DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
+        if (status == DDCRC_OK) { // dd
           edid_encoded = edid_encode(dinfo->edid_bytes);
           ddca_free_display_info(dinfo);
           break;
@@ -1716,7 +1717,7 @@ int main(int argc, char *argv[]) {
     else {
 #endif
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-      int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+      const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
       if (status == DDCRC_OK) {
         g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
         ddca_register_display_status_callback(display_status_event_callback);
