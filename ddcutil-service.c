@@ -1330,9 +1330,10 @@ static long last_poll_time = 0;
 static long poll_interval_micros = 10 * 1000000;
 
 static GList *poll_list = NULL;  // List of currently detected edids
+
 typedef struct {
   gchar * edid_encoded;
-  gboolean live;
+  gboolean connected;
 } Poll_List_Item;
 
 static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
@@ -1348,21 +1349,25 @@ static bool poll_for_changes() {
     g_debug("Poll for display connection changes");
     ddca_redetect_displays();  // Cannot do this too frequenntly - delays the whole service loop
     DDCA_Display_Info_List *dlist;
-    const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
-    if (list_status == 0) {
-      for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {
-        ((Poll_List_Item *) (ptr->data))->live = FALSE;
+    const DDCA_Status info_status = ddca_get_display_info_list2(1, &dlist);
+    if (info_status == 0) {
+      for (GList *ptr = poll_list; ptr != NULL; ptr = ptr->next) {  // Mark all past displays as disconnected.
+        ((Poll_List_Item *) (ptr->data))->connected = FALSE;
       }
-
-      for (int ndx = 0; ndx < dlist->ct; ndx++) {
+      for (int ndx = 0; ndx < dlist->ct; ndx++) {  // Check all displays, mark existing ones as connected, add new ones.
         const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
         gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
         GList *ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
-        if (ptr == NULL) {
-          Poll_List_Item *item = g_malloc(sizeof(Poll_List_Item));
-          item->edid_encoded = edid_encoded;
-          item->live = TRUE;
-          poll_list = g_list_append(poll_list, item);
+        if (ptr != NULL) {  // Found it, mark it as connected
+          // g_debug("Poll check - found %d set to connected %.30s...", ndx + 1, edid_encoded);
+          ((Poll_List_Item *) (ptr->data))->connected = TRUE;
+          g_free(edid_encoded);
+        }
+        else {  // Not in the list, add it
+          Poll_List_Item *vdu_poll_data = g_malloc(sizeof(Poll_List_Item));
+          vdu_poll_data->edid_encoded = edid_encoded;
+          vdu_poll_data->connected = TRUE;
+          poll_list = g_list_append(poll_list, vdu_poll_data);
           if (last_poll_time) {  // Not first time through
             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
             Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
@@ -1372,23 +1377,17 @@ static bool poll_for_changes() {
             break; // Only one event on each poll
           }
         }
-        else {
-          // g_debug("Poll check - found %d set to live %.30s...", ndx + 1, edid_encoded);
-          ((Poll_List_Item *) (ptr->data))->live = TRUE;
-          g_free(edid_encoded);
-        }
       }
-
-      for (GList *ptr = poll_list; ptr != NULL;) {
+      for (GList *ptr = poll_list; ptr != NULL;) {  // Check if any displays are still marked as disconnected
         GList *next = ptr->next;
-        Poll_List_Item *item = (Poll_List_Item *) ptr->data;
-        if (!item->live) {
-          g_message("Poll signal event - disconnected %.30s...\n", item->edid_encoded);
+        Poll_List_Item *vdu_poll_data = ptr->data;
+        if (!vdu_poll_data->connected) {
+          g_message("Poll signal event - disconnected %.30s...\n", vdu_poll_data->edid_encoded);
           Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
           event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
           g_atomic_pointer_set(&signal_event_data, event);
-          g_free(item->edid_encoded);
-          g_free(item);
+          g_free(vdu_poll_data->edid_encoded);
+          g_free(vdu_poll_data);
           poll_list = g_list_delete_link(poll_list, ptr);
           event_is_ready = TRUE;
           break; // Only one event on each poll
