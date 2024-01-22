@@ -1317,36 +1317,8 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
     return *error == NULL;
 }
 
-/*
- * Our service connection - Will be set the the running connection when the bus is aquired.
- */
-static GDBusConnection* dbus_connection = NULL;
-
-/*
- * GDBUS service handler table - passed on registraction of the service
- */
-static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
-
-
-/*
- * The follow code enables a main-loop implementation of a main-loop
- * custom event-source, a GSource.  It defines a polled source that
- * handles ddcutil displays-changed data and sends signals to
- * the D-Bus client.
- */
-
-struct ConnectedDisplaysChanged_SignalSource {
-    // Source structure including custom data (if any)
-    GSource source;
-    gchar chg_data[129]; // do we actually have any data - no, maybe later.
-};
-
-typedef struct ConnectedDisplaysChanged_SignalSource Chg_SignalSource_t;
-
-
 #define ENABLE_INTERNAL_CHANGE_POLLING_OPTION
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 static bool enable_internal_polling = FALSE;
@@ -1450,12 +1422,37 @@ static bool poll_for_changes() {
 
 #endif
 
+/*
+ * Our GDBus service connection - Will be set the the running connection when the bus is aquired.
+ */
+static GDBusConnection* dbus_connection = NULL;
+
+/*
+ * GDBUS service handler table - passed on registraction of the service
+ */
+static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
+
+/*
+ * The following code is a implementation of a GMainLoop custom event-source, a GSource.
+ * It defines a polled source that handles ddcutil displays-changed data and sends
+ * signals to the D-Bus client.
+ */
+
+/**
+ * \brief GSource custom source structure including custom data (if any),
+ * this gets passed around as context.
+ */
+typedef struct {
+    GSource source;
+    gchar chg_data[129]; // do we actually have any data - no, maybe later.
+} Chg_SignalSource_t;
+
 /**
  * @brief registered with main-loop as a custom prepare event function.
  *
- * The main purpose of this function is setting the length of the
- * next timeout_millis and return FALSE.  If an event happens to be ready the
- * function can return TRUE instead and the main-loop will act accordingly.
+ * The GMainLoop calls this function, the function decides the length of the
+ * next timeout_millis and mostly returns FALSE.  If an event happens to be ready the
+ * function can return TRUE and the main-loop will act to process it.
  *
  * @param source input source, not of much interest for this implementation
  * @param timeout_millis output parameter setting the timeout for next call
@@ -1482,9 +1479,9 @@ static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
 }
 
 /**
- * @brief registered with main-loop as a custom check event function.
+ * @brief registered with GMainLoop as a custom check event function.
  *
- * Called by the main-loop on timeout to see if an event is ready.
+ * Called by the GMainLoop on timeout to see if an event is ready.
  *
  * @param source
  * @return
@@ -1497,9 +1494,9 @@ static gboolean chg_signal_check(GSource* source) {
 }
 
 /**
- * @brief registered with main-loop to dispatch ConnectedDisplaysChanged signals.
+ * @brief registered with GMainLoop to dispatch ConnectedDisplaysChanged signals.
  *
- * Called by the mainloop if the check function reports that an event
+ * Called by the GMainLoop if the check function reports that an event
  * is ready.  This function should emit the signal to the D-Bus client.
  *
  * @param source
@@ -1570,6 +1567,9 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
     return TRUE;
 }
 
+/**
+ * \brief Defines the three functions that implement our GMainLoop custom event source.
+ */
 static GSourceFuncs chg_source_funcs = {chg_signal_prepare, chg_signal_check, chg_signal_dispatch};
 
 /**
