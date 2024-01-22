@@ -112,6 +112,11 @@ static const char* event_type_names[] = {
     G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),
 };
 
+/**
+ * \brief for a given event_type_num return its name
+ * \param event_type_num
+ * \return name or "unknown_event_type"
+ */
 static const char* get_event_type_name(int event_type_num) {
     for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
         if (event_types[i] == event_type_num) {
@@ -140,8 +145,7 @@ static const char* attributes_returned_from_detect[] = {
  * Boolean flags that can be passed in the service method flags argument.
  */
 typedef enum {
-    EDID_PREFIX = 1,
-    // Inidicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
+    EDID_PREFIX = 1,  // Inidicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
 } Flags_Enum_Type;
 
 /**
@@ -320,6 +324,11 @@ static char* edid_encode(const uint8_t* edid) {
 
 static char* server_executable = PROGRAM_NAME;
 
+/**
+ * \brief Duplicates the binary serial number extraction done by ddcutil
+ * \param edid_bytes binary edid bytes
+ * \return binary serial number
+ */
 static uint32_t edid_to_binary_serial_number(const uint8_t* edid_bytes) {
     const uint32_t binary_serial =
             edid_bytes[0x0c] |
@@ -356,10 +365,10 @@ static gchar* sanitize_utf8(const char* text) {
  */
 static bool enable_service_info_logging(bool enable, bool overwrite) {
     if (enable) {
-        g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite); // enable info & debug messages for our domain.
+        g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite); // enable info+debug messages for our domain.
         return TRUE;
     }
-    g_unsetenv("G_MESSAGES_DEBUG"); // disable info & debug messages for our domain.
+    g_unsetenv("G_MESSAGES_DEBUG"); // disable info+debug messages for our domain.
     return FALSE;
 }
 
@@ -404,6 +413,7 @@ static char* get_status_message(const DDCA_Status status) {
  * @param edid_encoded text encoded edid
  * @param dlist ddcutil list of displays (will need to be freed after use)
  * @param dinfo pointer into the list for the matched display
+ * @param edid_is_prefix match edidby unique prefix
  * @return success status
  */
 static DDCA_Status get_display_info(const int display_number, const char* edid_encoded,
@@ -839,9 +849,7 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                     for (int command_idx = 0; command_idx < parsed_capabilities_ptr->cmd_ct; command_idx++) {
                         char* command_desc = g_strdup_printf("desc of %d",
                                                              parsed_capabilities_ptr->cmd_codes[command_idx]);
-                        //ddca_cmd_code_name();
                         g_debug("CommandDef %x %s ", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
-
                         g_variant_builder_add(
                             command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx],
                             command_desc);
@@ -871,8 +879,8 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                                         if (fve->value_code == value_code) {
                                             g_debug("  ValueDef match feature %x value %d %s",
                                                     feature_def->feature_code, fve->value_code, fve->value_name);
-                                            g_variant_builder_add(value_dict_builder, "{ys}", fve->value_code,
-                                                                  fve->value_name);
+                                            g_variant_builder_add(value_dict_builder, "{ys}",
+                                                fve->value_code, fve->value_name);
                                             value_name = fve->value_name;
                                         }
                                     }
@@ -971,7 +979,8 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
                     feature_description = metadata_ptr->feature_desc;
                 }
                 // if (metadata_ptr->sl_values != NULL) {  // TODO - not used, do we need it?
-                //   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++) {}
+                //   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++)
+                //   {}
                 // }
                 is_read_only = metadata_ptr->feature_flags & DDCA_RO;
                 is_write_only = metadata_ptr->feature_flags & DDCA_WO;
@@ -1050,9 +1059,9 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 
     double multiplier;
 #if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
-  multiplier = ddca_get_sleep_multiplier();
+    multiplier = ddca_get_sleep_multiplier();
 #elif defined(HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
-  multiplier = ddca_get_default_sleep_multiplier();
+    multiplier = ddca_get_default_sleep_multiplier();
 #elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
@@ -1382,23 +1391,24 @@ static bool poll_for_changes() {
         DDCA_Display_Info_List* dlist;
         const DDCA_Status info_status = ddca_get_display_info_list2(1, &dlist);
         if (info_status == DDCRC_OK) {
+
+            // Mark all past displays as disconnected.
             for (const GList* ptr = poll_list; ptr != NULL; ptr = ptr->next) {
-                // Mark all past displays as disconnected.
                 ((Poll_List_Item *)(ptr->data))->connected = FALSE;
             }
+
+            // Check all displays, mark existing ones as connected, add new ones.
             for (int ndx = 0; ndx < dlist->ct; ndx++) {
-                // Check all displays, mark existing ones as connected, add new ones.
+
                 const DDCA_Display_Info* vdu_info = &dlist->info[ndx];
                 gchar* edid_encoded = edid_encode(vdu_info->edid_bytes);
                 const GList* ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
-                if (ptr != NULL) {
-                    // Found it, mark it as connected
+                if (ptr != NULL) {  // Found it, mark it as connected
                     // g_debug("Poll check - found %d set to connected %.30s...", ndx + 1, edid_encoded);
                     ((Poll_List_Item *)(ptr->data))->connected = TRUE;
                     g_free(edid_encoded);
                 }
-                else {
-                    // Not in the list, add it
+                else {  // Not in the list, add it
                     Poll_List_Item* vdu_poll_data = g_malloc(sizeof(Poll_List_Item));
                     vdu_poll_data->edid_encoded = edid_encoded;
                     vdu_poll_data->connected = TRUE;
@@ -1414,8 +1424,9 @@ static bool poll_for_changes() {
                     }
                 }
             }
+
+            // Check if any displays are still marked as disconnected
             for (GList* ptr = poll_list; ptr != NULL;) {
-                // Check if any displays are still marked as disconnected
                 GList* next = ptr->next;
                 Poll_List_Item* vdu_poll_data = ptr->data;
                 if (!vdu_poll_data->connected) {
@@ -1520,7 +1531,6 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
                 DDCA_Display_Info* dinfo;
                 const DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
                 if (status == DDCRC_OK) {
-                    // dd
                     edid_encoded = edid_encode(dinfo->edid_bytes);
                     ddca_free_display_info(dinfo);
                     break;
@@ -1533,7 +1543,8 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
         // TODO Should these be passed in the callback - at least log for now
         // const int io_mode = event_ptr->io_path.io_mode;
         // const int io_path = event_ptr->io_path.path.hiddev_devno;  // Union of ints
-        // g_info("chg_signal_dispatch: origin io_mode=%s io_path=%d", (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
+        // g_info("chg_signal_dispatch: origin io_mode=%s io_path=%d",
+        // (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
         g_free(event_ptr);
     }
     else {
@@ -1561,6 +1572,10 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
 
 static GSourceFuncs chg_source_funcs = {chg_signal_prepare, chg_signal_check, chg_signal_dispatch};
 
+/**
+ * \brief install our custom event source in the GMainLoop
+ * \param loop the targeted main loop
+ */
 static void enable_custom_source(GMainLoop* loop) {
     g_message("Enabling custom g_main_loop event source");
     GMainContext* loop_context = g_main_loop_get_context(loop);
@@ -1571,11 +1586,15 @@ static void enable_custom_source(GMainLoop* loop) {
 }
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+/**
+ * \brief called by libddcutil when a display status change occurs
+ * \param event libddcutil event
+ */
 static void display_status_event_callback(DDCA_Display_Status_Event event) {
     g_debug("DDCA event triggered display_status_event_callback");
     Event_Data_Type* event_copy = g_malloc(sizeof(Event_Data_Type));
     *event_copy = event;
-    g_atomic_pointer_set(&signal_event_data, event_copy);
+    g_atomic_pointer_set(&signal_event_data, event_copy);  // Save for processing by our GMainLoop custom source
 }
 #endif
 
