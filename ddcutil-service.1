@@ -224,6 +224,9 @@ Support for this callback requires
 
 .SH SERVICE PROPERTIES
 
+The service provides several D-Bus accessible properties for querying
+and adjusting its operation.
+
 .TP
 .B AttributesReturnedByDetect
 Query the fieldnames returned from the
@@ -243,36 +246,10 @@ along with their text names.
 List the event-types sent by the
 .B ConnectedDisplaysChanged
 signal along with their text names.
-
-The service provides several D-Bus accessible properties for querying
-and adjusting its operation and
+Events are included for display connection/disconnection (hotplug), DPMS-sleep, and DPMS-wake.
+If the list is empty, the GPU, GPU-driver, or
 .B libddcutil
-internal settings.
-
-.TP
-.B ServiceInfoLogging
-Enable/disable the service's diagnostic level output to include info and debug messages.
-
-.TP
-.B ServiceInterfaceVersion
-Query the service interface version.
-
-.TP
-.B ServiceFlagOptions
-List the available flag option values that can be passed to service methods.
-No all options are applicable to all methods.
-
-.TP
-.B ServiceDetectsDisplayEvents
-Indicates that this version of
-.B libddcutil
-supports monitoring this GPU for VDU connection events.
-Depending on the GPU and GPU-driver, some of connect, disconnect, DPMS-sleep, and
-DPMS-awake may be detected.
-The service will forward connection events by emitting the
-.B ConnectedDisplaysChanged
-signal.   Also see
-.B DisplayEventTypes.
+version doesn't support display event detection.
 
 .TP
 .B DdcutilDynamicSleep
@@ -297,6 +274,24 @@ extra DDC calls to check whether VCP settings were actually applied by the monit
 Query the
 .B libddcutil
 version string.
+
+.TP
+.B MuteSignals
+Mute the signals emitted by the service.  This will also shutdown any internal polling
+the service is managing (any existing libddcutil managed threads will continue to run).
+
+.TP
+.B ServiceInfoLogging
+Enable/disable the service's diagnostic level output to include info and debug messages.
+
+.TP
+.B ServiceInterfaceVersion
+Query the service interface version.
+
+.TP
+.B ServiceFlagOptions
+List the available flag option values that can be passed to service methods.
+No all options are applicable to all methods.
 
 
 .PP

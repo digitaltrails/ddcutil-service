@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sun Jan 21 08:40:31 2024 -->
+<!-- CreationDate: Mon Jan 22 13:44:37 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -305,8 +305,10 @@ callback requires <b>ddcutil/libddcutil 2.1.0+.</b></p>
 </h2>
 
 
-
-<p style="margin-left:9%; margin-top: 1em"><b>AttributesReturnedByDetect</b></p>
+<p style="margin-left:9%; margin-top: 1em">The service
+provides several D-Bus accessible properties for querying
+and adjusting its operation. <b><br>
+AttributesReturnedByDetect</b></p>
 
 <p style="margin-left:18%;">Query the fieldnames returned
 from the <b>Detect</b> method. Lists the names of the fields
@@ -323,41 +325,11 @@ names.</p>
 
 <p style="margin-left:18%;">List the event-types sent by
 the <b>ConnectedDisplaysChanged</b> signal along with their
-text names.</p>
-
-<p style="margin-left:18%; margin-top: 1em">The service
-provides several D-Bus accessible properties for querying
-and adjusting its operation and <b>libddcutil</b> internal
-settings.</p>
-
-<p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
-
-<p style="margin-left:18%;">Enable/disable the
-service&rsquo;s diagnostic level output to include info and
-debug messages.</p>
-
-
-<p style="margin-left:9%;"><b>ServiceInterfaceVersion</b></p>
-
-<p style="margin-left:18%;">Query the service interface
-version.</p>
-
-<p style="margin-left:9%;"><b>ServiceFlagOptions</b></p>
-
-<p style="margin-left:18%;">List the available flag option
-values that can be passed to service methods. No all options
-are applicable to all methods.</p>
-
-
-<p style="margin-left:9%;"><b>ServiceDetectsDisplayEvents</b></p>
-
-<p style="margin-left:18%;">Indicates that this version of
-<b>libddcutil</b> supports monitoring this GPU for VDU
-connection events. Depending on the GPU and GPU-driver, some
-of connect, disconnect, DPMS-sleep, and DPMS-awake may be
-detected. The service will forward connection events by
-emitting the <b>ConnectedDisplaysChanged</b> signal. Also
-see <b>DisplayEventTypes.</b></p>
+text names. Events are included for display
+connection/disconnection (hotplug), DPMS-sleep, and
+DPMS-wake. If the list is empty, the GPU, GPU-driver, or
+<b>libddcutil</b> version doesn&rsquo;t support display
+event detection.</p>
 
 <p style="margin-left:9%;"><b>DdcutilDynamicSleep</b></p>
 
@@ -380,6 +352,31 @@ settings were actually applied by the monitor.</p>
 
 <p style="margin-left:18%;">Query the <b>libddcutil</b>
 version string.</p>
+
+<p style="margin-left:9%;"><b>MuteSignals</b></p>
+
+<p style="margin-left:18%;">Mute the signals emitted by the
+service. This will also shutdown any internal polling the
+service is managing (any existing libddcutil managed threads
+will continue to run).</p>
+
+<p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
+
+<p style="margin-left:18%;">Enable/disable the
+service&rsquo;s diagnostic level output to include info and
+debug messages.</p>
+
+
+<p style="margin-left:9%;"><b>ServiceInterfaceVersion</b></p>
+
+<p style="margin-left:18%;">Query the service interface
+version.</p>
+
+<p style="margin-left:9%;"><b>ServiceFlagOptions</b></p>
+
+<p style="margin-left:18%;">List the available flag option
+values that can be passed to service methods. No all options
+are applicable to all methods.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Properties can
 be queried and set using utilities such as <b>busctl,

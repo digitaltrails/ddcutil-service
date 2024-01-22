@@ -72,7 +72,8 @@
 #endif
 
 
-static bool change_detection_enabled = FALSE;
+static bool display_status_detection_enabled = FALSE;
+static bool mute_signals = FALSE;
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 /**
@@ -259,14 +260,17 @@ static const gchar introspection_xml[] =
 
     "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
     "    <property type='a{is}' name='StatusValues' access='read'/>"
-    "    <property type='a{is}' name='DisplayEventTypes' access='read'/>"
+
     "    <property type='s' name='DdcutilVersion' access='read'/>"
     "    <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>"
     "    <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>"
     "    <property type='u' name='DdcutilOutputLevel' access='readwrite'/>"
+
+    "    <property type='a{is}' name='DisplayEventTypes' access='read'/>"
+
     "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
     "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
-    "    <property type='b' name='ServiceDetectsDisplayEvents' access='read'/>"
+    "    <property type='b' name='MuteSignals' access='readwrite'/>"
     "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
 
     "  </interface>"
@@ -1172,8 +1176,10 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else if (g_strcmp0(property_name, "DisplayEventTypes") == 0) {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-    for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
-      g_variant_builder_add(builder, "{is}", event_types[i], event_type_names[i]);
+    if (display_status_detection_enabled) {
+      for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
+        g_variant_builder_add(builder, "{is}", event_types[i], event_type_names[i]);
+      }
     }
 #endif
     GVariant *value = g_variant_new("a{is}", builder);
@@ -1186,8 +1192,8 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     ret = g_variant_new_boolean(is_service_info_logging());
   }
-  else if (g_strcmp0(property_name, "ServiceDetectsDisplayEvents") == 0) {
-    ret = g_variant_new_boolean(change_detection_enabled);
+  else if (g_strcmp0(property_name, "MuteSignals") == 0) {
+    ret = g_variant_new_boolean(mute_signals);
   }
   else if (g_strcmp0(property_name, "ServiceFlagOptions") == 0) {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
@@ -1241,6 +1247,10 @@ static gboolean handle_set_property(GDBusConnection *connection, const gchar *se
   else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
     const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
     g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
+  }
+  else if (g_strcmp0(property_name, "MuteSignals") == 0) {
+    mute_signals = g_variant_get_boolean(value);
+    g_message("MuteSignals %s", mute_signals ? "muted" : "unmuted");
   }
   return *error == NULL;
 }
@@ -1377,6 +1387,9 @@ static bool poll_for_changes() {
  */
 static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   *timeout = 5000;
+  if (mute_signals) {
+    return FALSE;
+  }
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
   if (enable_internal_polling) {
       poll_for_changes();
@@ -1484,7 +1497,7 @@ static void enable_custom_source(GMainLoop* loop) {
   GSource *source = g_source_new(&chg_source_funcs, sizeof(Chg_SignalSource_t));
   g_source_attach(source, loop_context);
   g_source_unref(source);
-  change_detection_enabled = TRUE;
+  display_status_detection_enabled = TRUE;
 }
 
 static void display_status_event_callback(DDCA_Display_Status_Event event) {
@@ -1568,7 +1581,7 @@ int main(int argc, char *argv[]) {
   bool version_request = FALSE;
   bool introspect_request = FALSE;
   bool log_info = FALSE;
-  bool disable_signals = FALSE;
+  bool disable_display_status_events = FALSE;
 
 #if defined(HAS_OPTION_ARGUMENTS)
   gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
@@ -1583,11 +1596,11 @@ int main(int argc, char *argv[]) {
 "print introspection xml and exit", NULL },
     { "log-info", 'l', 0, G_OPTION_ARG_NONE, &log_info,
 "log service info and debug messages", NULL },
-      { "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_signals,
+  { "disable-events", 'd', 0, G_OPTION_ARG_NONE, &disable_display_status_events,
 "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL },
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
     { "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_internal_polling,
-"prefer polling internally for display connection changes", NULL },
+"prefer polling internally for display connection events", NULL },
 #endif
 #if defined(HAS_OPTION_ARGUMENTS)
     { "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
@@ -1661,7 +1674,7 @@ int main(int argc, char *argv[]) {
   GMainLoop *main_loop = g_main_loop_new(NULL, FALSE);
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-  if (!disable_signals) {
+  if (!disable_display_status_events) {
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
     if (enable_internal_polling) {
       g_message("Enabled ConnectDisplaysChanged signal - prefering internal polling for change detection");
