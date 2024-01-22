@@ -1327,7 +1327,7 @@ static bool enable_internal_polling = TRUE;
  */
 
 static long last_poll_time = 0;
-static long poll_interval_milli_seconds = 10 * 1000000;
+static long poll_interval_micros = 10 * 1000000;
 
 static GList *poll_list = NULL;  // List of currently detected edids
 typedef struct {
@@ -1342,9 +1342,9 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
 }
 
 static bool poll_for_changes() {
-  const long now = g_get_monotonic_time();
+  const long now_in_micros = g_get_monotonic_time();
   bool event_is_ready = FALSE;
-  if (now >= last_poll_time + poll_interval_milli_seconds) {  // TODO make this configurable.
+  if (now_in_micros >= last_poll_time + poll_interval_micros) {  // TODO make this configurable.
     g_debug("Poll for display connection changes");
     ddca_redetect_displays();  // Cannot do this too frequenntly - delays the whole service loop
     DDCA_Display_Info_List *dlist;
@@ -1396,7 +1396,7 @@ static bool poll_for_changes() {
         ptr = next;
       }
     }
-    last_poll_time = now;
+    last_poll_time = now_in_micros;
   }
   return event_is_ready;
 }
@@ -1407,15 +1407,16 @@ static bool poll_for_changes() {
  * @brief registered with main-loop as a custom prepare event function.
  *
  * The main purpose of this function is setting the length of the
- * next timeout and return FALSE.  If an event happens to be ready the
+ * next timeout_millis and return FALSE.  If an event happens to be ready the
  * function can return TRUE instead and the main-loop will act accordingly.
  *
  * @param source input source, not of much interest for this implementation
- * @param timeout output parameter setting the timeout for next call
+ * @param timeout_millis output parameter setting the timeout for next call
  * @return
  */
-static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
-  *timeout = 5000;
+static gboolean chg_signal_prepare(GSource *source, gint *timeout_millis) {
+  // g_debug("prepare");
+  *timeout_millis = 5000;  // This doesn't appear to be strict, and after an event it doesn't seem to apply for a while???
   if (mute_signals) {
     return FALSE;
   }
@@ -1429,7 +1430,7 @@ static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   }
   g_debug("chg signal_event ready type=%d name=%s", signal_event_data->event_type,
     get_event_type_name(signal_event_data->event_type));
-  *timeout = 0;
+  *timeout_millis = 0;  // Not sure we want to do this
   return TRUE;
 }
 
