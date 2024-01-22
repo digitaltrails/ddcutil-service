@@ -76,6 +76,30 @@ static bool display_status_detection_enabled = FALSE;
 static bool mute_signals = FALSE;
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+
+/**
+ * Custom signal event data - used by the service's custom signal source
+ */
+typedef DDCA_Display_Status_Event Event_Data_Type;
+
+#else
+
+typedef enum {
+  DDCA_EVENT_DPMS_AWAKE,
+  DDCA_EVENT_DPMS_ASLEEP,
+  DDCA_EVENT_DISPLAY_CONNECTED,
+  DDCA_EVENT_DISPLAY_DISCONNECTED,
+  DDCA_EVENT_UNUSED1,
+  DDCA_EVENT_UNUSED2,
+} DDCA_Display_Event_Type;
+
+typedef struct {
+  DDCA_Display_Event_Type event_type;
+  DDCA_Display_Ref        dref;
+} Event_Data_Type;;
+
+#endif
+
 /**
  * List of DDCA events numbers and names that can be iterated over (for return from a service property).
  */
@@ -86,16 +110,19 @@ static const char *event_type_names[] = {
   G_STRINGIFY(DDCA_EVENT_DISPLAY_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISPLAY_DISCONNECTED),
   G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),};
 
-/**
- * Custom signal event data - used by the service's custom signal source
- */
-typedef DDCA_Display_Status_Event Event_Data_Type;
+static const char * get_event_type_name(int event_type_num) {
+  for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
+    if (event_types[i] == event_type_num) {
+      return event_type_names[i];
+    }
+  }
+  return "unknown_event_type";
+}
 
 /**
  * Global data value - held for dispatch - accessed/updated atomically.
  */
 static Event_Data_Type *signal_event_data = NULL;
-#endif
 
 /**
  * List of fields returned in by the Detect service method (for return from a service property).
@@ -474,7 +501,7 @@ static void service_test(GVariant* parameters, GDBusMethodInvocation* invocation
   g_info("ServiceTest key=%s value=%s flags=%d", key, value, flags);
   int final_status = 0;
   char *final_message_text = "OK";
-#if defined (HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
   if (strcmp(key, "create_event") == 0) {  // For testing signalling without libddcutil
     DDCA_Display_Status_Event event;
     event.dref = NULL;
@@ -1175,13 +1202,11 @@ static GVariant *handle_get_property(GDBusConnection *connection, const gchar *s
   }
   else if (g_strcmp0(property_name, "DisplayEventTypes") == 0) {
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE ("a{is}"));
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
     if (display_status_detection_enabled) {
       for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
         g_variant_builder_add(builder, "{is}", event_types[i], event_type_names[i]);
       }
     }
-#endif
     GVariant *value = g_variant_new("a{is}", builder);
     g_variant_builder_unref(builder);
     ret = value;
@@ -1266,8 +1291,6 @@ static GDBusConnection *dbus_connection = NULL;
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-
 /*
  * The follow code enables a main-loop implementation of a main-loop
  * custom event-source, a GSource.  It defines a polled source that
@@ -1285,7 +1308,13 @@ typedef struct ConnectedDisplaysChanged_SignalSource Chg_SignalSource_t;
 #define ENABLE_INTERNAL_CHANGE_POLLING_OPTION
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
 
+
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 static bool enable_internal_polling = FALSE;
+#else
+static bool enable_internal_polling = TRUE;
+#endif
+;
 
 /*
  * Internal polling implementation of detecting changes.
@@ -1398,7 +1427,9 @@ static gboolean chg_signal_prepare(GSource *source, gint *timeout) {
   if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
     return FALSE;
   }
-  g_debug("chg signal_event ready type=%d", signal_event_data->event_type);
+  g_debug("chg signal_event ready type=%d name=%s", signal_event_data->event_type,
+    get_event_type_name(signal_event_data->event_type));
+  *timeout = 0;
   return TRUE;
 }
 
@@ -1462,9 +1493,9 @@ static gboolean chg_signal_dispatch(GSource *source, GSourceFunc callback, gpoin
         break;
     }
     // TODO Should these be passed in the callback - at least log for now
-    const int io_mode = event_ptr->io_path.io_mode;
-    const int io_path = event_ptr->io_path.path.hiddev_devno;  // Union of ints
-    g_info("chg_signal_dispatch: origin io_mode=%s io_path=%d", (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
+    // const int io_mode = event_ptr->io_path.io_mode;
+    // const int io_path = event_ptr->io_path.path.hiddev_devno;  // Union of ints
+    // g_info("chg_signal_dispatch: origin io_mode=%s io_path=%d", (io_mode == DDCA_IO_I2C) ? "I2C" : "USB", io_path);
     g_free(event_ptr);
   }
   else {  // Not sure if this can ever be reached - maybe if a concurrency issue causes the event_ptr to be NULL.
@@ -1500,13 +1531,13 @@ static void enable_custom_source(GMainLoop* loop) {
   display_status_detection_enabled = TRUE;
 }
 
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 static void display_status_event_callback(DDCA_Display_Status_Event event) {
   g_debug("DDCA event triggered display_status_event_callback");
   Event_Data_Type *event_copy = g_malloc(sizeof(Event_Data_Type));
   *event_copy = event;
   g_atomic_pointer_set(&signal_event_data, event_copy);
 }
-
 #endif
 
 /**
@@ -1673,16 +1704,18 @@ int main(int argc, char *argv[]) {
 
   GMainLoop *main_loop = g_main_loop_new(NULL, FALSE);
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-  if (!disable_display_status_events) {
+  if (disable_display_status_events) {
+    g_warning("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
+  }
+  else {
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
     if (enable_internal_polling) {
-      g_message("Enabled ConnectDisplaysChanged signal - prefering internal polling for change detection");
+      g_message("Enabled ConnectDisplaysChanged signal - using internal polling for change detection");
       enable_custom_source(main_loop);
     }
-    else
+    else {
 #endif
-    {
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
       int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
       if (status == DDCRC_OK) {
         g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
@@ -1697,24 +1730,12 @@ int main(int argc, char *argv[]) {
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
         g_message("Falling back to using internal polling for change detection");
         enable_internal_polling = TRUE;
-#endif
-      }
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-      if (enable_internal_polling) {
-        g_message("Enabled ConnectDisplaysChanged signal - using internal polling for change detection");
         enable_custom_source(main_loop);
+#endif
       }
 #endif
     }
-
   }
-  else {
-    g_warning("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
-  }
-#else
-  g_message("Disabled ConnectDisplaysChanged signal - change detection unsupported by this version of libddcutil" );
-#endif
-
   g_main_loop_run(main_loop);
   g_bus_unown_name(owner_id);
   g_dbus_node_info_unref(introspection_data);
