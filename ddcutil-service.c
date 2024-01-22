@@ -1325,7 +1325,6 @@ static bool enable_internal_polling = FALSE;
 #else
 static bool enable_internal_polling = TRUE;
 #endif
-;
 
 /*
  * Internal polling implementation of detecting changes.
@@ -1339,6 +1338,7 @@ static bool enable_internal_polling = TRUE;
 
 static long last_poll_time = 0;
 static long poll_interval_micros = 10 * 1000000;
+static int poll_interval_secs = 10;
 
 static GList* poll_list = NULL; // List of currently detected edids
 
@@ -1699,6 +1699,10 @@ int main(int argc, char* argv[]) {
             "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_internal_polling,
             "prefer polling internally for display connection events", NULL
         },
+        {
+            "internal-poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_interval_secs,
+            "internal polling interval in seconds, 10 minimum, 0 to disable polling", NULL
+        },
 #endif
 #if defined(HAS_OPTION_ARGUMENTS)
         {
@@ -1720,6 +1724,21 @@ int main(int argc, char* argv[]) {
         g_print("option parsing failed: %s\n", error->message);
         exit(1);
     }
+
+#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+    if (poll_interval_secs == 0) {
+        enable_internal_polling = FALSE;
+        poll_interval_secs = 10;
+    }
+    else if (poll_interval_secs < 10) {
+        g_print("Internal polling interval parameter must be at least 10 seconds.");
+        exit(1);
+    }
+    else {
+        g_message("Internal poll interval set to %d seconds.", poll_interval_secs);
+        poll_interval_micros = poll_interval_secs * 1000000;
+    }
+#endif
 
     if (version_request) {
         g_print("ddcutil %s com.ddcutil.DdcUtilInterface %s\n",
