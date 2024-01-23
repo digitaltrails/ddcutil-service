@@ -84,6 +84,9 @@ typedef DDCA_Display_Status_Event Event_Data_Type;
 
 #else
 
+/**
+ * Define our own event type enum which mirrors the future one in libddcutil 2.1
+ */
 typedef enum {
     DDCA_EVENT_DPMS_AWAKE,
     DDCA_EVENT_DPMS_ASLEEP,
@@ -93,6 +96,9 @@ typedef enum {
     DDCA_EVENT_UNUSED2,
 } DDCA_Display_Event_Type;
 
+/**
+ * Define our own event data which mirrors the future one in libddcutil 2.1
+ */
 typedef struct {
     DDCA_Display_Event_Type event_type;
     DDCA_Display_Ref        dref;
@@ -107,6 +113,10 @@ static const int event_types[] = {
     DDCA_EVENT_DISPLAY_CONNECTED, DDCA_EVENT_DISPLAY_DISCONNECTED,
     DDCA_EVENT_DPMS_AWAKE, DDCA_EVENT_DPMS_ASLEEP,
 };
+
+/**
+ * List of DDCA events names in the same order as the event_types array.
+ */
 static const char* event_type_names[] = {
     G_STRINGIFY(DDCA_EVENT_DISPLAY_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISPLAY_DISCONNECTED),
     G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),
