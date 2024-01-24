@@ -8,7 +8,9 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 .B ddcutil-service
 .I --log_info
 |
-.I --disable-signals
+.I --disable-events
+|
+.I --lock-properties
 |
 .I --ddca-syslog-level=N
 |
@@ -76,12 +78,19 @@ property (see
 below).
 
 .TP
-.B "--disable-signals"
+.B "--disable-events"
 
 By default, the service enables monitoring for
 display connectivity changes or display power-state changes,
 any changes are forwarded via the ConnectDisplaysChanged
 signal.  This flag disables all monitoring threads and signals.
+
+.TP
+.B "--lock-properties"
+
+Make all service properties readonly so that clients cannot
+change them. This options provides a way to lockdown the
+service to the configuration passed on the command line.
 
 .TP
 .B "--ddca-syslog-level" \fIN\fP
@@ -277,7 +286,7 @@ Query the
 version string.
 
 .TP
-.B MuteSignals
+.B ServiceMuteSignals
 Mute the signals emitted by the service.  This will also shutdown any internal polling
 the service is managing (any existing libddcutil managed threads will continue to run).
 
@@ -293,6 +302,12 @@ Query the service interface version.
 .B ServiceFlagOptions
 List the available flag option values that can be passed to service methods.
 Not all options are applicable to all methods.
+
+.TP
+.B ServicePropertiesLocked
+Returns whether the
+.I --lock-properties
+command line argument has been used to make all properties read-only.
 
 
 .PP

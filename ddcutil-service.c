@@ -58,6 +58,7 @@
 
 
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.0"
+#define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
     #define HAS_OPTION_ARGUMENTS
@@ -74,6 +75,7 @@
 
 static bool display_status_detection_enabled = FALSE;
 static bool mute_signals = FALSE;
+static bool lock_properties = FALSE;
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 
@@ -163,6 +165,10 @@ typedef enum {
  */
 const int flag_options[] = {EDID_PREFIX,};
 const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),};
+
+/* ----------------------------------------------------------------------------------------------------
+ * D-Bus interface definition in XML
+ */
 
 static GDBusNodeInfo* introspection_data = NULL;
 
@@ -314,11 +320,40 @@ static const gchar introspection_xml[] =
 
         "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
         "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
-        "    <property type='b' name='MuteSignals' access='readwrite'/>"
+        "    <property type='b' name='ServiceMuteSignals' access='readwrite'/>"
         "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
-
+        "    <property type='b' name='ServicePropertiesLocked' access='read'/>"
         "  </interface>"
         "</node>";
+
+/* ----------------------------------------------------------------------------------------------------
+ * GLib error message definitions.
+ */
+
+typedef enum
+{
+  DDCUTIL_SERVICE_SET_NOT_ALLOWED,
+  DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
+} DdcutilServiceError;
+
+static const GDBusErrorEntry ddcutil_service_error_entries[] =
+{
+  {DDCUTIL_SERVICE_SET_NOT_ALLOWED, "com.ddcutil.DdcutilService.Error.PropertiesLocked"},
+};
+
+G_STATIC_ASSERT (G_N_ELEMENTS (ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
+
+static GQuark service_error_quark;
+
+static void init_service_error_quark(void)
+{
+    static gsize quark = 0;
+    g_dbus_error_register_error_domain ("ddcutil_service_error_quark",
+                                        &quark,
+                                        ddcutil_service_error_entries,
+                                        G_N_ELEMENTS (ddcutil_service_error_entries));
+    service_error_quark = quark;
+}
 
 /* ----------------------------------------------------------------------------------------------------
  */
@@ -1264,7 +1299,7 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
         ret = g_variant_new_boolean(is_service_info_logging());
     }
-    else if (g_strcmp0(property_name, "MuteSignals") == 0) {
+    else if (g_strcmp0(property_name, "ServiceMuteSignals") == 0) {
         ret = g_variant_new_boolean(mute_signals);
     }
     else if (g_strcmp0(property_name, "ServiceFlagOptions") == 0) {
@@ -1275,6 +1310,9 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
         GVariant* value = g_variant_new("a{is}", builder);
         g_variant_builder_unref(builder);
         ret = value;
+    }
+    else if (g_strcmp0(property_name, "ServicePropertiesLocked") == 0) {
+        ret = g_variant_new_boolean(lock_properties);
     }
     return ret;
 }
@@ -1302,6 +1340,15 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
 static gboolean handle_set_property(GDBusConnection* connection, const gchar* sender, const gchar* object_path,
                                     const gchar* interface_name, const gchar* property_name, GVariant* value,
                                     GError** error, gpointer user_data) {
+    if (lock_properties) {
+        g_set_error (error,
+             service_error_quark,
+             DDCUTIL_SERVICE_SET_NOT_ALLOWED,
+             "Failed to set %s - properties have been locked by the command line argument: --lock-properties",
+             property_name);
+        g_warning((*error)->message);
+        return FALSE;
+    }
     if (g_strcmp0(property_name, "DdcutilVerifySetVcp") == 0) {
         ddca_enable_verify(g_variant_get_boolean(value));
     }
@@ -1320,9 +1367,9 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
         g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
     }
-    else if (g_strcmp0(property_name, "MuteSignals") == 0) {
+    else if (g_strcmp0(property_name, "ServiceMuteSignals") == 0) {
         mute_signals = g_variant_get_boolean(value);
-        g_message("MuteSignals %s", mute_signals ? "muted" : "unmuted");
+        g_message("ServiceMuteSignals %s", mute_signals ? "muted" : "unmuted");
     }
     return *error == NULL;
 }
@@ -1704,6 +1751,10 @@ int main(int argc, char* argv[]) {
             "disable-events", 'd', 0, G_OPTION_ARG_NONE, &disable_display_status_events,
             "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL
         },
+        {
+            "lock-properties", 'L', 0, G_OPTION_ARG_NONE, &lock_properties,
+            "lock all properties, make all advertised properties read only", NULL
+        },
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
         {
             "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_internal_polling,
@@ -1735,6 +1786,8 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
+    init_service_error_quark();
+
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
     if (poll_interval_secs == 0) {
         enable_internal_polling = FALSE;
@@ -1762,6 +1815,10 @@ int main(int argc, char* argv[]) {
     g_message("%s %s, libddcutil %s", PROGRAM_NAME,
               DDCUTIL_DBUS_INTERFACE_VERSION_STRING, ddca_ddcutil_extended_version_string());
     g_message("ServiceInfoLogging %s", is_service_info_logging() ? "enabled" : "disabled");
+
+    if (lock_properties) {
+        g_message("All properties are read only (--lock-properties passed)");
+    }
 
     /* Build introspection data structures from XML.
      */
@@ -1795,7 +1852,7 @@ int main(int argc, char* argv[]) {
 
     const guint owner_id = g_bus_own_name(
         G_BUS_TYPE_SESSION,
-        "com.ddcutil.DdcutilService",
+        DDCUTIL_DBUS_DOMAIN,
         G_BUS_NAME_OWNER_FLAGS_NONE,
         on_bus_acquired,
         on_name_acquired,
