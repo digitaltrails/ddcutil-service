@@ -1589,7 +1589,7 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
         int_event_type = event_ptr->event_type;
         switch (event_ptr->event_type) {
             case DDCA_EVENT_DPMS_AWAKE:
-            case DDCA_EVENT_DPMS_ASLEEP:
+            case DDCA_EVENT_DPMS_ASLEEP: ;  // Add semi-colon to resolve OpenSUSE 15.5 compile error
                 DDCA_Display_Info* dinfo;
                 const DDCA_Status status = ddca_get_display_info(event_ptr->dref, &dinfo);
                 if (status == DDCRC_OK) {
