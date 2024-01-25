@@ -1,7 +1,7 @@
 #
-# spec file for package vdu_controls
+# spec file for package ddcutil-service
 #
-# Copyright (c) 2023 SUSE LLC
+# Copyright (c) 2024 SUSE LLC
 # Copyright (c) 2021-2023 Michael Hamilton <michael@actrix.gen.nz>
 #
 # All modifications and additions to the file contributed by third parties
@@ -21,23 +21,27 @@ Name:           ddcutil-service
 Version:        1.0.0
 Release:        0
 Summary:        D-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
-License:        GPL-2.0+
-
+License:        GPL-2.0-or-later
 %if %{defined fedora_version}
 Group: Hardware/Other
 %endif
 %if %{defined suse_version}
 Group: System/GUI/Other
 %endif
-
 URL:            https://github.com/digitaltrails/ddcutil-service
 Source0:        https://github.com/digitaltrails/ddcutil-service/archive/refs/tags/v1.0.0.tar.gz#/%{name}-%{version}.tar.gz
-BuildRequires: make
-BuildRequires: gcc-c++
-BuildRequires: pkgconfig(glib-2.0)   >= 2.40
-BuildRequires: libddcutil-devel >= 1.4.0
-
-Requires: dbus-1-daemon
+BuildRequires:  gcc-c++
+BuildRequires:  libddcutil-devel >= 1.4.0
+BuildRequires:  libddcutil4 >= 1.4.0
+BuildRequires:  make
+BuildRequires:  pkgconfig
+BuildRequires:  pkgconfig(glib-2.0) >= 2.40
+%if %{defined fedora_version}
+Requires:       dbus-1-daemon
+%endif
+%if %{defined suse_version}
+Requires:       dbus-1
+%endif
 
 %description
 ddcutil-service is D-Bus service wrapper for libddcutil which
@@ -49,7 +53,7 @@ display can be controlled by this service.
 %autosetup
 
 %build
-make
+%make_build
 
 %install
 install -d -m 0755 %{buildroot}%{_bindir} \
