@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Wed Jan 24 21:10:46 2024 -->
+<!-- CreationDate: Thu Jan 25 16:45:10 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -56,7 +56,7 @@ Virtual Control Panel</p>
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service
 <br>
 ddcutil-service</b> <i>--log_info</i> |
-<i>--disable-events</i> | <i>--lock-properties</i> |
+<i>--disable-events</i> | <i>--lock</i> |
 <i>--ddca-syslog-level=N</i> | <i>--ddca-init-options=M</i>
 -- [ <i>libddcutil ddc_init options</i> ] <b><br>
 ddcutil-service</b> <i>--help</i> | <i>--version</i> |
@@ -116,12 +116,25 @@ or display power-state changes, any changes are forwarded
 via the ConnectDisplaysChanged signal. This flag disables
 all monitoring threads and signals.</p>
 
-<p style="margin-left:9%;"><b>--lock-properties</b></p>
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="8%">
+
+
+<p><b>--lock</b></p></td>
+<td width="83%">
+</td></tr>
+</table>
 
 <p style="margin-left:18%; margin-top: 1em">Make all
-service properties readonly so that clients cannot change
-them. This options provides a way to lockdown the service to
-the configuration passed on the command line.</p>
+service properties and sleep-multipliers readonly so that
+clients cannot change them. This options provides a way to
+lockdown the service to the configuration passed on the
+command line. The lock is provided to assist with managing
+conflicts when more than one ddcutil application is in use
+at the same time.</p>
 
 <p style="margin-left:9%;"><b>--ddca-syslog-level</b>
 <i>N</i></p>
@@ -130,7 +143,9 @@ the configuration passed on the command line.</p>
 level numerical value is passed to <b>libddutil&rsquo;s
 ddca_init()</b> function at startup to enable logging from
 within the library. It&rsquo;s only available for
-<b>libddutil version 2.1.0 and up.</b></p>
+<b>libddutil version 2.1.0</b> and up. Values for <b>N</b>
+are <b>0:never, 2:error:, 6:warning, 9:notice, 12:info,
+15:verbose, and 18:debug.</b></p>
 
 <p style="margin-left:9%;"><b>--ddca-init-options</b>
 <i>N</i></p>
@@ -145,9 +160,9 @@ for <b>libddutil 2.1.0+.</b></p>
 options ]</b></p>
 
 <p style="margin-left:18%;">The <b>libddcutil</b> library
-also supports a set of init options, any following the
-<b>--</b> will be passed as a string to the <b>libddutil
-ddca_init()</b> function when it&rsquo;s called at
+also supports its own extensive set of init options, any
+arguments following the <b>--</b> will be passed as to
+<b>libddutil ddca_init()</b> function at service
 startup.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
@@ -365,15 +380,20 @@ version string.</p>
 <p style="margin-left:9%;"><b>ServiceMuteSignals</b></p>
 
 <p style="margin-left:18%;">Mute the signals emitted by the
-service. This will also shutdown any internal polling the
-service is managing (any existing libddcutil managed threads
-will continue to run).</p>
+service. This will shutdown any internal polling the service
+is managing. Any <b>libddcutil</b> managed event-detection
+threads created at service startup will continue to run, but
+no signals will be emitted. Setting this property will
+reestablish polling or recommence forwarding
+<b>libddcutil</b> events.</p>
 
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 
 <p style="margin-left:18%;">Enable/disable the
 service&rsquo;s diagnostic level output to include info and
-debug messages.</p>
+debug messages. Not that <b>libddcutil</b> also has a
+logging mechanism (see <b>libddcutil ddc_init options</b>
+)</p>
 
 
 <p style="margin-left:9%;"><b>ServiceInterfaceVersion</b></p>
@@ -388,11 +408,11 @@ values that can be passed to service methods. Not all
 options are applicable to all methods.</p>
 
 
-<p style="margin-left:9%;"><b>ServicePropertiesLocked</b></p>
+<p style="margin-left:9%;"><b>ServiceParametersLocked</b></p>
 
 <p style="margin-left:18%;">Returns whether the
-<i>--lock-properties</i> command line argument has been used
-to make all properties read-only.</p>
+<i>--lock</i> command line argument has been used to make
+all properties and sleep-multipliers read-only.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Properties can
 be queried and set using utilities such as <b>busctl,

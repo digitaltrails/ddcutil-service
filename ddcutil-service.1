@@ -10,7 +10,7 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 |
 .I --disable-events
 |
-.I --lock-properties
+.I --lock
 |
 .I --ddca-syslog-level=N
 |
@@ -86,11 +86,13 @@ any changes are forwarded via the ConnectDisplaysChanged
 signal.  This flag disables all monitoring threads and signals.
 
 .TP
-.B "--lock-properties"
+.B "--lock"
 
-Make all service properties readonly so that clients cannot
-change them. This options provides a way to lockdown the
-service to the configuration passed on the command line.
+Make all service properties and sleep-multipliers readonly so
+that clients cannot change them. This options provides a way to
+lockdown the service to the configuration passed on the command line.
+The lock is provided to assist with managing conflicts
+when more than one ddcutil application is in use at the same time.
 
 .TP
 .B "--ddca-syslog-level" \fIN\fP
@@ -99,7 +101,12 @@ The DDCA syslog level numerical value is passed to
 .B libddutil's ddca_init()
 function at startup to enable logging from within the library.
 It's only available for
-.B libddutil version 2.1.0 and up.
+.B libddutil version 2.1.0
+and up.
+Values for
+.B N
+are
+.B 0:never, 2:error:, 6:warning, 9:notice, 12:info, 15:verbose, and 18:debug.
 
 .TP
 .B "--ddca-init-options" \fIN\fP
@@ -114,11 +121,11 @@ It's only available for
 .B -- [ libddcutil ddc_init options ]
 The
 .B libddcutil
-library also supports a set of init options, any following the
+library also supports its own extensive set of init options, any arguments following the
 .B --
-will be passed as a string to the
+will be passed as to
 .B libddutil ddca_init()
-function when it's called at startup.
+function at service startup.
 
 .TP
 .B "--help"
@@ -287,12 +294,23 @@ version string.
 
 .TP
 .B ServiceMuteSignals
-Mute the signals emitted by the service.  This will also shutdown any internal polling
-the service is managing (any existing libddcutil managed threads will continue to run).
+Mute the signals emitted by the service.  This will shutdown any internal polling
+the service is managing. Any
+.B libddcutil
+managed event-detection threads created at service startup
+will continue to run, but no signals will be emitted.  Setting this property
+will reestablish polling or recommence forwarding
+.B libddcutil
+events.
 
 .TP
 .B ServiceInfoLogging
 Enable/disable the service's diagnostic level output to include info and debug messages.
+Not that
+.B libddcutil
+also has a logging mechanism (see
+.B libddcutil ddc_init options
+)
 
 .TP
 .B ServiceInterfaceVersion
@@ -304,11 +322,10 @@ List the available flag option values that can be passed to service methods.
 Not all options are applicable to all methods.
 
 .TP
-.B ServicePropertiesLocked
+.B ServiceParametersLocked
 Returns whether the
-.I --lock-properties
-command line argument has been used to make all properties read-only.
-
+.I --lock
+command line argument has been used to make all properties and sleep-multipliers read-only.
 
 .PP
 Properties can be queried and set using utilities such as

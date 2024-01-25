@@ -322,7 +322,7 @@ static const gchar introspection_xml[] =
         "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
         "    <property type='b' name='ServiceMuteSignals' access='readwrite'/>"
         "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
-        "    <property type='b' name='ServicePropertiesLocked' access='read'/>"
+        "    <property type='b' name='ServiceParametersLocked' access='read'/>"
         "  </interface>"
         "</node>";
 
@@ -332,26 +332,28 @@ static const gchar introspection_xml[] =
 
 typedef enum
 {
-  DDCUTIL_SERVICE_SET_NOT_ALLOWED,
-  DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
+    DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED,
+    DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
+    DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
 } DdcutilServiceError;
 
 static const GDBusErrorEntry ddcutil_service_error_entries[] =
 {
-  {DDCUTIL_SERVICE_SET_NOT_ALLOWED, "com.ddcutil.DdcutilService.Error.PropertiesLocked"},
+    { DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED, "com.ddcutil.DdcutilService.Error.PropertiesLocked" },
+    { DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED, "com.ddcutil.DdcutilService.Error.MultiplierLocked" },
 };
 
-G_STATIC_ASSERT (G_N_ELEMENTS (ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
+G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
 
 static GQuark service_error_quark;
 
 static void init_service_error_quark(void)
 {
     static gsize quark = 0;
-    g_dbus_error_register_error_domain ("ddcutil_service_error_quark",
-                                        &quark,
-                                        ddcutil_service_error_entries,
-                                        G_N_ELEMENTS (ddcutil_service_error_entries));
+    g_dbus_error_register_error_domain("ddcutil_service_error_quark",
+                                       &quark,
+                                       ddcutil_service_error_entries,
+                                       G_N_ELEMENTS (ddcutil_service_error_entries));
     service_error_quark = quark;
 }
 
@@ -1138,6 +1140,12 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
     double new_multiplier;
     DDCA_Status status = 0;
 
+    if(lock_properties) {
+        g_dbus_method_invocation_return_error(invocation, service_error_quark, DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
+            "Failed to set multiplier because of command line argument: --lock");
+        return;
+    }
+
     g_variant_get(parameters, "(isdu)", &display_number, &edid_encoded, &new_multiplier, &flags);
 
     g_info("SetSleepMultiplier value=%f display_num=%d edid=%.30s...",
@@ -1311,7 +1319,7 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
         g_variant_builder_unref(builder);
         ret = value;
     }
-    else if (g_strcmp0(property_name, "ServicePropertiesLocked") == 0) {
+    else if (g_strcmp0(property_name, "ServiceParametersLocked") == 0) {
         ret = g_variant_new_boolean(lock_properties);
     }
     return ret;
@@ -1343,8 +1351,8 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
     if (lock_properties) {
         g_set_error (error,
              service_error_quark,
-             DDCUTIL_SERVICE_SET_NOT_ALLOWED,
-             "Failed to set %s - properties have been locked by the command line argument: --lock-properties",
+             DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED,
+             "Failed to set %s - properties have been locked by the command line argument: --lock",
              property_name);
         g_warning((*error)->message);
         return FALSE;
@@ -1788,21 +1796,6 @@ int main(int argc, char* argv[]) {
 
     init_service_error_quark();
 
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-    if (poll_interval_secs == 0) {
-        enable_internal_polling = FALSE;
-        poll_interval_secs = 10;
-    }
-    else if (poll_interval_secs < 10) {
-        g_print("Internal polling interval parameter must be at least 10 seconds.");
-        exit(1);
-    }
-    else {
-        g_message("Internal poll interval set to %d seconds.", poll_interval_secs);
-        poll_interval_micros = poll_interval_secs * 1000000;
-    }
-#endif
-
     if (version_request) {
         g_print("ddcutil %s com.ddcutil.DdcUtilInterface %s\n",
                 ddca_ddcutil_extended_version_string(), DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
@@ -1817,7 +1810,7 @@ int main(int argc, char* argv[]) {
     g_message("ServiceInfoLogging %s", is_service_info_logging() ? "enabled" : "disabled");
 
     if (lock_properties) {
-        g_message("All properties are read only (--lock-properties passed)");
+        g_message("All properties and sleep-multipliers are read only (--lock passed)");
     }
 
     /* Build introspection data structures from XML.
@@ -1866,8 +1859,23 @@ int main(int argc, char* argv[]) {
     }
     else {
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+
+        if (poll_interval_secs == 0) {
+            enable_internal_polling = FALSE;
+            poll_interval_secs = 10;
+        }
+        else if (poll_interval_secs < 10) {
+            g_print("Internal polling interval parameter must be at least 10 seconds.");
+            exit(1);
+        }
+        else {
+            poll_interval_micros = poll_interval_secs * 1000000;
+        }
+
         if (enable_internal_polling) {
-            g_message("Enabled ConnectDisplaysChanged signal - using internal polling for change detection");
+            g_message(
+                "Enabled ConnectDisplaysChanged signal - using internal polling every %d seconds",
+                poll_interval_secs);
             enable_custom_source(main_loop);
         }
         else {
@@ -1886,7 +1894,9 @@ int main(int argc, char* argv[]) {
                 g_warning("libddcutil change detection unavailable for this GPU");
                 free(message_text);
 #if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-                g_message("Falling back to using internal polling for change detection");
+                g_message(
+                    "Enabled ConnectDisplaysChanged signal - Falling back to internal polling every %d seconds",
+                    poll_interval_secs);
                 enable_internal_polling = TRUE;
                 enable_custom_source(main_loop);
 #endif
