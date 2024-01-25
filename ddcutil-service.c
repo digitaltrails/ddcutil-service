@@ -157,7 +157,7 @@ static const char* attributes_returned_from_detect[] = {
  * Boolean flags that can be passed in the service method flags argument.
  */
 typedef enum {
-    EDID_PREFIX = 1,  // Inidicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
+    EDID_PREFIX = 1,  // Indicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
 } Flags_Enum_Type;
 
 /**
