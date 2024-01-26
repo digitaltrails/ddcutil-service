@@ -1,11 +1,14 @@
 # ddcutil-service 
 A D-Bus ddcutil service for control of DDC Monitors/VDUs
 
-This code is a work in progress, it is possibly buggy and the API may
-change when the requirements are better understood.
+The aim of this service is to make it easier to create widgets and apps for 
+**ddcutil**.  The service's client interface is now quite stable, but there 
+may be some additions or tweaks if new requirements are discovered.
 
-Once built, running the executable should make a ddcutil service available on 
-the D-Bus Session-Bus.
+The service is written in C.  It has very few dependencies (glib and libddcutil) and is
+consequently quite easy to build.  Once built, running the executable should make 
+a ddcutil service available on the D-Bus Session-Bus.
+
 
 Testing using the d-feet D-Bus interactive GUI: 
 1. start d-feet;
