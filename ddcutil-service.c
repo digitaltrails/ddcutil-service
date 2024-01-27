@@ -77,8 +77,12 @@ static bool display_status_detection_enabled = FALSE;
 static bool mute_signals = FALSE;
 static bool lock_properties = FALSE;
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#define MIN_POLL_SECONDS 10
+#define DEFAULT_POLL_SECONDS 30
+static long poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
 
+
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 /**
  * Custom signal event data - used by the service's custom signal source
  */
@@ -323,6 +327,8 @@ static const gchar introspection_xml[] =
         "    <property type='b' name='ServiceMuteSignals' access='readwrite'/>"
         "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
         "    <property type='b' name='ServiceParametersLocked' access='read'/>"
+        "    <property type='u' name='ServicePollInterval' access='readwrite'/>"
+
         "  </interface>"
         "</node>";
 
@@ -334,6 +340,7 @@ typedef enum
 {
     DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED,
     DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
+    DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
     DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
 } DdcutilServiceError;
 
@@ -341,6 +348,7 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
 {
     { DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED, "com.ddcutil.DdcutilService.Error.PropertiesLocked" },
     { DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED, "com.ddcutil.DdcutilService.Error.MultiplierLocked" },
+{ DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
@@ -1322,6 +1330,9 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     else if (g_strcmp0(property_name, "ServiceParametersLocked") == 0) {
         ret = g_variant_new_boolean(lock_properties);
     }
+    else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
+        ret = g_variant_new_uint32(poll_interval_micros / 1000000);
+    }
     return ret;
 }
 
@@ -1379,17 +1390,27 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         mute_signals = g_variant_get_boolean(value);
         g_message("ServiceMuteSignals %s", mute_signals ? "muted" : "unmuted");
     }
+    else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
+        const uint secs = g_variant_get_uint32(value);
+        if (secs == 0) {
+            poll_interval_micros = 0;
+        }
+        else if (secs < MIN_POLL_SECONDS) {
+            g_set_error (error,
+             service_error_quark,
+             DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
+             "Invalid polling interval %u, interval must be at least %d seconds", secs, MIN_POLL_SECONDS);
+            g_warning((*error)->message);
+            return FALSE;
+        }
+        else {
+            g_message("ServicePollInterval changed to %u", secs);
+            poll_interval_micros = secs * 1000000;
+        }
+    }
     return *error == NULL;
 }
 
-#define ENABLE_INTERNAL_CHANGE_POLLING_OPTION
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-static bool enable_internal_polling = FALSE;
-#else
-static bool enable_internal_polling = TRUE;
-#endif
 
 /*
  * Internal polling implementation of detecting changes.
@@ -1402,8 +1423,6 @@ static bool enable_internal_polling = TRUE;
  */
 
 static long last_poll_time = 0;
-static long poll_interval_micros = 10 * 1000000;
-static int poll_interval_secs = 10;
 
 static GList* poll_list = NULL; // List of currently detected edids
 
@@ -1422,7 +1441,6 @@ static bool poll_for_changes() {
     const long now_in_micros = g_get_monotonic_time();
     bool event_is_ready = FALSE;
     if (now_in_micros >= last_poll_time + poll_interval_micros) {
-        // TODO make this configurable.
         g_debug("Poll for display connection changes");
         ddca_redetect_displays(); // Cannot do this too frequenntly - delays the whole service loop
         DDCA_Display_Info_List* dlist;
@@ -1485,8 +1503,6 @@ static bool poll_for_changes() {
     return event_is_ready;
 }
 
-#endif
-
 /*
  * Our GDBus service connection - Will be set the the running connection when the bus is aquired.
  */
@@ -1529,11 +1545,11 @@ static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
     if (mute_signals) {
         return FALSE;
     }
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-    if (enable_internal_polling) {
+
+    if (poll_interval_micros > 0) {
         poll_for_changes();
     }
-#endif
+
     if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
         return FALSE;
     }
@@ -1736,6 +1752,9 @@ int main(int argc, char* argv[]) {
     bool log_info = FALSE;
     bool disable_display_status_events = FALSE;
 
+    bool prefer_polling = FALSE;
+    int poll_seconds = -1;  // -1 flags no argument supplied
+
 #if defined(HAS_OPTION_ARGUMENTS)
     gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
     gint ddca_init_options = 0; // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
@@ -1763,16 +1782,16 @@ int main(int argc, char* argv[]) {
             "lock-properties", 'L', 0, G_OPTION_ARG_NONE, &lock_properties,
             "lock all properties, make all advertised properties read only", NULL
         },
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
+
         {
-            "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &enable_internal_polling,
-            "prefer polling internally for display connection events", NULL
+            "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
+            "prefer polling for display connection events", NULL
         },
         {
-            "internal-poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_interval_secs,
-            "internal polling interval in seconds, 10 minimum, 0 to disable polling", NULL
+            "poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_seconds,
+            "polling interval in seconds, 10 minimum, 0 to disable polling", NULL
         },
-#endif
+
 #if defined(HAS_OPTION_ARGUMENTS)
         {
             "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
@@ -1858,52 +1877,52 @@ int main(int argc, char* argv[]) {
         g_warning("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
     }
     else {
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
 
-        if (poll_interval_secs == 0) {
-            enable_internal_polling = FALSE;
-            poll_interval_secs = 10;
-        }
-        else if (poll_interval_secs < 10) {
-            g_print("Internal polling interval parameter must be at least 10 seconds.");
-            exit(1);
-        }
-        else {
-            poll_interval_micros = poll_interval_secs * 1000000;
-        }
 
-        if (enable_internal_polling) {
-            g_message(
-                "Enabled ConnectDisplaysChanged signal - using internal polling every %d seconds",
-                poll_interval_secs);
-            enable_custom_source(main_loop);
-        }
-        else {
-#endif
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+        if (prefer_polling) {
+            g_message("ConnectDisplaysChanged signal - prefering polling instead of libddcutil change detection");
+        }
+        else {
             const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
             if (status == DDCRC_OK) {
                 g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
                 ddca_register_display_status_callback(display_status_event_callback);
                 enable_custom_source(main_loop);
+                poll_interval_micros = 0;  // Disable internal polling
             }
             else {
                 char* message_text = get_status_message(status);
                 g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status,
                           message_text);
-                g_warning("libddcutil change detection unavailable for this GPU");
                 free(message_text);
-#if defined(ENABLE_INTERNAL_CHANGE_POLLING_OPTION)
-                g_message(
-                    "Enabled ConnectDisplaysChanged signal - Falling back to internal polling every %d seconds",
-                    poll_interval_secs);
-                enable_internal_polling = TRUE;
-                enable_custom_source(main_loop);
-#endif
+                g_warning("libddcutil change detection unavailable for this GPU");
             }
+        }
 #endif
+
+        if (poll_seconds != -1 && poll_interval_micros > 0) {  // Command line override of polling interval
+            if (poll_seconds == 0) {
+                poll_interval_micros = 0;  // Disable
+                g_message("ConnectDisplaysChanged - polling disabled by --poll-interval 0");
+            }
+            else if (poll_seconds < MIN_POLL_SECONDS) {
+                g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
+                exit(1);
+            }
+            else {
+                poll_interval_micros = poll_seconds * 1000000;
+            }
+        }
+
+        if (poll_interval_micros > 0) {
+            g_message(
+                "Enabled ConnectDisplaysChanged signal - using internal polling every %ld seconds",
+                poll_interval_micros / 1000000);
+            enable_custom_source(main_loop);
         }
     }
+
     g_main_loop_run(main_loop);
     g_bus_unown_name(owner_id);
     g_dbus_node_info_unref(introspection_data);
