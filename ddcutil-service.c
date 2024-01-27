@@ -1747,12 +1747,12 @@ int main(int argc, char* argv[]) {
     g_message("Running %s (%s)", server_executable, PROGRAM_NAME);
     g_set_prgname(PROGRAM_NAME);
 
-    bool version_request = FALSE;
-    bool introspect_request = FALSE;
-    bool log_info = FALSE;
-    bool disable_display_status_events = FALSE;
+    gboolean version_request = FALSE;     // WARNING gboolean is int sized, do not substitute bool or
+    gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
+    gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
+    gboolean disable_display_status_events = FALSE;
 
-    bool prefer_polling = FALSE;
+    gboolean prefer_polling = FALSE;
     int poll_seconds = -1;  // -1 flags no argument supplied
 
 #if defined(HAS_OPTION_ARGUMENTS)
