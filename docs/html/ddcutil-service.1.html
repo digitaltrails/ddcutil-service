@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sun Jan 28 15:07:35 2024 -->
+<!-- CreationDate: Mon Jan 29 09:15:43 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -136,7 +136,8 @@ seconds, zero to disable polling.</p>
 
 <p style="margin-left:18%; margin-top: 1em">Disable all
 display connectivity change detection and disable the
-<b>ConnectDisplaysChanged signal</b> sent to clients.</p>
+<b>ConnectDisplaysChanged signal</b> sent to clients. This
+cannot be reversed without restarting the service.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -393,13 +394,12 @@ version string.</p>
 
 <p style="margin-left:9%;"><b>ServiceMuteSignals</b></p>
 
-<p style="margin-left:18%;">Mute the signals emitted by the
-service. This will shutdown any internal polling the service
-is managing. Any <b>libddcutil</b> managed event-detection
-threads created at service startup will continue to run, but
-no signals will be emitted. Setting this property will
-reestablish polling or recommence forwarding
-<b>libddcutil</b> events.</p>
+<p style="margin-left:18%;">Set this property to true to
+mute the signals emitted by the service. Any
+<b>libddcutil</b> managed event-detection threads created at
+service startup will continue to run, but no signals will be
+emitted. Any internal service polling will be suspended. Set
+to true to unmute.</p>
 
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 

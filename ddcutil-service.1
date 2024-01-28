@@ -102,6 +102,7 @@ connectivity changes.  Default 30 seconds,  minimum 10 seconds, zero to disable 
 Disable all display connectivity change detection and disable the
 .B ConnectDisplaysChanged signal
 sent to clients.
+This cannot be reversed without restarting the service.
 
 .TP
 .B "--lock"
@@ -318,14 +319,13 @@ version string.
 
 .TP
 .B ServiceMuteSignals
-Mute the signals emitted by the service.  This will shutdown any internal polling
-the service is managing. Any
+Set this property to true to mute the signals emitted by the service.
+Any
 .B libddcutil
 managed event-detection threads created at service startup
-will continue to run, but no signals will be emitted.  Setting this property
-will reestablish polling or recommence forwarding
-.B libddcutil
-events.
+will continue to run, but no signals will be emitted.  Any
+internal service polling will be suspended.  Set to true
+to unmute.
 
 .TP
 .B ServiceInfoLogging

@@ -348,7 +348,7 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
 {
     { DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED, "com.ddcutil.DdcutilService.Error.PropertiesLocked" },
     { DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED, "com.ddcutil.DdcutilService.Error.MultiplierLocked" },
-{ DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
+    { DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
@@ -1394,6 +1394,7 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         const uint secs = g_variant_get_uint32(value);
         if (secs == 0) {
             poll_interval_micros = 0;
+            g_message("ServicePollInterval changed to zero, polling is now disabled.");
         }
         else if (secs < MIN_POLL_SECONDS) {
             g_set_error (error,
@@ -1404,7 +1405,7 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
             return FALSE;
         }
         else {
-            g_message("ServicePollInterval changed to %u", secs);
+            g_message("ServicePollInterval changed to %u seconds", secs);
             poll_interval_micros = secs * 1000000;
         }
     }
@@ -1873,6 +1874,7 @@ int main(int argc, char* argv[]) {
 
     if (disable_display_status_events) {
         g_warning("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
+        poll_interval_micros = 0;  // Disable internal polling
     }
     else {
 
@@ -1886,7 +1888,6 @@ int main(int argc, char* argv[]) {
             if (status == DDCRC_OK) {
                 g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
                 ddca_register_display_status_callback(display_status_event_callback);
-                enable_custom_source(main_loop);
                 poll_interval_micros = 0;  // Disable internal polling
             }
             else {
@@ -1914,12 +1915,14 @@ int main(int argc, char* argv[]) {
         }
 
         if (poll_interval_micros > 0) {
-            g_message(
-                "Enabled ConnectDisplaysChanged signal - using internal polling every %ld seconds",
+            g_message("Enabled ConnectDisplaysChanged signal - using internal polling every %ld seconds",
                 poll_interval_micros / 1000000);
-            enable_custom_source(main_loop);
         }
+
+        enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
     }
+
+
 
     g_main_loop_run(main_loop);
     g_bus_unown_name(owner_id);
