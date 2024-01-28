@@ -4,28 +4,42 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 .SH SYNOPSIS
 
 .B ddcutil-service
-.br
-.B ddcutil-service
-.I --log_info
-|
-.I --disable-events
-|
-.I --lock
-|
-.I --ddca-syslog-level=N
-|
-.I --ddca-init-options=M
---
-[
-.I libddcutil ddc_init options
-]
-.br
-.B ddcutil-service
 .I --help
 |
 .I --version
 |
 .I --introspect
+.br
+.B ddcutil-service
+[
+.B --prefer-polling
+]
+|
+[
+.B --polling-interval \fIseconds\fP
+]
+|
+[
+.B --disable-signals
+]
+|
+[
+.B --lock
+]
+|
+[
+.B --log-info
+]
+[
+.B --ddca-syslog-level \fIN\fP
+]
+|
+[
+.B --ddca-init-options \fIM\fP
+]
+[
+.B -- \fIlibddcutil ddc_init options...\fP
+]
 
 .SH DESCRIPTION
 .B ddcutil-service
@@ -47,21 +61,57 @@ Should the service error and terminate, the
 will automatically restart it when it is next accessed.  Client
 connections with the service are stateless.
 
-.P
-For startup under
-.B dbus-daemon,
-the service requires no command line options.
-For the purpose of testing and development, the service can be
-manually started and several options are provided to assist with
-such activities.  There are some info reporting options,
-.B --version, --introspect,
-and
-.B --help,
-which can be
-manually run without causing any interference with the running service.
-
-
 .SS OPTIONS
+
+.TP
+.B "--help"
+
+Outputs options-help and exits.
+
+.TP
+.B "--version"
+
+Outputs the service interface version and the
+.B libddcutil
+version and exits.
+
+.TP
+.B "--introspect"
+
+Outputs the XML introspection text for the service and exits.
+
+.TP
+.B "--prefer-polling"
+
+Set polling to be the preferred method for detecting display connectivity changes.
+Normally polling is the a fallback used if a GPU-driver does
+not support DMA or does not provide the change-detection features
+required by
+.B libddcutil.
+Polling will probably work with any GPU.
+
+.TP
+.B "--poll-interval" \fIseconds\fP
+
+If polling is enabled, this option defines how often to check for display
+connectivity changes.  Default 30 seconds,  minimum 10 seconds, zero to disable polling.
+
+.TP
+.B "--disable-signals"
+
+Disable all display connectivity change detection and disable the
+.B ConnectDisplaysChanged signal
+sent to clients.
+
+.TP
+.B "--lock"
+
+Make all service properties and sleep-multipliers readonly so
+that clients cannot change them. This options provides a way to
+lockdown the service to the configuration passed on the command line.
+The lock is provided to assist with managing conflicts
+when more than one ddcutil application is in use at the same time.
+
 .TP
 .B "--log_info"
 
@@ -76,23 +126,6 @@ service's
 property (see
 .B EXAMPLES
 below).
-
-.TP
-.B "--disable-events"
-
-By default, the service enables monitoring for
-display connectivity changes or display power-state changes,
-any changes are forwarded via the ConnectDisplaysChanged
-signal.  This flag disables all monitoring threads and signals.
-
-.TP
-.B "--lock"
-
-Make all service properties and sleep-multipliers readonly so
-that clients cannot change them. This options provides a way to
-lockdown the service to the configuration passed on the command line.
-The lock is provided to assist with managing conflicts
-when more than one ddcutil application is in use at the same time.
 
 .TP
 .B "--ddca-syslog-level" \fIN\fP
@@ -118,31 +151,15 @@ It's only available for
 .B libddutil 2.1.0+.
 
 .TP
-.B -- [ libddcutil ddc_init options ]
+.B -- \fIlibddcutil ddc_init options...\fP
+
 The
 .B libddcutil
-library also supports its own extensive set of init options, any arguments following the
+library also supports its own extensive set of init options, any arguments following
 .B --
 will be passed as to
 .B libddutil ddca_init()
 function at service startup.
-
-.TP
-.B "--help"
-
-Outputs options-help and exits.
-
-.TP
-.B "--version"
-
-Outputs the service interface version and the
-.B libddcutil
-version and exits.
-
-.TP
-.B "--introspect"
-
-Outputs the XML introspection text for the service and exits.
 
 .SH SERVICE METHODS
 
@@ -229,15 +246,22 @@ The service may raise a
 .B ConnectedDisplaysChanged
 D-Bus signal when a display undergoes a connection status change.
 .PP
-Not all monitors, GPU's, GPU-drivers, or cabling, provide the necessary support
+Not all displays, GPU's, GPU-drivers, or cabling, provide the necessary support
 for this feature.  Results may also vary depending on the mix of desktop components,
 such as KDE, Gnome, X11, and Wayland.  Depending on all of these factors,
 status changes may be signaled for all/some/none of display-cable connect/disconnect,
 power on/off, and DPMS wake/sleep.
 .PP
 Full support for this callback requires
-.B ddcutil/libddcutil version 2.1.0+, limited support based on polling is available in
-ealier versions.
+.B ddcutil/libddcutil version 2.1.0+ and a GPU and driver configured for DRM.
+
+Should a GPU lack the necessary features, the service may automatically fallback to
+polling by using DDC detect.  Polling provides basic support for detecting
+connectivity and power-switch changes.
+If necessary polling can be forced by the
+.B --prefer-polling
+option.  Depending on factors such as GPU, display and cabling, even change
+detection by polling may not work.
 
 .SH SERVICE PROPERTIES
 
@@ -326,6 +350,10 @@ Not all options are applicable to all methods.
 Returns whether the
 .I --lock
 command line argument has been used to make all properties and sleep-multipliers read-only.
+
+.TP
+.B ServicePollInterval
+Query or set the display change detection poll interval (minimum 10, zero to disable polling).
 
 .PP
 Properties can be queried and set using utilities such as

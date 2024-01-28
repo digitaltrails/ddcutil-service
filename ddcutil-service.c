@@ -1771,27 +1771,25 @@ int main(int argc, char* argv[]) {
             "print introspection xml and exit", NULL
         },
         {
-            "log-info", 'l', 0, G_OPTION_ARG_NONE, &log_info,
-            "log service info and debug messages", NULL
-        },
-        {
-            "disable-events", 'd', 0, G_OPTION_ARG_NONE, &disable_display_status_events,
-            "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL
-        },
-        {
-            "lock-properties", 'L', 0, G_OPTION_ARG_NONE, &lock_properties,
-            "lock all properties, make all advertised properties read only", NULL
-        },
-
-        {
             "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
-            "prefer polling for display connection events", NULL
+            "prefer polling for detecting display connection events", NULL
         },
         {
             "poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_seconds,
             "polling interval in seconds, 10 minimum, 0 to disable polling", NULL
         },
-
+        {
+            "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_display_status_events,
+            "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL
+        },
+        {
+            "lock", 'L', 0, G_OPTION_ARG_NONE, &lock_properties,
+            "lock properties and sleep multipliers, make them all read only", NULL
+        },
+        {
+            "log-info", 'l', 0, G_OPTION_ARG_NONE, &log_info,
+            "log service info and debug messages", NULL
+        },
 #if defined(HAS_OPTION_ARGUMENTS)
         {
             "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,

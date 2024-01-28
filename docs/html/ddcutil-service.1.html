@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Jan 25 18:00:23 2024 -->
+<!-- CreationDate: Sun Jan 28 14:42:24 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -53,14 +53,15 @@ Virtual Control Panel</p>
 
 
 
-<p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service
-<br>
-ddcutil-service</b> <i>--log_info</i> |
-<i>--disable-events</i> | <i>--lock</i> |
-<i>--ddca-syslog-level=N</i> | <i>--ddca-init-options=M</i>
--- [ <i>libddcutil ddc_init options</i> ] <b><br>
-ddcutil-service</b> <i>--help</i> | <i>--version</i> |
-<i>--introspect</i></p>
+<p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>
+<i>--help</i> | <i>--version</i> | <i>--introspect</i>
+<b><br>
+ddcutil-service</b> [ <b>--prefer-polling</b> ] | [
+<b>--polling-interval</b> <i>seconds</i> ] | [
+<b>--disable-signals</b> ] | [ <b>--lock</b> ] | [
+<b>--log-info</b> ] [ <b>--ddca-syslog-level</b> <i>N</i> ]
+| [ <b>--ddca-init-options</b> <i>M</i> ] [ <b>--</b>
+<i>libddcutil ddc_init options...</i> ]</p>
 
 <h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
@@ -68,7 +69,7 @@ ddcutil-service</b> <i>--help</i> | <i>--version</i> |
 
 
 
-<p style="margin-left:9%; margin-top: 1em"><i><b>ddcutil-service</b></i>
+<p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>
 ddcutil-service is D-Bus service wrapper for libddcutil
 which implements the VESA DDC Monitor Control Command Set.
 In general, most things that can be controlled using a
@@ -83,38 +84,59 @@ terminate, the <b>dbus-daemon</b> will automatically restart
 it when it is next accessed. Client connections with the
 service are stateless.</p>
 
-<p style="margin-left:9%; margin-top: 1em">For startup
-under <b>dbus-daemon,</b> the service requires no command
-line options. For the purpose of testing and development,
-the service can be manually started and several options are
-provided to assist with such activities. There are some info
-reporting options, <b>--version, --introspect,</b> and
-<b>--help,</b> which can be manually run without causing any
-interference with the running service.</p>
-
 <h3>OPTIONS
 <a name="OPTIONS"></a>
 </h3>
 
 
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="9%"></td>
+<td width="8%">
 
-<p style="margin-left:9%; margin-top: 1em"><b>--log_info</b></p>
 
-<p style="margin-left:18%; margin-top: 1em">Enabling
-log-info will produce info and debug level output. The out
-put will go to standard-error or, if running from
-<b>dbus-daemon,</b> to the journal. This option can also be
-toggled after startup by using B-Bus to alter the
-service&rsquo;s <b>ServiceInfoLogging</b> property (see
-<b>EXAMPLES</b> below).</p>
+<p style="margin-top: 1em"><b>--help</b></p></td>
+<td width="83%">
+</td></tr>
+</table>
 
-<p style="margin-left:9%;"><b>--disable-events</b></p>
+<p style="margin-left:18%; margin-top: 1em">Outputs
+options-help and exits.</p>
 
-<p style="margin-left:18%; margin-top: 1em">By default, the
-service enables monitoring for display connectivity changes
-or display power-state changes, any changes are forwarded
-via the ConnectDisplaysChanged signal. This flag disables
-all monitoring threads and signals.</p>
+<p style="margin-left:9%;"><b>--version</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Outputs the
+service interface version and the <b>libddcutil</b> version
+and exits.</p>
+
+<p style="margin-left:9%;"><b>--introspect</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Outputs the XML
+introspection text for the service and exits.</p>
+
+<p style="margin-left:9%;"><b>--prefer-polling</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Set polling to
+be the preferred method for detecting display connectivity
+changes. Normally polling is the a fallback used if a
+GPU-driver does not support DMA or does not provide the
+change-detection features required by <b>libddcutil.</b>
+Polling will probably work with any GPU.</p>
+
+<p style="margin-left:9%;"><b>--poll-interval</b>
+<i>seconds</i></p>
+
+<p style="margin-left:18%; margin-top: 1em">If polling is
+enabled, this option defines how often to check for display
+connectivity changes. Default 30 seconds, minimum 10
+seconds, zero to disable polling.</p>
+
+<p style="margin-left:9%;"><b>--disable-signals</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Disable all
+display connectivity change detection and disable the
+<b>ConnectDisplaysChanged signal</b> sent to clients.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -136,6 +158,16 @@ command line. The lock is provided to assist with managing
 conflicts when more than one ddcutil application is in use
 at the same time.</p>
 
+<p style="margin-left:9%;"><b>--log_info</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Enabling
+log-info will produce info and debug level output. The out
+put will go to standard-error or, if running from
+<b>dbus-daemon,</b> to the journal. This option can also be
+toggled after startup by using B-Bus to alter the
+service&rsquo;s <b>ServiceInfoLogging</b> property (see
+<b>EXAMPLES</b> below).</p>
+
 <p style="margin-left:9%;"><b>--ddca-syslog-level</b>
 <i>N</i></p>
 
@@ -156,40 +188,14 @@ ddca_init()</b> function at startup to enable/disable
 various options with the library. It&rsquo;s only available
 for <b>libddutil 2.1.0+.</b></p>
 
-<p style="margin-left:9%;"><b>-- [ libddcutil ddc_init
-options ]</b></p>
+<p style="margin-left:9%;"><b>--</b> <i>libddcutil ddc_init
+options...</i></p>
 
-<p style="margin-left:18%;">The <b>libddcutil</b> library
-also supports its own extensive set of init options, any
-arguments following the <b>--</b> will be passed as to
-<b>libddutil ddca_init()</b> function at service
-startup.</p>
-
-<table width="100%" border="0" rules="none" frame="void"
-       cellspacing="0" cellpadding="0">
-<tr valign="top" align="left">
-<td width="9%"></td>
-<td width="8%">
-
-
-<p><b>--help</b></p></td>
-<td width="83%">
-</td></tr>
-</table>
-
-<p style="margin-left:18%; margin-top: 1em">Outputs
-options-help and exits.</p>
-
-<p style="margin-left:9%;"><b>--version</b></p>
-
-<p style="margin-left:18%; margin-top: 1em">Outputs the
-service interface version and the <b>libddcutil</b> version
-and exits.</p>
-
-<p style="margin-left:9%;"><b>--introspect</b></p>
-
-<p style="margin-left:18%; margin-top: 1em">Outputs the XML
-introspection text for the service and exits.</p>
+<p style="margin-left:18%; margin-top: 1em">The
+<b>libddcutil</b> library also supports its own extensive
+set of init options, any arguments following <b>--</b> will
+be passed as to <b>libddutil ddca_init()</b> function at
+service startup.</p>
 
 <h2>SERVICE METHODS
 <a name="SERVICE METHODS"></a>
@@ -311,7 +317,7 @@ raise a <b>ConnectedDisplaysChanged</b> D-Bus signal when a
 display undergoes a connection status change.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Not all
-monitors, GPU&rsquo;s, GPU-drivers, or cabling, provide the
+displays, GPU&rsquo;s, GPU-drivers, or cabling, provide the
 necessary support for this feature. Results may also vary
 depending on the mix of desktop components, such as KDE,
 Gnome, X11, and Wayland. Depending on all of these factors,
@@ -320,9 +326,17 @@ display-cable connect/disconnect, power on/off, and DPMS
 wake/sleep.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Full support for
-this callback requires <b>ddcutil/libddcutil version 2.1.0+,
-limited support based on polling is available in</b> ealier
-versions.</p>
+this callback requires <b>ddcutil/libddcutil version 2.1.0+
+and a GPU and driver configured for DRM.</b></p>
+
+<p style="margin-left:9%; margin-top: 1em">Should a GPU
+lack the necessary features, the service may automatically
+fallback to polling by using DDC detect. Polling provides
+basic support for detecting connectivity and power-switch
+changes. If necessary polling can be forced by the
+<b>--prefer-polling</b> option. Depending on factors such as
+GPU, display and cabling, even change detection by polling
+may not work.</p>
 
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>
@@ -413,6 +427,12 @@ options are applicable to all methods.</p>
 <p style="margin-left:18%;">Returns whether the
 <i>--lock</i> command line argument has been used to make
 all properties and sleep-multipliers read-only.</p>
+
+<p style="margin-left:9%;"><b>ServicePollInterval</b></p>
+
+<p style="margin-left:18%;">Query or set the display change
+detection poll interval (minimum 10, zero to disable
+polling).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Properties can
 be queried and set using utilities such as <b>busctl,
