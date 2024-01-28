@@ -73,3 +73,10 @@ without the service file being installed.
 The `vdu_controls` GUI has been modified to use the service by default, see:
 https://github.com/digitaltrails/vdu_controls
 
+### Acknowledgements
+
+Thanks go out to Sanford Rockowitz for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
+advice provided during the development of this service.
+
+Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec.
+
