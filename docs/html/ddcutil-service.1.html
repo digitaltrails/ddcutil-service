@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sun Jan 28 14:42:24 2024 -->
+<!-- CreationDate: Sun Jan 28 15:07:35 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -443,23 +443,37 @@ d-bus-send,</b> and <b>d-feet,</b> see <b>EXAMPLES.</b></p>
 </h2>
 
 
+<p style="margin-left:9%; margin-top: 1em">If running via
+the dbus-daemon, when the service is requested, the
+dbus-daemon consults the service definition in:</p>
+
 
 <p style="margin-left:9%; margin-top: 1em"><b>/usr/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
 
-<p style="margin-left:9%; margin-top: 1em">The
-<b>dbus-daemon</b> config file ensures the service is
-started or restarted on demand. Typically the contents would
-be as follows</p>
+<p style="margin-left:9%; margin-top: 1em">Typically the
+contents would be as follows</p>
 
 <p style="margin-left:9%; margin-top: 1em">[D-BUS Service]
 <br>
 Name=com.ddcutil.DdcutilService <br>
 Exec=/usr/bin/ddcutil-service</p>
 
-<p style="margin-left:9%; margin-top: 1em">The
-<b>libddcutil</b> library loads options from
-<b>$HOME/.config/ddcutil/ddcutilrc</b> at startup, see
-<i>https://www.ddcutil.com/config_file/</i> for details.</p>
+<p style="margin-left:9%; margin-top: 1em">Any service
+options can be appended to the <b>Exec</b> line.</p>
+
+<p style="margin-left:9%; margin-top: 1em">If you wish to
+install the service for use by a single user, on many Linux
+distributions, the dbus-daemon first looks for the session
+service config-file in:</p>
+
+
+<p style="margin-left:9%; margin-top: 1em"><b>$HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
+
+<p style="margin-left:9%; margin-top: 1em">When initialised
+at service startup, the <b>libddcutil</b> library loads
+options from <b>$HOME/.config/ddcutil/ddcutilrc</b> at
+startup, see <i>https://www.ddcutil.com/config_file/</i> for
+details.</p>
 
 <h2>EXAMPLES
 <a name="EXAMPLES"></a>

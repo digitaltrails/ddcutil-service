@@ -366,12 +366,12 @@ see
 
 .SH CONFIG FILES
 
-.B /usr/share/dbus-1/services/com.ddcutil.DdcutilService.service
+If running via the dbus-daemon, when the service is requested, the
+dbus-daemon consults the service definition in:
+
+.B     /usr/share/dbus-1/services/com.ddcutil.DdcutilService.service
 .PP
-The
-.B dbus-daemon
-config file ensures the service is started or restarted on demand.  Typically the
-contents would be as follows
+Typically the contents would be as follows
 
 .nf
     [D-BUS Service]
@@ -379,13 +379,24 @@ contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-The
+Any service options can be appended to the
+.B Exec
+line.
+
+If you wish to install the service for use by a single user,
+on many Linux distributions, the dbus-daemon first looks for the session service
+config-file in:
+
+.B $HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service
+
+When initialised at service startup, the
 .B libddcutil
 library loads options from
 .B $HOME/.config/ddcutil/ddcutilrc
 at startup, see
 .I https://www.ddcutil.com/config_file/
 for details.
+
 
 .SH EXAMPLES
 .PP
