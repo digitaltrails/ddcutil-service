@@ -1430,12 +1430,28 @@ static GList* poll_list = NULL; // List of currently detected edids
 typedef struct {
     gchar* edid_encoded;
     gboolean connected;
+    gboolean dpms_awake;
 } Poll_List_Item;
 
 static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
     const gchar* target_str = (char *)target;
     const Poll_List_Item* item = (Poll_List_Item *)item_ptr;
     return strcmp(target_str, item->edid_encoded);
+}
+
+static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
+    DDCA_Display_Handle disp_handle;
+    DDCA_Status status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
+    if (status == DDCRC_OK) {
+        static DDCA_Non_Table_Vcp_Value valrec;
+        status = ddca_get_non_table_vcp_value(disp_handle, 0xd6, &valrec);
+        ddca_close_display(disp_handle);
+        if (status == DDCRC_OK) {
+            const uint16_t current_value = valrec.sh << 8 | valrec.sl;
+            return current_value == 1;
+        }
+    }
+    return FALSE;
 }
 
 static bool poll_for_changes() {
@@ -1454,20 +1470,30 @@ static bool poll_for_changes() {
             }
 
             // Check all displays, mark existing ones as connected, add new ones.
-            for (int ndx = 0; ndx < dlist->ct; ndx++) {
-
+            for (int ndx = 0; ndx < dlist->ct && !event_is_ready; ndx++) {
                 const DDCA_Display_Info* vdu_info = &dlist->info[ndx];
                 gchar* edid_encoded = edid_encode(vdu_info->edid_bytes);
                 const GList* ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
                 if (ptr != NULL) {  // Found it, mark it as connected
                     // g_debug("Poll check - found %d set to connected %.30s...", ndx + 1, edid_encoded);
-                    ((Poll_List_Item *)(ptr->data))->connected = TRUE;
-                    g_free(edid_encoded);
+                    Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(ptr->data);
+                    const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
+                    vdu_poll_data->connected = TRUE;
+                    vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
+                    if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
+                        g_message("Poll signal event - dpms %d %d %.30s...", vdu_poll_data->dpms_awake, ndx + 1, edid_encoded);
+                        Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
+                        event->event_type = vdu_poll_data->dpms_awake ? DDCA_EVENT_DPMS_AWAKE : DDCA_EVENT_DPMS_ASLEEP;
+                        event->dref = vdu_info->dref;
+                        g_atomic_pointer_set(&signal_event_data, event);
+                        event_is_ready = TRUE; // Only one event on each poll - terminate loop
+                    }
                 }
                 else {  // Not in the list, add it
                     Poll_List_Item* vdu_poll_data = g_malloc(sizeof(Poll_List_Item));
                     vdu_poll_data->edid_encoded = edid_encoded;
                     vdu_poll_data->connected = TRUE;
+                    vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
                     poll_list = g_list_append(poll_list, vdu_poll_data);
                     if (last_poll_time) {
                         // Not first time through
@@ -1475,14 +1501,13 @@ static bool poll_for_changes() {
                         Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                         event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
                         g_atomic_pointer_set(&signal_event_data, event);
-                        event_is_ready = TRUE;
-                        break; // Only one event on each poll
+                        event_is_ready = TRUE; // Only one event on each poll - terminate loop
                     }
                 }
+                g_free(edid_encoded);
             }
-
             // Check if any displays are still marked as disconnected
-            for (GList* ptr = poll_list; ptr != NULL;) {
+            for (GList* ptr = poll_list; ptr != NULL && !event_is_ready;) {
                 GList* next = ptr->next;
                 Poll_List_Item* vdu_poll_data = ptr->data;
                 if (!vdu_poll_data->connected) {
@@ -1493,11 +1518,11 @@ static bool poll_for_changes() {
                     g_free(vdu_poll_data->edid_encoded);
                     g_free(vdu_poll_data);
                     poll_list = g_list_delete_link(poll_list, ptr);
-                    event_is_ready = TRUE;
-                    break; // Only one event on each poll
+                    event_is_ready = TRUE; // Only one event on each poll - terminate loop
                 }
                 ptr = next;
             }
+            ddca_free_display_info_list(dlist);
         }
         last_poll_time = now_in_micros;
     }
