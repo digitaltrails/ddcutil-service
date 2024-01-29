@@ -82,5 +82,6 @@ install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
 %{_datadir}/%{name}/examples/ddcutil-qtdbus-signal-receiver.py
 %{_datadir}/%{name}/examples/busctl.bash
 %{_datadir}/%{name}/examples/dbus-disable-signals.bash
+%{_datadir}/%{name}/examples/dbus-set-polling-interval.bash
 
 %changelog
