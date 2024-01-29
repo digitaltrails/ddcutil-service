@@ -1639,11 +1639,11 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
                                        "ConnectedDisplaysChanged",
                                        g_variant_new("(siu)", edid_encoded, int_event_type, 0),
                                        &local_error)) {
-        g_warning("chg_signal_dispatch: failed %s", local_error != NULL ? local_error->message : "");
+        g_warning("Signal ConnectedDisplaysChanged: failed %s", local_error != NULL ? local_error->message : "");
         g_free(local_error);
     }
     else {
-        g_debug("chg_signal_dispatch: succeeded");
+        g_debug("Signal ConnectedDisplaysChanged: succeeded");
     }
     g_free(edid_encoded);
     return TRUE;
@@ -1921,8 +1921,6 @@ int main(int argc, char* argv[]) {
 
         enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
     }
-
-
 
     g_main_loop_run(main_loop);
     g_bus_unown_name(owner_id);
