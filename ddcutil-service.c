@@ -1439,7 +1439,7 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
     return strcmp(target_str, item->edid_encoded);
 }
 
-static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info, const bool existing_dpms_state) {
+static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
     DDCA_Display_Handle disp_handle;
     DDCA_Status status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == DDCRC_OK) {
@@ -1448,10 +1448,12 @@ static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info, const bool existi
         ddca_close_display(disp_handle);
         if (status == DDCRC_OK) {
             const uint16_t current_value = valrec.sh << 8 | valrec.sl;
-            return current_value == 1;
+            g_debug("Poll check-dpms value=%d %s", current_value, current_value <= 1 ? "awake" : "asleep");
+            return current_value <= 1;
         }
     }
-    return existing_dpms_state;
+    g_debug("Poll check-dpms failed %s", ddca_rc_name(status));
+    return FALSE;  // Guessing the VDU has gone into DPMS where it cannot respond.
 }
 
 static bool poll_for_changes() {
@@ -1476,14 +1478,15 @@ static bool poll_for_changes() {
                     gchar* edid_encoded = edid_encode(vdu_info->edid_bytes);
                     const GList* ptr = g_list_find_custom(poll_list, edid_encoded, pollcmp);
                     if (ptr != NULL) {  // Found it, mark it as connected
-                        // g_debug("Poll check - found %d set to connected %.30s...", ndx + 1, edid_encoded);
                         Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(ptr->data);
                         const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
                         vdu_poll_data->connected = TRUE;
-                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info, previous_dpms_awake);
+                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
+                        g_debug("Poll check: found-existing, %s disp=%d %.30s...",
+                            vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
                         if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
-                            g_message("Poll signal event - dpms %d %d %.30s...",
-                                vdu_poll_data->dpms_awake, ndx + 1, edid_encoded);
+                            g_message("Poll signal event - dpms-%s %d %.30s...",
+                                vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
                             Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                             event->event_type =
                                 vdu_poll_data->dpms_awake ? DDCA_EVENT_DPMS_AWAKE : DDCA_EVENT_DPMS_ASLEEP;
@@ -1497,8 +1500,10 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = g_malloc(sizeof(Poll_List_Item));
                         vdu_poll_data->edid_encoded = edid_encoded;
                         vdu_poll_data->connected = TRUE;
-                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info, TRUE);
+                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
                         poll_list = g_list_append(poll_list, vdu_poll_data);
+                        g_debug("Poll check: found-new, %s disp=%d %.30s...",
+                            vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
                         if (last_poll_time) {
                             // Not first time through
                             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
