@@ -1439,7 +1439,7 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
     return strcmp(target_str, item->edid_encoded);
 }
 
-static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info, const bool fallback_value) {
+static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info, const bool existing_dpms_state) {
     DDCA_Display_Handle disp_handle;
     DDCA_Status status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == DDCRC_OK) {
@@ -1451,7 +1451,7 @@ static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info, const bool fallba
             return current_value == 1;
         }
     }
-    return fallback_value;
+    return existing_dpms_state;
 }
 
 static bool poll_for_changes() {
