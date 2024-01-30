@@ -1439,7 +1439,7 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
     return strcmp(target_str, item->edid_encoded);
 }
 
-static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
+static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info, bool fallback_value) {
     DDCA_Display_Handle disp_handle;
     DDCA_Status status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
     if (status == DDCRC_OK) {
@@ -1451,7 +1451,7 @@ static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
             return current_value == 1;
         }
     }
-    return FALSE;
+    return fallback_value;
 }
 
 static bool poll_for_changes() {
@@ -1480,7 +1480,7 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(ptr->data);
                         const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
                         vdu_poll_data->connected = TRUE;
-                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
+                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info, previous_dpms_awake);
                         if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
                             g_message("Poll signal event - dpms %d %d %.30s...",
                                 vdu_poll_data->dpms_awake, ndx + 1, edid_encoded);
