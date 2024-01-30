@@ -1448,11 +1448,11 @@ static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
         ddca_close_display(disp_handle);
         if (status == DDCRC_OK) {
             const uint16_t current_value = valrec.sh << 8 | valrec.sl;
-            g_debug("Poll check-dpms value=%d %s", current_value, current_value <= 1 ? "awake" : "asleep");
+            // g_debug("Poll check-dpms value=%d %s", current_value, current_value <= 1 ? "awake" : "asleep");
             return current_value <= 1;
         }
     }
-    g_debug("Poll check-dpms failed %s", ddca_rc_name(status));
+    g_debug("Poll check-dpms failed %s - assume asleep", ddca_rc_name(status));
     return FALSE;  // Guessing the VDU has gone into DPMS where it cannot respond.
 }
 
