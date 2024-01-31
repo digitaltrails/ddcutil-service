@@ -97,6 +97,14 @@ If polling is enabled, this option defines how often to check for display
 connectivity changes.  Default 30 seconds,  minimum 10 seconds, zero to disable polling.
 
 .TP
+.B "--poll-cascade-interval" \fIseconds\fP
+
+If polling is enabled, this option defines the minimum interval between
+events within a cascade of events. For example, the time between each
+each event when several displays enter DPMS sleep at the same time.
+Default 0.5 seconds,  minimum 0.1 seconds.
+
+.TP
 .B "--disable-signals"
 
 Disable all display connectivity change detection and disable the

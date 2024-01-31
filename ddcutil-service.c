@@ -79,8 +79,18 @@ static bool lock_properties = FALSE;
 
 #define MIN_POLL_SECONDS 10
 #define DEFAULT_POLL_SECONDS 30
+
+/**
+ * If severice is doing it's own polling for events, how often to poll:
+ */
 static long poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
 
+#define MIN_POLL_CASCADE_INTERVAL_SECONDS 0.1
+#define DEFAULT_POLL_CASCADE_INTERVAL_SECONDS 0.5
+/**
+* Each event in an event-cascade will be at least this far appart:
+*/
+static long poll_cascade_interval_micros = (long) (DEFAULT_POLL_CASCADE_INTERVAL_SECONDS * 1000000);
 
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
 /**
@@ -1423,7 +1433,7 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
  * Only detects connect/disconnect events.
  */
 
-static long last_poll_time = 0;
+static long next_poll_time = 0;
 
 static GList* poll_list = NULL; // List of currently detected edids
 
@@ -1459,7 +1469,7 @@ static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
 static bool poll_for_changes() {
     const long now_in_micros = g_get_monotonic_time();
     bool event_is_ready = FALSE;
-    if (now_in_micros >= last_poll_time + poll_interval_micros) {
+    if (now_in_micros >= next_poll_time) {
         g_debug("Poll for display connection changes");
         const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
         if (detect_status == DDCRC_OK) {
@@ -1504,7 +1514,7 @@ static bool poll_for_changes() {
                         poll_list = g_list_append(poll_list, vdu_poll_data);
                         g_debug("Poll check: found-new, %s disp=%d %.30s...",
                             vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
-                        if (last_poll_time) {
+                        if (next_poll_time) {
                             // Not first time through
                             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
                             Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
@@ -1533,7 +1543,7 @@ static bool poll_for_changes() {
                 ddca_free_display_info_list(dlist);
             }
         }
-        last_poll_time = now_in_micros;
+        next_poll_time = now_in_micros + (event_is_ready ? poll_cascade_interval_micros : poll_interval_micros);
     }
     return event_is_ready;
 }
@@ -1789,6 +1799,7 @@ int main(int argc, char* argv[]) {
 
     gboolean prefer_polling = FALSE;
     int poll_seconds = -1;  // -1 flags no argument supplied
+    double poll_cascade_interval_seconds = 0.0;
 
 #if defined(HAS_OPTION_ARGUMENTS)
     gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
@@ -1812,6 +1823,10 @@ int main(int argc, char* argv[]) {
         {
             "poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_seconds,
             "polling interval in seconds, 10 minimum, 0 to disable polling", NULL
+        },
+        {
+            "poll-cascade-interval", 'c', 0, G_OPTION_ARG_DOUBLE, &poll_cascade_interval_seconds,
+            "polling minimum interval between cascading events in seconds, 0.1 minimum", NULL
         },
         {
             "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_display_status_events,
@@ -1934,23 +1949,37 @@ int main(int argc, char* argv[]) {
         }
 #endif
 
-        if (poll_seconds != -1 && poll_interval_micros > 0) {  // Command line override of polling interval
-            if (poll_seconds == 0) {
-                poll_interval_micros = 0;  // Disable
-                g_message("ConnectDisplaysChanged - polling disabled by --poll-interval 0");
+        if (poll_interval_micros > 0) {  // Means polling hasn't been disabled by other options
+            if (poll_seconds != -1) {
+                // Command line override of polling interval
+                if (poll_seconds == 0) {
+                    poll_interval_micros = 0;  // Disable
+                    g_message("ConnectDisplaysChanged - polling disabled by --poll-interval 0");
+                }
+                else if (poll_seconds < MIN_POLL_SECONDS) {
+                    g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
+                    exit(1);
+                }
+                else {
+                    poll_interval_micros = poll_seconds * 1000000;
+                }
             }
-            else if (poll_seconds < MIN_POLL_SECONDS) {
-                g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
-                exit(1);
-            }
-            else {
-                poll_interval_micros = poll_seconds * 1000000;
-            }
-        }
-
-        if (poll_interval_micros > 0) {
             g_message("Enabled ConnectDisplaysChanged signal - using internal polling every %ld seconds",
                 poll_interval_micros / 1000000);
+
+            if (poll_cascade_interval_seconds > 0) {
+                // Command line override of polling interval
+                if (poll_cascade_interval_seconds < MIN_POLL_CASCADE_INTERVAL_SECONDS) {
+                    g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
+                        MIN_POLL_CASCADE_INTERVAL_SECONDS);
+                    exit(1);
+                }
+                else {
+                    poll_cascade_interval_micros = (long) (poll_cascade_interval_seconds * 1000000);
+                }
+            }
+            g_message("Set ConnectDisplaysChanged event cascade interval to %5.3f seconds",
+                poll_cascade_interval_micros / 1000000.0);
         }
 
         enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later

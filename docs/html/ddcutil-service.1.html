@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jan 29 19:51:36 2024 -->
+<!-- CreationDate: Thu Feb  1 09:11:39 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -131,6 +131,16 @@ Polling will probably work with any GPU.</p>
 enabled, this option defines how often to check for display
 connectivity changes. Default 30 seconds, minimum 10
 seconds, zero to disable polling.</p>
+
+<p style="margin-left:9%;"><b>--poll-cascade-interval</b>
+<i>seconds</i></p>
+
+<p style="margin-left:18%; margin-top: 1em">If polling is
+enabled, this option defines the minimum interval between
+events within a cascade of events. For example, the time
+between each each event when several displays enter DPMS
+sleep at the same time. Default 0.5 seconds, minimum 0.1
+seconds.</p>
 
 <p style="margin-left:9%;"><b>--disable-signals</b></p>
 
