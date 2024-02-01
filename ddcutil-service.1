@@ -54,9 +54,10 @@ service
 is registered as a
 .B session-service
 with the
-.B dbus-daemon.  The daemon starts the service on demand.
-If the service terminates for any reason, the
-daemon will automatically restart it when it is next accessed.
+.B dbus-daemon.
+The daemon starts the service on demand.
+If the service terminates for any reason, the daemon will be restart
+it when it is next accessed.
 Client connections with the service are stateless, each request
 is handled atomically.
 
@@ -99,8 +100,8 @@ connectivity changes.  Default 30 seconds,  minimum 10 seconds, zero to disable 
 .B "--poll-cascade-interval" \fIseconds\fP
 
 If polling is enabled, this option defines the minimum interval between
-events within a cascade of events. For example, the time between each
-each event when several displays enter DPMS sleep at the same time.
+events within a cascade of events. For example, a cascade of events will
+occur when a session is locked and all displays are put into DPMS sleep.
 Default 0.5 seconds,  minimum 0.1 seconds.
 
 .TP
@@ -124,7 +125,7 @@ when more than one ddcutil application is in use at the same time.
 .B "--log_info"
 
 Enabling log-info will produce info and debug level output.  The
-out put will go to standard-error or, if running from
+output will go to standard-error or, if running from
 .B dbus-daemon,
 to the journal.
 This option can also be toggled after startup by using B-Bus
@@ -145,9 +146,8 @@ It's only available for
 .B libddutil version 2.1.0
 and up.
 Values for
-.B N
-are
-.B 0:never, 2:error:, 6:warning, 9:notice, 12:info, 15:verbose, and 18:debug.
+.I N
+are 0:never, 2:error:, 6:warning, 9:notice, 12:info, 15:verbose, and 18:debug.
 
 .TP
 .B "--ddca-init-options" \fIN\fP
@@ -171,9 +171,7 @@ function at service startup.
 
 .SH SERVICE METHODS
 
-.PP
 The following is a brief summary of the methods provided by the service.
-
 
 .TP
 .B Detect
@@ -229,16 +227,16 @@ can be supplied. Base64-encoded EDIDs are obtained from the
 .B Detect
 method.  If a EDID is supplied, a method's
 .B flags
-option can be set to
-.B EDID_PREFIX
-(1),
+bit-string parameter can be set to
+.B 1
+(EDID_PREFIX),
 this indicates a unique prefix of an EDID has been passed rather than
 the entire string (this makes using EDIDs from the command line a little easier).
 
 Run
 .B ddcutil-service --introspect
 for details on each method's in/out parameters. For even more
-information the
+information, the
 .B d-feet
 graphical D-Bus debugger provides a very readable
 way to browse and experiment with the service interface, simply start
@@ -252,24 +250,23 @@ and search for
 
 The service may raise a
 .B ConnectedDisplaysChanged
-D-Bus signal when a display undergoes a connection status change.
+D-Bus signal when a display undergoes a status change
+due to connectivity, hot-plug and DPMS events.
+
+.PP
+Changes can be detected in one of two ways.  The most efficient method requires
+.B ddcutil/libddcutil version 2.1.0+ and a GPU configured for DRM.
+If those requirements can't be met, the service can periodically poll for changes.
+If the requirments for the first method are met, but DRM isn't working as expected,
+polling can be forced by the
+.B --prefer-polling
+option.    The default polling interval is 30 seconds.
+
 .PP
 Not all displays, GPU's, GPU-drivers, or cabling, provide the necessary support
-for this feature.  Results may also vary depending on the mix of desktop components,
-such as KDE, Gnome, X11, and Wayland.  Depending on all of these factors,
-status changes may be signaled for all/some/none of display-cable connect/disconnect,
-power on/off, and DPMS wake/sleep.
-.PP
-Full support for this callback requires
-.B ddcutil/libddcutil version 2.1.0+ and a GPU and driver configured for DRM.
-
-Should a GPU lack the necessary features, the service may automatically fallback to
-polling by using DDC detect.  Polling provides basic support for detecting
-connectivity and power-switch changes.
-If necessary polling can be forced by the
-.B --prefer-polling
-option.  Depending on factors such as GPU, display and cabling, change
-detection by polling may not work.  The default polling interval is 30 seconds.
+for detecting connection status changes by either method.  Results may also vary
+depending on the mix of desktop components,
+such as KDE, Gnome, X11, and Wayland.
 
 .SH SERVICE PROPERTIES
 
@@ -326,12 +323,12 @@ version string.
 
 .TP
 .B ServiceMuteSignals
-Set this property to true to mute the signals emitted by the service.
+Set this property to \fBtrue\fP to mute the signals emitted by the service.
 Any
 .B libddcutil
 managed event-detection threads created at service startup
 will continue to run, but no signals will be emitted.  Any
-internal service polling will be suspended.  Set to true
+internal service polling will be suspended.  Set to \fBfalse\fP
 to unmute.
 
 .TP
@@ -339,9 +336,7 @@ to unmute.
 Enable/disable the service's diagnostic level output to include info and debug messages.
 Not that
 .B libddcutil
-also has a logging mechanism (see
-.B libddcutil ddc_init options
-)
+also has a logging mechanism (see \fBlibddcutil ddc_init options\fP).
 
 .TP
 .B ServiceInterfaceVersion
@@ -355,7 +350,7 @@ Not all options are applicable to all methods.
 .TP
 .B ServiceParametersLocked
 Returns whether the
-.I --lock
+.B --lock
 command line argument has been used to make all properties and sleep-multipliers read-only.
 
 .TP

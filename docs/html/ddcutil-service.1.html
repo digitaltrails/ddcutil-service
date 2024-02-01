@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Feb  2 11:02:01 2024 -->
+<!-- CreationDate: Fri Feb  2 11:45:58 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -78,11 +78,11 @@ be controlled by this service.</p>
 
 <p style="margin-left:9%; margin-top: 1em">The service is
 registered as a <b>session-service</b> with the
-<b>dbus-daemon. The daemon starts the service on demand.</b>
-If the service terminates for any reason, the daemon will
-automatically restart it when it is next accessed. Client
-connections with the service are stateless, each request is
-handled atomically.</p>
+<b>dbus-daemon.</b> The daemon starts the service on demand.
+If the service terminates for any reason, the daemon will be
+restart it when it is next accessed. Client connections with
+the service are stateless, each request is handled
+atomically.</p>
 
 <h3>OPTIONS
 <a name="OPTIONS"></a>
@@ -137,9 +137,9 @@ seconds, zero to disable polling.</p>
 
 <p style="margin-left:18%; margin-top: 1em">If polling is
 enabled, this option defines the minimum interval between
-events within a cascade of events. For example, the time
-between each each event when several displays enter DPMS
-sleep at the same time. Default 0.5 seconds, minimum 0.1
+events within a cascade of events. For example, a cascade of
+events will occur when a session is locked and all displays
+are put into DPMS sleep. Default 0.5 seconds, minimum 0.1
 seconds.</p>
 
 <p style="margin-left:9%;"><b>--disable-signals</b></p>
@@ -172,8 +172,8 @@ at the same time.</p>
 <p style="margin-left:9%;"><b>--log_info</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Enabling
-log-info will produce info and debug level output. The out
-put will go to standard-error or, if running from
+log-info will produce info and debug level output. The
+output will go to standard-error or, if running from
 <b>dbus-daemon,</b> to the journal. This option can also be
 toggled after startup by using B-Bus to alter the
 service&rsquo;s <b>ServiceInfoLogging</b> property (see
@@ -186,9 +186,9 @@ service&rsquo;s <b>ServiceInfoLogging</b> property (see
 level numerical value is passed to <b>libddutil&rsquo;s
 ddca_init()</b> function at startup to enable logging from
 within the library. It&rsquo;s only available for
-<b>libddutil version 2.1.0</b> and up. Values for <b>N</b>
-are <b>0:never, 2:error:, 6:warning, 9:notice, 12:info,
-15:verbose, and 18:debug.</b></p>
+<b>libddutil version 2.1.0</b> and up. Values for <i>N</i>
+are 0:never, 2:error:, 6:warning, 9:notice, 12:info,
+15:verbose, and 18:debug.</p>
 
 <p style="margin-left:9%;"><b>--ddca-init-options</b>
 <i>N</i></p>
@@ -304,15 +304,15 @@ requires a display-argument, either an integer
 <i>display-number</i> or a <i>base64-encoded EDID</i> can be
 supplied. Base64-encoded EDIDs are obtained from the
 <b>Detect</b> method. If a EDID is supplied, a
-method&rsquo;s <b>flags</b> option can be set to
-<b>EDID_PREFIX</b> (1), this indicates a unique prefix of an
-EDID has been passed rather than the entire string (this
+method&rsquo;s <b>flags</b> bit-string parameter can be set
+to <b>1</b> (EDID_PREFIX), this indicates a unique prefix of
+an EDID has been passed rather than the entire string (this
 makes using EDIDs from the command line a little
 easier).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Run
 <b>ddcutil-service --introspect</b> for details on each
-method&rsquo;s in/out parameters. For even more information
+method&rsquo;s in/out parameters. For even more information,
 the <b>d-feet</b> graphical D-Bus debugger provides a very
 readable way to browse and experiment with the service
 interface, simply start <b>d-feet,</b> select the <b>Session
@@ -325,29 +325,25 @@ Bus</b> and search for <b>ddcutil-service.</b></p>
 
 <p style="margin-left:9%; margin-top: 1em">The service may
 raise a <b>ConnectedDisplaysChanged</b> D-Bus signal when a
-display undergoes a connection status change.</p>
+display undergoes a status change due to connectivity,
+hot-plug and DPMS events.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Changes can be
+detected in one of two ways. The most efficient method
+requires <b>ddcutil/libddcutil version 2.1.0+ and a GPU
+configured for DRM.</b> If those requirements can&rsquo;t be
+met, the service can periodically poll for changes. If the
+requirments for the first method are met, but DRM
+isn&rsquo;t working as expected, polling can be forced by
+the <b>--prefer-polling</b> option. The default polling
+interval is 30 seconds.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Not all
 displays, GPU&rsquo;s, GPU-drivers, or cabling, provide the
-necessary support for this feature. Results may also vary
-depending on the mix of desktop components, such as KDE,
-Gnome, X11, and Wayland. Depending on all of these factors,
-status changes may be signaled for all/some/none of
-display-cable connect/disconnect, power on/off, and DPMS
-wake/sleep.</p>
-
-<p style="margin-left:9%; margin-top: 1em">Full support for
-this callback requires <b>ddcutil/libddcutil version 2.1.0+
-and a GPU and driver configured for DRM.</b></p>
-
-<p style="margin-left:9%; margin-top: 1em">Should a GPU
-lack the necessary features, the service may automatically
-fallback to polling by using DDC detect. Polling provides
-basic support for detecting connectivity and power-switch
-changes. If necessary polling can be forced by the
-<b>--prefer-polling</b> option. Depending on factors such as
-GPU, display and cabling, change detection by polling may
-not work. The default polling interval is 30 seconds.</p>
+necessary support for detecting connection status changes by
+either method. Results may also vary depending on the mix of
+desktop components, such as KDE, Gnome, X11, and
+Wayland.</p>
 
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>
@@ -404,20 +400,20 @@ version string.</p>
 
 <p style="margin-left:9%;"><b>ServiceMuteSignals</b></p>
 
-<p style="margin-left:18%;">Set this property to true to
-mute the signals emitted by the service. Any
+<p style="margin-left:18%;">Set this property to
+<b>true</b> to mute the signals emitted by the service. Any
 <b>libddcutil</b> managed event-detection threads created at
 service startup will continue to run, but no signals will be
 emitted. Any internal service polling will be suspended. Set
-to true to unmute.</p>
+to <b>false</b> to unmute.</p>
 
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 
 <p style="margin-left:18%;">Enable/disable the
 service&rsquo;s diagnostic level output to include info and
 debug messages. Not that <b>libddcutil</b> also has a
-logging mechanism (see <b>libddcutil ddc_init options</b>
-)</p>
+logging mechanism (see <b>libddcutil ddc_init
+options</b>).</p>
 
 
 <p style="margin-left:9%;"><b>ServiceInterfaceVersion</b></p>
@@ -435,7 +431,7 @@ options are applicable to all methods.</p>
 <p style="margin-left:9%;"><b>ServiceParametersLocked</b></p>
 
 <p style="margin-left:18%;">Returns whether the
-<i>--lock</i> command line argument has been used to make
+<b>--lock</b> command line argument has been used to make
 all properties and sleep-multipliers read-only.</p>
 
 <p style="margin-left:9%;"><b>ServicePollInterval</b></p>
