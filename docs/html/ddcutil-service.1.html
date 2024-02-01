@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Feb  2 09:00:41 2024 -->
+<!-- CreationDate: Fri Feb  2 11:02:01 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -71,19 +71,18 @@ ddcutil-service</b> [ <b>--prefer-polling</b> ] | [
 
 
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>
-ddcutil-service is D-Bus service wrapper for libddcutil
-which implements the VESA DDC Monitor Control Command Set.
-In general, most things that can be controlled using a
-monitor&rsquo;s on-screen display can be controlled by this
-service.</p>
+is D-Bus service wrapper for libddcutil which implements the
+VESA DDC Monitor Control Command Set. Most things that can
+be controlled using a monitor&rsquo;s on-screen display can
+be controlled by this service.</p>
 
-<p style="margin-left:9%; margin-top: 1em">The
-<b>ddctuil-service</b> is registered as a
-<b>session-service</b> with the <b>dbus-daemon</b> which
-starts the service on demand. Should the service error and
-terminate, the <b>dbus-daemon</b> will automatically restart
-it when it is next accessed. Client connections with the
-service are stateless.</p>
+<p style="margin-left:9%; margin-top: 1em">The service is
+registered as a <b>session-service</b> with the
+<b>dbus-daemon. The daemon starts the service on demand.</b>
+If the service terminates for any reason, the daemon will
+automatically restart it when it is next accessed. Client
+connections with the service are stateless, each request is
+handled atomically.</p>
 
 <h3>OPTIONS
 <a name="OPTIONS"></a>
