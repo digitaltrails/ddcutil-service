@@ -338,6 +338,7 @@ static const gchar introspection_xml[] =
         "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
         "    <property type='b' name='ServiceParametersLocked' access='read'/>"
         "    <property type='u' name='ServicePollInterval' access='readwrite'/>"
+        "    <property type='d' name='ServicePollCascadeInterval' access='readwrite'/>"
 
         "  </interface>"
         "</node>";
@@ -351,6 +352,7 @@ typedef enum
     DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED,
     DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
     DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
+    DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
     DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
 } DdcutilServiceError;
 
@@ -359,6 +361,7 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
     { DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED, "com.ddcutil.DdcutilService.Error.PropertiesLocked" },
     { DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED, "com.ddcutil.DdcutilService.Error.MultiplierLocked" },
     { DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
+    { DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds" },
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
@@ -1343,6 +1346,9 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
         ret = g_variant_new_uint32(poll_interval_micros / 1000000);
     }
+    else if (g_strcmp0(property_name, "ServicePollCascadeInterval") == 0) {
+        ret = g_variant_new_double(poll_cascade_interval_micros / 1000000.0);
+    }
     return ret;
 }
 
@@ -1419,6 +1425,22 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
             poll_interval_micros = secs * 1000000;
         }
     }
+    else if (g_strcmp0(property_name, "ServicePollCascadeInterval") == 0) {
+        const double secs = g_variant_get_double(value);
+        if (secs < MIN_POLL_CASCADE_INTERVAL_SECONDS || secs < poll_interval_micros / 1000000) {
+            g_set_error (error,
+             service_error_quark,
+             DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
+             "Invalid poll cascade interval %5.3f, valid range is %5.3f to %5.3f",
+             secs, MIN_POLL_CASCADE_INTERVAL_SECONDS, poll_interval_micros / 1000000.0);
+            g_warning((*error)->message);
+            return FALSE;
+        }
+        else {
+            g_message("ServicePollCascadeInterval changed to %f seconds", secs);
+            poll_cascade_interval_micros = (long) (secs * 1000000);
+        }
+    }
     return *error == NULL;
 }
 
@@ -1440,6 +1462,7 @@ static GList* poll_list = NULL; // List of currently detected edids
 typedef struct {
     gchar* edid_encoded;
     gboolean connected;
+    gboolean has_dpms;
     gboolean dpms_awake;
 } Poll_List_Item;
 
@@ -1491,18 +1514,20 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(ptr->data);
                         const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
                         vdu_poll_data->connected = TRUE;
-                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
-                        g_debug("Poll check: found-existing, %s disp=%d %.30s...",
-                            vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
-                        if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
-                            g_message("Poll signal event - dpms-%s %d %.30s...",
-                                vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
-                            Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
-                            event->event_type =
-                                vdu_poll_data->dpms_awake ? DDCA_EVENT_DPMS_AWAKE : DDCA_EVENT_DPMS_ASLEEP;
-                            event->dref = vdu_info->dref;
-                            g_atomic_pointer_set(&signal_event_data, event);
-                            event_is_ready = TRUE; // Only one event on each poll - terminate loop
+                        g_debug("Poll check: found-existing disp=%d %.30s... has_dpms=%d",
+                                ndx + 1, edid_encoded, vdu_poll_data->has_dpms);
+                        if (vdu_poll_data->has_dpms) {
+                            vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
+                            if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
+                                g_message("Poll signal event - dpms changed to %s %d %.30s...",
+                                    vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
+                                Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
+                                event->event_type =
+                                    vdu_poll_data->dpms_awake ? DDCA_EVENT_DPMS_AWAKE : DDCA_EVENT_DPMS_ASLEEP;
+                                event->dref = vdu_info->dref;
+                                g_atomic_pointer_set(&signal_event_data, event);
+                                event_is_ready = TRUE; // Only one event on each poll - terminate loop
+                            }
                         }
                         g_free(edid_encoded);  // Already in list - no longer needed
                     }
@@ -1510,10 +1535,17 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = g_malloc(sizeof(Poll_List_Item));
                         vdu_poll_data->edid_encoded = edid_encoded;
                         vdu_poll_data->connected = TRUE;
-                        vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
+                        vdu_poll_data->has_dpms = FALSE;
+                        vdu_poll_data->dpms_awake = TRUE;
+                        DDCA_Feature_Metadata *meta_0xd6;
+                        if (ddca_get_feature_metadata_by_dref(0xd6, vdu_info->dref, FALSE, &meta_0xd6) == DDCRC_OK) {
+                            ddca_free_feature_metadata(meta_0xd6);
+                            vdu_poll_data->has_dpms = TRUE;
+                            vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
+                        }
                         poll_list = g_list_append(poll_list, vdu_poll_data);
-                        g_debug("Poll check: found-new, %s disp=%d %.30s...",
-                            vdu_poll_data->dpms_awake ? "awake" : "asleep", ndx + 1, edid_encoded);
+                        g_debug("Poll check: found-new disp=%d %.30s... has_dpms=%d awake=%d ",
+                            ndx + 1, edid_encoded, vdu_poll_data->has_dpms, vdu_poll_data->dpms_awake);
                         if (next_poll_time) {
                             // Not first time through
                             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
