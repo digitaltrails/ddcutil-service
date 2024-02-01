@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Feb  1 09:11:39 2024 -->
+<!-- CreationDate: Fri Feb  2 09:00:41 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -27,9 +27,10 @@
 <a href="#SERVICE METHODS">SERVICE METHODS</a><br>
 <a href="#SERVICE SIGNALS">SERVICE SIGNALS</a><br>
 <a href="#SERVICE PROPERTIES">SERVICE PROPERTIES</a><br>
-<a href="#CONFIG FILES">CONFIG FILES</a><br>
+<a href="#FILES">FILES</a><br>
 <a href="#EXAMPLES">EXAMPLES</a><br>
 <a href="#LIMITATIONS">LIMITATIONS</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
 <a href="#REPORTING BUGS">REPORTING BUGS</a><br>
 <a href="#AUTHOR">AUTHOR</a><br>
 <a href="#ACKNOWLEDGEMENTS">ACKNOWLEDGEMENTS</a><br>
@@ -441,49 +442,67 @@ all properties and sleep-multipliers read-only.</p>
 <p style="margin-left:9%;"><b>ServicePollInterval</b></p>
 
 <p style="margin-left:18%;">Query or set the display change
-detection poll interval (minimum 10, zero to disable
+detection poll-interval (minimum 10 seconds, zero to disable
 polling).</p>
+
+
+<p style="margin-left:9%;"><b>ServicePollCascadeInterval</b></p>
+
+<p style="margin-left:18%;">Query or set the display change
+detection poll-cascade-interval (minimum 0.1 seconds). When
+dealing with a cascade of events, for example, when a
+desktop-session is locked and sets all VDUs to DPMS sleep,
+polling occurs more frequently until the cascade is
+cleared.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Properties can
 be queried and set using utilities such as <b>busctl,
 d-bus-send,</b> and <b>d-feet,</b> see <b>EXAMPLES.</b></p>
 
-<h2>CONFIG FILES
-<a name="CONFIG FILES"></a>
+<h2>FILES
+<a name="FILES"></a>
 </h2>
 
-
-<p style="margin-left:9%; margin-top: 1em">If running via
-the dbus-daemon, when the service is requested, the
-dbus-daemon consults the service definition in:</p>
 
 
 <p style="margin-left:9%; margin-top: 1em"><b>/usr/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
 
-<p style="margin-left:9%; margin-top: 1em">Typically the
-contents would be as follows</p>
+<p style="margin-left:18%;">If running via the dbus-daemon,
+this config file is read when the service is requested.
+Typically the contents would be as follows</p>
 
-<p style="margin-left:9%; margin-top: 1em">[D-BUS Service]
+<p style="margin-left:18%; margin-top: 1em">[D-BUS Service]
 <br>
 Name=com.ddcutil.DdcutilService <br>
 Exec=/usr/bin/ddcutil-service</p>
 
-<p style="margin-left:9%; margin-top: 1em">Any service
-options can be appended to the <b>Exec</b> line.</p>
-
-<p style="margin-left:9%; margin-top: 1em">If you wish to
-install the service for use by a single user, on many Linux
-distributions, the dbus-daemon first looks for the session
-service config-file in:</p>
+<p style="margin-left:18%; margin-top: 1em">Any service
+options, such as <b>&acirc;&acirc;prefer&acirc;polling,</b>
+can be appended to the <b>Exec=</b> line.</p>
 
 
-<p style="margin-left:9%; margin-top: 1em"><b>$HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
+<p style="margin-left:9%;"><b>$HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
 
-<p style="margin-left:9%; margin-top: 1em">When initialised
-at service startup, the <b>libddcutil</b> library loads
-options from <b>$HOME/.config/ddcutil/ddcutilrc</b> at
-startup, see <i>https://www.ddcutil.com/config_file/</i> for
+<p style="margin-left:18%;">If you do not have root access
+or wish to set options for a specific user, the dbus-daemon
+first looks for in <b>$HOME/.local/share</b> before looking
+in <b>/usr/share.</b></p>
+
+
+<p style="margin-left:9%;"><b>$HOME/.config/ddcutil/ddcutilrc</b></p>
+
+<p style="margin-left:18%;">When initialised at service
+startup, <b>libddcutil</b> loads options from its rc file.
+See <i>https://www.ddcutil.com/config_file/</i> for
 details.</p>
+
+
+<p style="margin-left:9%;"><b>/usr/share/ddcutil-service/examples/</b></p>
+
+<p style="margin-left:18%;">The service is packaged with
+several example scripts, including <b>dbus-send</b>
+bash-scripts and <b>python3</b> clients for D-Bus
+<b>dasbus</b> and <b>QtDBus</b> APIs.</p>
 
 <h2>EXAMPLES
 <a name="EXAMPLES"></a>
@@ -540,31 +559,40 @@ set-property com.ddcutil.DdcutilService
 /com/ddcutil/DdcutilObject \ <br>
 com.ddcutil.DdcutilInterface ServiceInfoLogging b true</p>
 
-<p style="margin-left:9%; margin-top: 1em">The installed
-service is packaged with several examples of it&rsquo;s use,
-including <b>dbus-send</b> scripts and <b>python3</b>
-clients for D-Bus <b>dasbus</b> and <b>QtDBus</b> APIs. The
-examples are normally be installed in:
-<b>/usr/share/ddcutil-service/examples/</b></p>
-
 <h2>LIMITATIONS
 <a name="LIMITATIONS"></a>
 </h2>
 
 
-<p style="margin-left:9%; margin-top: 1em">Support for the
-<b>ConnectedDisplaysChanged</b> signal depends on features
-within the GPU and GPU-Driver.</p>
+<p style="margin-left:9%; margin-top: 1em">The service may
+fail to determine working options for the
+<b>ConnectedDisplaysChanged</b> signal for some mixes of
+VPUs and GPUs (some hardware/drivers misreport their
+capabilities). If signals are not being raised, try manually
+adding <b>--prefer-polling</b> option, this option is not
+the most responsive, but it is the one most likely to always
+work.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some GPU drivers
-and VDUs have buggy DDC implementations. If you have the
-choice, a DisplayPort to DisplayPort connection may work
-more reliably than DVI or HDMI.</p>
+and VDUs have buggy implementations of DDC. If you have the
+choice, a <b>DisplayPort to DisplayPort</b> connection may
+work more reliably than <b>DVI, HDMI</b> or mixed
+connectors. Different GPU driver editions, such as
+production, beta, and development, may vary in the state of
+their DDC support.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some parameters
 can only be changed at process startup. The service can be
 restarted either by killing it with a UNIX signal, or by
-invoking the service&rsquo;s <b>Restart</b> menthod.</p>
+invoking the service&rsquo;s <b>Restart</b> method.</p>
+
+<h2>SEE ALSO
+<a name="SEE ALSO"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">dbus-daemon(1),
+dbus-send(1), busctl(1), vdu_controls(1), ddcutil(1)</p>
 
 <h2>REPORTING BUGS
 <a name="REPORTING BUGS"></a>
@@ -594,7 +622,7 @@ development of this service.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Thanks also to
 <b>Michal Suchanek</b> for assistance with the OpenSUSE RPM
-spec.</p>
+packaging.</p>
 
 <h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
@@ -602,7 +630,7 @@ spec.</p>
 
 
 <p style="margin-left:9%; margin-top: 1em">Copyright (C)
-2023 Michael Hamilton.</p>
+2023,2024 Michael Hamilton.</p>
 
 
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>

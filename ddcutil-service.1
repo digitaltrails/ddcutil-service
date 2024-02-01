@@ -361,7 +361,14 @@ command line argument has been used to make all properties and sleep-multipliers
 
 .TP
 .B ServicePollInterval
-Query or set the display change detection poll interval (minimum 10, zero to disable polling).
+Query or set the display change detection poll-interval (minimum 10 seconds, zero to disable polling).
+
+.TP
+.B ServicePollCascadeInterval
+Query or set the display change detection poll-cascade-interval (minimum 0.1 seconds).
+When dealing with a cascade of events, for example, when a desktop-session is locked
+and sets all VDUs to DPMS sleep, polling occurs more frequently until the cascade is
+cleared.
 
 .PP
 Properties can be queried and set using utilities such as
@@ -372,14 +379,12 @@ and
 see
 .B EXAMPLES.
 
-.SH CONFIG FILES
+.SH FILES
 
-If running via the dbus-daemon, when the service is requested, the
-dbus-daemon consults the service definition in:
-
-.B     /usr/share/dbus-1/services/com.ddcutil.DdcutilService.service
-.PP
-Typically the contents would be as follows
+.TP
+.B /usr/share/dbus-1/services/com.ddcutil.DdcutilService.service
+If running via the dbus-daemon, this config file is read when the
+service is requested.  Typically the contents would be as follows
 
 .nf
     [D-BUS Service]
@@ -387,24 +392,40 @@ Typically the contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-Any service options can be appended to the
-.B Exec
+Any service options, such as
+.B ‐‐prefer‐polling,
+can be appended to the
+.B Exec=
 line.
 
-If you wish to install the service for use by a single user,
-on many Linux distributions, the dbus-daemon first looks for the session service
-config-file in:
-
+.TP
 .B $HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service
+If you do not have root access or wish to set options
+for a specific user, the dbus-daemon first looks for in
+.B $HOME/.local/share
+before looking in
+.B /usr/share.
 
-When initialised at service startup, the
-.B libddcutil
-library loads options from
+.TP
 .B $HOME/.config/ddcutil/ddcutilrc
-at startup, see
+When initialised at service startup,
+.B libddcutil
+loads options from its rc file. See
 .I https://www.ddcutil.com/config_file/
 for details.
 
+.TP
+.B /usr/share/ddcutil-service/examples/
+The service is packaged with several example scripts, including
+.B dbus-send
+bash-scripts
+and
+.B python3
+clients for D-Bus
+.B dasbus
+and
+.B QtDBus
+APIs.
 
 .SH EXAMPLES
 .PP
@@ -449,30 +470,26 @@ can be used from the command line to interact with the service.
        com.ddcutil.DdcutilInterface ServiceInfoLogging b true
 .fi
 
-.PP
-The installed service is packaged with several examples of it's use, including
-.B dbus-send
-scripts
-and
-.B python3
-clients for D-Bus
-.B dasbus
-and
-.B QtDBus
-APIs.  The examples are normally be installed in:
-.B /usr/share/ddcutil-service/examples/
-
-
-.fi
-
 .SH LIMITATIONS
 
-Support for the
+The service may fail to determine working options for the
 .B ConnectedDisplaysChanged
-signal depends on features within the GPU and GPU-Driver.
+signal for some mixes of VPUs and GPUs (some hardware/drivers
+misreport their capabilities).
+If signals are not being raised, try manually adding
+.B --prefer-polling
+option, this option is not the most responsive, but it is
+the one most likely to always work.
 
-Some GPU drivers and VDUs have buggy DDC implementations. If you have the choice,
-a DisplayPort to DisplayPort connection may work more reliably than DVI or HDMI.
+Some GPU drivers and VDUs have buggy implementations of DDC. If you have the choice,
+a
+.B DisplayPort to DisplayPort
+connection may work more reliably than
+.B DVI,
+.B HDMI
+or mixed connectors.
+Different GPU driver editions, such as production, beta, and development, may
+vary in the state of their DDC support.
 
 Some
 .libddcutil
@@ -480,8 +497,12 @@ parameters can only be changed at process startup.  The service can be
 restarted either by killing it with a UNIX signal, or by invoking the
 service's
 .B Restart
-menthod.
+method.
 
+.SH SEE ALSO
+
+.TP
+dbus-daemon(1), dbus-send(1), busctl(1), vdu_controls(1), ddcutil(1)
 
 .SH REPORTING BUGS
 
@@ -502,10 +523,10 @@ and all the assistance and advice provided during the development of this servic
 
 Thanks also to
 .B Michal Suchanek
-for assistance with the OpenSUSE RPM spec.
+for assistance with the OpenSUSE RPM packaging.
 
 .SH COPYRIGHT
-Copyright (C) 2023 Michael Hamilton.
+Copyright (C) 2023,2024 Michael Hamilton.
 
 .B ddcutil-service
 is free software; you can redistribute it and/or modify it
