@@ -253,7 +253,6 @@ The service may raise a
 D-Bus signal when a display undergoes a status change
 due to connectivity, hot-plug and DPMS events.
 
-.PP
 Changes can be detected in one of two ways.  The most efficient method requires
 .B ddcutil/libddcutil version 2.1.0+ and a GPU configured for DRM.
 If those requirements can't be met, the service can periodically poll for changes.
@@ -262,7 +261,6 @@ polling can be forced by the
 .B --prefer-polling
 option.    The default polling interval is 30 seconds.
 
-.PP
 Not all displays, GPU's, GPU-drivers, or cabling, provide the necessary support
 for detecting connection status changes by either method.  Results may also vary
 depending on the mix of desktop components,
