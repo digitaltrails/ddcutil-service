@@ -1514,8 +1514,7 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(ptr->data);
                         const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
                         vdu_poll_data->connected = TRUE;
-                        g_debug("Poll check: found-existing disp=%d %.30s... has_dpms=%d",
-                                ndx + 1, edid_encoded, vdu_poll_data->has_dpms);
+                        g_debug("Poll check: existing-connection disp=%d %.30s...", ndx + 1, edid_encoded);
                         if (vdu_poll_data->has_dpms) {
                             vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
                             if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
@@ -1544,10 +1543,9 @@ static bool poll_for_changes() {
                             vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
                         }
                         poll_list = g_list_append(poll_list, vdu_poll_data);
-                        g_debug("Poll check: found-new disp=%d %.30s... has_dpms=%d awake=%d ",
+                        g_debug("Poll check: new-connection disp=%d %.30s... has_dpms=%d awake=%d ",
                             ndx + 1, edid_encoded, vdu_poll_data->has_dpms, vdu_poll_data->dpms_awake);
-                        if (next_poll_time) {
-                            // Not first time through
+                        if (next_poll_time) {  // Not on first time through
                             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
                             Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                             event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
