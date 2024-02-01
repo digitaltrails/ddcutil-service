@@ -43,23 +43,22 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 
 .SH DESCRIPTION
 .B ddcutil-service
-ddcutil-service is D-Bus service wrapper for libddcutil which
-implements the VESA DDC Monitor Control Command Set.  In general,
-most things that can be controlled using a monitor's on-screen
+is D-Bus service wrapper for libddcutil which
+implements the VESA DDC Monitor Control Command Set.
+Most things that can be controlled using a monitor's on-screen
 display can be controlled by this service.
 
 .P
 The
-.B ddctuil-service
+service
 is registered as a
 .B session-service
 with the
-.B dbus-daemon
-which starts the service on demand.
-Should the service error and terminate, the
-.B dbus-daemon
-will automatically restart it when it is next accessed.  Client
-connections with the service are stateless.
+.B dbus-daemon.  The daemon starts the service on demand.
+If the service terminates for any reason, the
+daemon will automatically restart it when it is next accessed.
+Client connections with the service are stateless, each request
+is handled atomically.
 
 .SS OPTIONS
 
