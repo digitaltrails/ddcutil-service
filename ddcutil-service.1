@@ -331,7 +331,7 @@ to unmute.
 .TP
 .B ServiceInfoLogging
 Enable/disable the service's diagnostic level output to include info and debug messages.
-Not that
+Note that
 .B libddcutil
 also has a logging mechanism (see \fBlibddcutil ddc_init options\fP).
 
@@ -383,11 +383,8 @@ service is requested.  Typically the contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-Any service options, such as
-.B ‐‐prefer‐polling,
-can be appended to the
-.B Exec=
-line.
+Any service options, such as \fB--prefer-polling\fP,
+can be appended to the \fBExec=\fP line.
 
 .TP
 .B $HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service
@@ -420,14 +417,18 @@ APIs.
 
 .SH EXAMPLES
 .PP
-The systemd utility
-.B bustctl
-can be used from the command line to interact with the service.
+The commonly available command line utilities systemd \fBbustctl\fP and
+dbus-tools \fBdbus-send\fP command
+can be used to interact with the service.
 
 .B Summarise the service methods and properties:
 
 .nf
     busctl --user introspect com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject
+
+    dbus-send --session --dest=com.ddcutil.DdcutilService --print-reply \\
+        /com/ddcutil/DdcutilObject \\
+        org.freedesktop.DBus.Introspectable.Introspect
 .fi
 
 .B Detect the connected displays:
@@ -435,13 +436,22 @@ can be used from the command line to interact with the service.
 .nf
     busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
         com.ddcutil.DdcutilInterface Detect u 0
+
+    dbus-send --dest=com.ddcutil.DdcutilService --print-reply --type=method_call \\
+        /com/ddcutil/DdcutilObject com.ddcutil.DdcutilInterface.Detect uint32:0
 .fi
+
+
 
 .B Get the brightness of display-1 (VCP 0x10):
 
 .nf
     busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
         com.ddcutil.DdcutilInterface GetVcp isyu 1 "" 0x10 0
+
+    dbus-send --dest=com.ddcutil.DdcutilService --print-reply --type=method_call \\
+        /com/ddcutil/DdcutilObject com.ddcutil.DdcutilInterface.GetVcp \\
+        int32:1 string: byte:0x10 uint32:0
 .fi
 
 .B Set brightness of display-1 (VCP 0x10):
@@ -449,6 +459,10 @@ can be used from the command line to interact with the service.
 .nf
     busctl --user call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
         com.ddcutil.DdcutilInterface SetVcp isyqu 1 "" 16 50 0
+
+    dbus-send --session --dest=com.ddcutil.DdcutilService --print-reply --type=method_call \\
+        /com/ddcutil/DdcutilObject com.ddcutil.DdcutilInterface.SetVcp \\
+        int32:1 string:"" byte:0x10 uint16:10  uint32:0
 .fi
 
 .B Query or set the service logging level:
@@ -457,8 +471,21 @@ can be used from the command line to interact with the service.
    busctl --user get-property com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
        com.ddcutil.DdcutilInterface ServiceInfoLogging
 
+
    busctl --user set-property com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
        com.ddcutil.DdcutilInterface ServiceInfoLogging b true
+
+   dbus-send --session --dest=com.ddcutil.DdcutilService --print-reply \\
+        --type=method_call /com/ddcutil/DdcutilObject \\
+        org.freedesktop.DBus.Properties.Get \\
+        string:com.ddcutil.DdcutilInterface \\
+        string:ServiceInfoLogging
+
+   dbus-send --dest=com.ddcutil.DdcutilService --print-reply \\
+        --type=method_call /com/ddcutil/DdcutilObject \\
+        org.freedesktop.DBus.Properties.Set \\
+        string:com.ddcutil.DdcutilInterface \\
+        string:ServiceInfoLogging variant:boolean:true
 .fi
 
 .SH LIMITATIONS

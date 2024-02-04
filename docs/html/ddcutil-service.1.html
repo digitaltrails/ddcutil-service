@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Feb  2 11:50:03 2024 -->
+<!-- CreationDate: Mon Feb  5 07:53:34 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -411,7 +411,7 @@ to <b>false</b> to unmute.</p>
 
 <p style="margin-left:18%;">Enable/disable the
 service&rsquo;s diagnostic level output to include info and
-debug messages. Not that <b>libddcutil</b> also has a
+debug messages. Note that <b>libddcutil</b> also has a
 logging mechanism (see <b>libddcutil ddc_init
 options</b>).</p>
 
@@ -472,8 +472,8 @@ Name=com.ddcutil.DdcutilService <br>
 Exec=/usr/bin/ddcutil-service</p>
 
 <p style="margin-left:18%; margin-top: 1em">Any service
-options, such as <b>&acirc;&acirc;prefer&acirc;polling,</b>
-can be appended to the <b>Exec=</b> line.</p>
+options, such as <b>--prefer-polling</b>, can be appended to
+the <b>Exec=</b> line.</p>
 
 
 <p style="margin-left:9%;"><b>$HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
@@ -504,9 +504,10 @@ bash-scripts and <b>python3</b> clients for D-Bus
 </h2>
 
 
-<p style="margin-left:9%; margin-top: 1em">The systemd
-utility <b>bustctl</b> can be used from the command line to
-interact with the service.</p>
+<p style="margin-left:9%; margin-top: 1em">The commonly
+available command line utilities systemd <b>bustctl</b> and
+dbus-tools <b>dbus-send</b> command can be used to interact
+with the service.</p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>Summarise the
 service methods and properties:</b></p>
@@ -515,6 +516,12 @@ service methods and properties:</b></p>
 introspect com.ddcutil.DdcutilService
 /com/ddcutil/DdcutilObject</p>
 
+<p style="margin-left:9%; margin-top: 1em">dbus-send
+--session --dest=com.ddcutil.DdcutilService --print-reply \
+<br>
+/com/ddcutil/DdcutilObject \ <br>
+org.freedesktop.DBus.Introspectable.Introspect</p>
+
 <p style="margin-left:9%; margin-top: 1em"><b>Detect the
 connected displays:</b></p>
 
@@ -522,6 +529,12 @@ connected displays:</b></p>
 call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
 <br>
 com.ddcutil.DdcutilInterface Detect u 0</p>
+
+<p style="margin-left:9%; margin-top: 1em">dbus-send
+--dest=com.ddcutil.DdcutilService --print-reply
+--type=method_call \ <br>
+/com/ddcutil/DdcutilObject
+com.ddcutil.DdcutilInterface.Detect uint32:0</p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>Get the
 brightness of display-1 (VCP 0x10):</b></p>
@@ -532,6 +545,13 @@ call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
 com.ddcutil.DdcutilInterface GetVcp isyu 1 &quot;&quot; 0x10
 0</p>
 
+<p style="margin-left:9%; margin-top: 1em">dbus-send
+--dest=com.ddcutil.DdcutilService --print-reply
+--type=method_call \ <br>
+/com/ddcutil/DdcutilObject
+com.ddcutil.DdcutilInterface.GetVcp \ <br>
+int32:1 string: byte:0x10 uint32:0</p>
+
 <p style="margin-left:9%; margin-top: 1em"><b>Set
 brightness of display-1 (VCP 0x10):</b></p>
 
@@ -540,6 +560,13 @@ call com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \
 <br>
 com.ddcutil.DdcutilInterface SetVcp isyqu 1 &quot;&quot; 16
 50 0</p>
+
+<p style="margin-left:9%; margin-top: 1em">dbus-send
+--session --dest=com.ddcutil.DdcutilService --print-reply
+--type=method_call \ <br>
+/com/ddcutil/DdcutilObject
+com.ddcutil.DdcutilInterface.SetVcp \ <br>
+int32:1 string:&quot;&quot; byte:0x10 uint16:10 uint32:0</p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>Query or set
 the service logging level:</b></p>
@@ -553,6 +580,21 @@ com.ddcutil.DdcutilInterface ServiceInfoLogging</p>
 set-property com.ddcutil.DdcutilService
 /com/ddcutil/DdcutilObject \ <br>
 com.ddcutil.DdcutilInterface ServiceInfoLogging b true</p>
+
+<p style="margin-left:9%; margin-top: 1em">dbus-send
+--session --dest=com.ddcutil.DdcutilService --print-reply \
+<br>
+--type=method_call /com/ddcutil/DdcutilObject \ <br>
+org.freedesktop.DBus.Properties.Get \ <br>
+string:com.ddcutil.DdcutilInterface \ <br>
+string:ServiceInfoLogging</p>
+
+<p style="margin-left:9%; margin-top: 1em">dbus-send
+--dest=com.ddcutil.DdcutilService --print-reply \ <br>
+--type=method_call /com/ddcutil/DdcutilObject \ <br>
+org.freedesktop.DBus.Properties.Set \ <br>
+string:com.ddcutil.DdcutilInterface \ <br>
+string:ServiceInfoLogging variant:boolean:true</p>
 
 <h2>LIMITATIONS
 <a name="LIMITATIONS"></a>
