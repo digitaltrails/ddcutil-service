@@ -83,11 +83,7 @@ Outputs the XML introspection text for the service and exits.
 .B "--prefer-polling"
 
 Set polling to be the preferred method for detecting display connectivity changes.
-Normally polling is the a fallback used if a GPU-driver does
-not support DMA or does not provide the change-detection features
-required by
-.B libddcutil.
-Polling will probably work with any GPU.
+See \fBSERVICE SIGNALS\fP.
 
 .TP
 .B "--poll-interval" \fIseconds\fP
@@ -106,9 +102,9 @@ Default 0.5 seconds,  minimum 0.1 seconds.
 .TP
 .B "--disable-signals"
 
-Disable all display connectivity change detection and disable the
+Disable the
 .B ConnectDisplaysChanged signal
-sent to clients.
+sent to clients and also disable any associated polling for changes.
 This cannot be reversed without restarting the service.
 
 .TP
@@ -253,17 +249,20 @@ D-Bus signal when a display undergoes a status change
 due to connectivity, hot-plug and DPMS events.
 
 Changes can be detected in one of two ways.  The most efficient method requires
-.B ddcutil/libddcutil version 2.1.0+ and a GPU configured for DRM.
-If those requirements can't be met, the service can periodically poll for changes.
-If the requirments for the first method are met, but DRM isn't working as expected,
+\fBddcutil/libddcutil version 2.1.0+\fP, a GPU configured for DRM, and
+the \fB--enable-watch-displays\fP to be added to \fI[libddcutil] options\fP
+in \fB$HOME/.config/ddcutil/ddcutilrc\fP.
+If those prerequisites are not be met, the service will periodically poll for changes.
+If change detection using DRM isn't working as expected,
 polling can be forced by the
 .B --prefer-polling
 option.    The default polling interval is 30 seconds.
 
 Not all displays, GPU's, GPU-drivers, or cabling, provide the necessary support
-for detecting connection status changes by either method.  Results may also vary
-depending on the mix of desktop components,
-such as KDE, Gnome, X11, and Wayland.
+for detecting connection status changes by either method. Results may also vary
+depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland.
+Another issue is that DisplayPort behaves differently to DVI and HDMI when
+a display is turned off but remains connected.
 
 .SH SERVICE PROPERTIES
 
