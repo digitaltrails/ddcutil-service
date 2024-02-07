@@ -73,9 +73,14 @@
 #endif
 
 
-static bool display_status_detection_enabled = FALSE;
-static bool mute_signals = FALSE;
-static bool lock_properties = FALSE;
+static gboolean display_status_detection_enabled = FALSE;
+static gboolean enable_signals = FALSE;
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+static gboolean prefer_polling = FALSE;
+#else
+static gboolean prefer_polling = TRUE;
+#endif
+static gboolean lock_properties = FALSE;
 
 #define MIN_POLL_SECONDS 10
 #define DEFAULT_POLL_SECONDS 30
@@ -334,7 +339,7 @@ static const gchar introspection_xml[] =
 
         "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
         "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
-        "    <property type='b' name='ServiceMuteSignals' access='readwrite'/>"
+        "    <property type='b' name='ServiceEmitSignals' access='readwrite'/>"
         "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
         "    <property type='b' name='ServiceParametersLocked' access='read'/>"
         "    <property type='u' name='ServicePollInterval' access='readwrite'/>"
@@ -1328,8 +1333,8 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
         ret = g_variant_new_boolean(is_service_info_logging());
     }
-    else if (g_strcmp0(property_name, "ServiceMuteSignals") == 0) {
-        ret = g_variant_new_boolean(mute_signals);
+    else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
+        ret = g_variant_new_boolean(enable_signals);
     }
     else if (g_strcmp0(property_name, "ServiceFlagOptions") == 0) {
         GVariantBuilder* builder = g_variant_builder_new(G_VARIANT_TYPE("a{is}"));
@@ -1402,29 +1407,33 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
         g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
     }
-    else if (g_strcmp0(property_name, "ServiceMuteSignals") == 0) {
-        mute_signals = g_variant_get_boolean(value);
+    else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
+        enable_signals = g_variant_get_boolean(value);
+        g_message("ServiceEmitSignals %s", enable_signals ? "enabled" : "disabled");
+        if (prefer_polling) {
+            g_message("ServiceEmitSignals using ddcutil-service polling");
+        }
+        else {
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-        if (poll_interval_micros == 0) {  // Not polling, therefore using libddcutil watch thread
-            if (mute_signals) {
-                const int status = ddca_stop_watch_displays(DDCA_EVENT_CLASS_ALL);
+            if (enable_signals) {
+                g_message("ServiceEmitSignals using libddcutil change detection");
+                const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status != DDCRC_OK) {
                     char* message_text = get_status_message(status);
-                    g_message("ServiceMuteSignals ddca_stop_watch_displays %d %s", status, message_text);
+                    g_message("ServiceEmitSignals ddca_start_watch_displays %d %s", status, message_text);
                     free(message_text);
                 }
             }
             else {
-                const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+                const int status = ddca_stop_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status != DDCRC_OK) {
                     char* message_text = get_status_message(status);
-                    g_message("ServiceMuteSignals ddca_start_watch_displays %d %s", status, message_text);
+                    g_message("ServiceEmitSignals ddca_stop_watch_displays %d %s", status, message_text);
                     free(message_text);
                 }
             }
-        }
 #endif
-        g_message("ServiceMuteSignals %s", mute_signals ? "muted" : "unmuted");
+        }
     }
     else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
         const uint secs = g_variant_get_uint32(value);
@@ -1637,7 +1646,7 @@ typedef struct {
 static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
     // g_debug("prepare");
     *timeout_millis = 5000; // This doesn't appear to be strict, after an event it doesn't seem to apply for a while???
-    if (mute_signals) {
+    if (!enable_signals) {
         return FALSE;
     }
 
@@ -1845,9 +1854,8 @@ int main(int argc, char* argv[]) {
     gboolean version_request = FALSE;     // WARNING gboolean is int sized, do not substitute bool or
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
-    gboolean disable_display_status_events = FALSE;
+    gboolean enable_display_status_events = FALSE;
 
-    gboolean prefer_polling = FALSE;
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
 
@@ -1879,8 +1887,8 @@ int main(int argc, char* argv[]) {
             "polling minimum interval between cascading events in seconds, 0.1 minimum", NULL
         },
         {
-            "disable-signals", 'd', 0, G_OPTION_ARG_NONE, &disable_display_status_events,
-            "disable the D-Bus ConnectDisplaysChanged signal and associated change monitoring", NULL
+            "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_display_status_events,
+            "enable the D-Bus ConnectedDisplaysChanged signal and associated change monitoring", NULL
         },
         {
             "lock", 'L', 0, G_OPTION_ARG_NONE, &lock_properties,
@@ -1971,16 +1979,15 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    if (disable_display_status_events) {
-        g_warning("Disabled ConnectDisplaysChanged signal - change detection disabled by command line parameter");
+    if (!enable_display_status_events) {
+        g_message("ConnectedDisplaysChanged signals and connectivity monitoring are disabled.");
         poll_interval_micros = 0;  // Disable internal polling
     }
     else {
 
-
 #if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
         if (prefer_polling) {
-            g_message("ConnectDisplaysChanged signal - prefering polling instead of libddcutil change detection");
+            g_message("ConnectedDisplaysChanged signal - prefering polling instead of libddcutil change detection");
         }
         else {
             const int rstatus = ddca_register_display_status_callback(display_status_event_callback);
@@ -1994,7 +2001,7 @@ int main(int argc, char* argv[]) {
             else {
                 const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status == DDCRC_OK) {
-                    g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
+                    g_message("Enabled ConnectedDisplaysChanged signal - using libddcutil change detection");
                     poll_interval_micros = 0;  // Disable internal polling
                 }
                 else {
@@ -2013,7 +2020,7 @@ int main(int argc, char* argv[]) {
                 // Command line override of polling interval
                 if (poll_seconds == 0) {
                     poll_interval_micros = 0;  // Disable
-                    g_message("ConnectDisplaysChanged - polling disabled by --poll-interval 0");
+                    g_message("ConnectedDisplaysChanged - polling disabled by --poll-interval 0");
                 }
                 else if (poll_seconds < MIN_POLL_SECONDS) {
                     g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
@@ -2023,7 +2030,7 @@ int main(int argc, char* argv[]) {
                     poll_interval_micros = poll_seconds * 1000000;
                 }
             }
-            g_message("Enabled ConnectDisplaysChanged signal - using internal polling every %ld seconds",
+            g_message("Enabled ConnectedDisplaysChanged signal - using internal polling every %ld seconds",
                 poll_interval_micros / 1000000);
 
             if (poll_cascade_interval_seconds > 0) {
@@ -2037,7 +2044,7 @@ int main(int argc, char* argv[]) {
                     poll_cascade_interval_micros = (long) (poll_cascade_interval_seconds * 1000000);
                 }
             }
-            g_message("Set ConnectDisplaysChanged event cascade interval to %5.3f seconds",
+            g_message("Set ConnectedDisplaysChanged event cascade interval to %5.3f seconds",
                 poll_cascade_interval_micros / 1000000.0);
         }
 
