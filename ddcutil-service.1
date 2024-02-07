@@ -104,8 +104,10 @@ Default 0.5 seconds,  minimum 0.1 seconds.
 
 Disable the
 .B ConnectDisplaysChanged signal
-sent to clients and also disable any associated polling for changes.
-This cannot be reversed without restarting the service.
+sent to clients and also disable any monitoring for changes.
+This can be toggled by altering the
+.B ServiceMuteSignals
+property.
 
 .TP
 .B "--lock"
@@ -264,6 +266,10 @@ depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland
 Another issue is that DisplayPort behaves differently to DVI and HDMI when
 a display is turned off but remains connected.
 
+Monitoring for changes can be toggled by altering the
+.B ServiceMuteSignals
+property.
+
 .SH SERVICE PROPERTIES
 
 The service provides several D-Bus accessible properties for querying
@@ -320,12 +326,8 @@ version string.
 .TP
 .B ServiceMuteSignals
 Set this property to \fBtrue\fP to mute the signals emitted by the service.
-Any
-.B libddcutil
-managed event-detection threads created at service startup
-will continue to run, but no signals will be emitted.  Any
-internal service polling will be suspended.  Set to \fBfalse\fP
-to unmute.
+Monitoring for changes will will stop and no signals will be emitted.
+Set to \fBfalse\fP to unmute.
 
 .TP
 .B ServiceInfoLogging

@@ -1404,6 +1404,26 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
     }
     else if (g_strcmp0(property_name, "ServiceMuteSignals") == 0) {
         mute_signals = g_variant_get_boolean(value);
+#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+        if (poll_interval_micros == 0) {  // Not polling, therefore using libddcutil watch thread
+            if (mute_signals) {
+                const int status = ddca_stop_watch_displays(DDCA_EVENT_CLASS_ALL);
+                if (status != DDCRC_OK) {
+                    char* message_text = get_status_message(status);
+                    g_message("ServiceMuteSignals ddca_stop_watch_displays %d %s", status, message_text);
+                    free(message_text);
+                }
+            }
+            else {
+                const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+                if (status != DDCRC_OK) {
+                    char* message_text = get_status_message(status);
+                    g_message("ServiceMuteSignals ddca_start_watch_displays %d %s", status, message_text);
+                    free(message_text);
+                }
+            }
+        }
+#endif
         g_message("ServiceMuteSignals %s", mute_signals ? "muted" : "unmuted");
     }
     else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
@@ -1963,18 +1983,27 @@ int main(int argc, char* argv[]) {
             g_message("ConnectDisplaysChanged signal - prefering polling instead of libddcutil change detection");
         }
         else {
-            const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
-            if (status == DDCRC_OK) {
-                g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
-                ddca_register_display_status_callback(display_status_event_callback);
-                poll_interval_micros = 0;  // Disable internal polling
-            }
-            else {
-                char* message_text = get_status_message(status);
-                g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status,
+            const int rstatus = ddca_register_display_status_callback(display_status_event_callback);
+            if (rstatus != DDCRC_OK) {
+                char* message_text = get_status_message(rstatus);
+                g_message("libddcutil ddca_register_display_status_callback failed (status=%d - %s)", rstatus,
                           message_text);
                 free(message_text);
                 g_warning("libddcutil change detection unavailable for this GPU");
+            }
+            else {
+                const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+                if (status == DDCRC_OK) {
+                    g_message("Enabled ConnectDisplaysChanged signal - using libddcutil change detection");
+                    poll_interval_micros = 0;  // Disable internal polling
+                }
+                else {
+                    char* message_text = get_status_message(status);
+                    g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status,
+                              message_text);
+                    free(message_text);
+                    g_warning("libddcutil change detection unavailable for this GPU");
+                }
             }
         }
 #endif

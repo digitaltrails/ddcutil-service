@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Tue Feb  6 14:13:05 2024 -->
+<!-- CreationDate: Wed Feb  7 17:06:28 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -143,8 +143,8 @@ seconds.</p>
 
 <p style="margin-left:18%; margin-top: 1em">Disable the
 <b>ConnectDisplaysChanged signal</b> sent to clients and
-also disable any associated polling for changes. This cannot
-be reversed without restarting the service.</p>
+also disable any monitoring for changes. This can be toggled
+by altering the <b>ServiceMuteSignals</b> property.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -346,6 +346,10 @@ Another issue is that DisplayPort behaves differently to DVI
 and HDMI when a display is turned off but remains
 connected.</p>
 
+<p style="margin-left:9%; margin-top: 1em">Monitoring for
+changes can be toggled by altering the
+<b>ServiceMuteSignals</b> property.</p>
+
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>
 </h2>
@@ -402,11 +406,9 @@ version string.</p>
 <p style="margin-left:9%;"><b>ServiceMuteSignals</b></p>
 
 <p style="margin-left:18%;">Set this property to
-<b>true</b> to mute the signals emitted by the service. Any
-<b>libddcutil</b> managed event-detection threads created at
-service startup will continue to run, but no signals will be
-emitted. Any internal service polling will be suspended. Set
-to <b>false</b> to unmute.</p>
+<b>true</b> to mute the signals emitted by the service.
+Monitoring for changes will will stop and no signals will be
+emitted. Set to <b>false</b> to unmute.</p>
 
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 
