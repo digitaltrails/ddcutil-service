@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Wed Feb  7 17:06:28 2024 -->
+<!-- CreationDate: Thu Feb  8 08:31:48 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -57,11 +57,11 @@ Virtual Control Panel</p>
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>
 <i>--help</i> | <i>--version</i> | <i>--introspect</i>
 <b><br>
-ddcutil-service</b> [ <b>--prefer-polling</b> ] | [
-<b>--polling-interval</b> <i>seconds</i> ] | [
-<b>--disable-signals</b> ] | [ <b>--lock</b> ] | [
-<b>--log-info</b> ] [ <b>--ddca-syslog-level</b> <i>N</i> ]
-| [ <b>--ddca-init-options</b> <i>M</i> ] [ <b>--</b>
+ddcutil-service</b> [ <b>--emit-signals</b> ] | [
+<b>--prefer-polling</b> ] | [ <b>--polling-interval</b>
+<i>seconds</i> ] | [ <b>--lock</b> ] | [ <b>--log-info</b> ]
+[ <b>--ddca-syslog-level</b> <i>N</i> ] | [
+<b>--ddca-init-options</b> <i>M</i> ] [ <b>--</b>
 <i>libddcutil ddc_init options...</i> ]</p>
 
 <h2>DESCRIPTION
@@ -115,11 +115,20 @@ and exits.</p>
 <p style="margin-left:18%; margin-top: 1em">Outputs the XML
 introspection text for the service and exits.</p>
 
+<p style="margin-left:9%;"><b>--emit-signals</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Enable the
+<b>ConnectedDisplaysChanged signal</b> sent to clients and
+also enable any monitoring for changes. Once the service is
+running, this setting can be toggled by altering the
+<b>ServiceEmitSignals</b> property. See <b>SERVICE
+SIGNALS</b>.</p>
+
 <p style="margin-left:9%;"><b>--prefer-polling</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Set polling to
 be the preferred method for detecting display connectivity
-changes. See <b>SERVICE SIGNALS</b>.</p>
+changes for the <b>ConnectedDisplaysChanged signal</b>.</p>
 
 <p style="margin-left:9%;"><b>--poll-interval</b>
 <i>seconds</i></p>
@@ -138,13 +147,6 @@ events within a cascade of events. For example, a cascade of
 events will occur when a session is locked and all displays
 are put into DPMS sleep. Default 0.5 seconds, minimum 0.1
 seconds.</p>
-
-<p style="margin-left:9%;"><b>--disable-signals</b></p>
-
-<p style="margin-left:18%; margin-top: 1em">Disable the
-<b>ConnectDisplaysChanged signal</b> sent to clients and
-also disable any monitoring for changes. This can be toggled
-by altering the <b>ServiceMuteSignals</b> property.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -348,7 +350,7 @@ connected.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Monitoring for
 changes can be toggled by altering the
-<b>ServiceMuteSignals</b> property.</p>
+<b>ServiceEmitSignals</b> property.</p>
 
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>
@@ -403,12 +405,12 @@ settings were actually applied by the monitor.</p>
 <p style="margin-left:18%;">Query the <b>libddcutil</b>
 version string.</p>
 
-<p style="margin-left:9%;"><b>ServiceMuteSignals</b></p>
+<p style="margin-left:9%;"><b>ServiceEmitSignals</b></p>
 
 <p style="margin-left:18%;">Set this property to
-<b>true</b> to mute the signals emitted by the service.
-Monitoring for changes will will stop and no signals will be
-emitted. Set to <b>false</b> to unmute.</p>
+<b>true</b> or <b>false</b> to enable or disable the
+services&rsquo;s <b>ConnectedDisplaysChanged</b> signal and
+associated monitoring.</p>
 
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 
