@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Feb  8 17:08:36 2024 -->
+<!-- CreationDate: Fri Feb  9 09:51:49 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -337,8 +337,14 @@ Bus</b> and search for <b>ddcutil-service.</b></p>
 </h2>
 
 
+<p style="margin-left:9%; margin-top: 1em">At startup the
+service emits the <b>ServiceInitialized</b> D-Bus signal.
+This provides clients with the means to restore any
+properties or settings they may require subsequent to any
+restart.</p>
+
 <p style="margin-left:9%; margin-top: 1em">The service may
-optionally raise a <b>ConnectedDisplaysChanged</b> D-Bus
+optionally emit a <b>ConnectedDisplaysChanged</b> D-Bus
 signal when a display undergoes a status change due to
 connectivity, hot-plug and DPMS events.</p>
 

@@ -264,7 +264,13 @@ and search for
 
 .SH SERVICE SIGNALS
 
-The service may optionally raise a
+At startup the service emits the
+.B ServiceInitialized
+D-Bus signal.  This provides clients with the means to restore
+any properties or settings they may require subsequent to any
+restart.
+
+The service may optionally emit a
 .B ConnectedDisplaysChanged
 D-Bus signal when a display undergoes a status change
 due to connectivity, hot-plug and DPMS events.

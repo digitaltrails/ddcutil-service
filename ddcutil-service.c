@@ -323,6 +323,10 @@ static const gchar introspection_xml[] =
         "      <arg type='u' name='flags'/>"
         "    </signal>"
 
+        "    <signal name='ServiceInitialized'>"
+        "      <arg type='u' name='flags'/>"
+        "    </signal>"
+
         "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
         "    <property type='a{is}' name='StatusValues' access='read'/>"
 
@@ -1405,7 +1409,7 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
     }
     else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
         enable_signals = g_variant_get_boolean(value);
-        g_message("ServiceEmitSignals %s", enable_signals ? "enabled" : "disabled");
+        g_message("ServiceEmitSignals set property to %s", enable_signals ? "enabled" : "disabled");
         if (prefer_polling) {
             g_message("ServiceEmitSignals using ddcutil-service polling");
         }
@@ -1817,6 +1821,18 @@ static void on_bus_acquired(GDBusConnection* connection, const gchar* name, gpoi
  */
 static void on_name_acquired(GDBusConnection* connection, const gchar* name, gpointer user_data) {
     g_message("Name acquired %s", name);
+    GError* error = NULL;
+    g_message("Emitting ServiceInitialized signal");
+    if (!g_dbus_connection_emit_signal(dbus_connection,
+                                       NULL,
+                                       "/com/ddcutil/DdcutilObject",
+                                       "com.ddcutil.DdcutilInterface",
+                                       "ServiceInitialized",
+                                       g_variant_new("(u)", 0),
+                                       &error)) {
+        g_warning("Signal ServiceInitialized: failed %s", error != NULL ? error->message : "");
+        g_free(error);
+    }
 }
 
 /**
