@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Feb  8 14:22:04 2024 -->
+<!-- CreationDate: Thu Feb  8 17:08:36 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -342,16 +342,23 @@ optionally raise a <b>ConnectedDisplaysChanged</b> D-Bus
 signal when a display undergoes a status change due to
 connectivity, hot-plug and DPMS events.</p>
 
-<p style="margin-left:9%; margin-top: 1em">Display change
-detection is optional: detection entails some overheads;
-detection may be unnecessary for display configurations that
-are static; detection may not work for some combinations of
-hardware and drivers.</p>
+<p style="margin-left:9%; margin-top: 1em">Display
+change-detection is optional: detection entails some
+overheads; detection may be unnecessary for display
+configurations that are static; detection may not work for
+some combinations of hardware and drivers.</p>
 
-<p style="margin-left:9%; margin-top: 1em">Change detection
+
+<p style="margin-left:9%; margin-top: 1em">Change-detection
 can enabled by passing <b>--emit-signals</b> on the command
 line, or by setting the <b>ServiceEmitSignals</b>
 property.</p>
+
+<p style="margin-left:9%; margin-top: 1em">To permanently
+enable change-detection, the <b>--emit-signals</b> option
+can be appended to the <b>Exec</b> line of the system or
+user D-Bus <b>com.ddcutil.DdcutilService.service</b> file
+(see <b>FILES</b>).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Changes are
 detected in one of two ways. The service defaults to polling
@@ -499,9 +506,10 @@ Typically the contents would be as follows</p>
 Name=com.ddcutil.DdcutilService <br>
 Exec=/usr/bin/ddcutil-service</p>
 
-<p style="margin-left:18%; margin-top: 1em">Any service
-options, such as <b>--prefer-polling</b>, can be appended to
-the <b>Exec=</b> line.</p>
+<p style="margin-left:18%; margin-top: 1em">Service
+options, such as <b>--emit-signals</b> or
+<b>--prefer-dma</b>, should be appended to the end of
+<b>Exec=</b> line.</p>
 
 
 <p style="margin-left:9%;"><b>$HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>

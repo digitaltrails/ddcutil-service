@@ -269,15 +269,25 @@ The service may optionally raise a
 D-Bus signal when a display undergoes a status change
 due to connectivity, hot-plug and DPMS events.
 
-Display change detection is optional:  detection entails some overheads;
+Display change-detection is optional:  detection entails some overheads;
 detection may be unnecessary for display configurations that are static;
 detection may not work for some combinations of hardware and drivers.
 
-Change detection can enabled by passing
+Change-detection can enabled by passing
 .B --emit-signals
 on the command line, or by setting the
 .B ServiceEmitSignals
 property.
+
+To permanently enable change-detection, the
+.B --emit-signals
+option can be appended to the
+.B Exec
+line of the
+system or user D-Bus
+.B com.ddcutil.DdcutilService.service
+file (see \fBFILES\fP).
+
 
 Changes are detected in one of two ways.
 The service defaults to polling for changes by
@@ -410,8 +420,8 @@ service is requested.  Typically the contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-Any service options, such as \fB--prefer-polling\fP,
-can be appended to the \fBExec=\fP line.
+Service options, such as \fB--emit-signals\fP or \fB--prefer-dma\fP,
+should be appended to the end of \fBExec=\fP line.
 
 .TP
 .B $HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service
