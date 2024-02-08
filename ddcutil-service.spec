@@ -32,7 +32,7 @@ URL:            https://github.com/digitaltrails/ddcutil-service
 Source0:        https://github.com/digitaltrails/ddcutil-service/archive/refs/tags/v1.0.0.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  gcc-c++
 BuildRequires:  libddcutil-devel >= 1.4.0
-BuildRequires:  libddcutil4 >= 1.4.0
+BuildRequires:  (libddcutil4 >= 1.4.0 or libddutil5)
 BuildRequires:  make
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(glib-2.0) >= 2.40

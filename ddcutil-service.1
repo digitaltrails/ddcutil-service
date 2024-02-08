@@ -20,6 +20,10 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 ]
 |
 [
+.B --prefer-dma
+]
+|
+[
 .B --polling-interval \fIseconds\fP
 ]
 |
@@ -94,7 +98,17 @@ See \fBSERVICE SIGNALS\fP.
 .B "--prefer-polling"
 
 Set polling to be the preferred method for detecting display connectivity changes
-for the \fBConnectedDisplaysChanged signal\fP.
+for the \fBConnectedDisplaysChanged signal\fP.  This is the default.
+
+.TP
+.B "--prefer-dma"
+
+Use
+.B libddcutil DMA-lookups
+as the preferred method for detecting display connectivity changes
+for the \fBConnectedDisplaysChanged signal\fP.  This option should detect changes sooner
+with less overheads, but may fail to detect changes for some combinations or drivers and hardware.
+
 
 .TP
 .B "--poll-interval" \fIseconds\fP
@@ -246,30 +260,37 @@ and search for
 
 .SH SERVICE SIGNALS
 
-The service may raise a
+The service may optionally raise a
 .B ConnectedDisplaysChanged
 D-Bus signal when a display undergoes a status change
 due to connectivity, hot-plug and DPMS events.
 
-Changes can be detected in one of two ways.  The most efficient method requires
-\fBddcutil/libddcutil version 2.1.0+\fP, a GPU configured for DRM, and
+Display change detection is optional:  detection entails some overheads;
+detection may be unnecessary for display configurations that are static;
+detection may not work for some combinations of hardware and drivers.
+
+Change detection can enabled by passing
+.B --emit-signals
+on the command line, or by setting the
+.B ServiceEmitSignals
+property.
+
+Changes are detected in one of two ways.
+The service defaults to polling for changes by
+periodically issuing libddcutil DDCA detects, this is quite
+likely to work for a wide varienty of drivers and hardware.
+Alternatively the service can use libddcutil to provice a more efficient method for change detection,
+but this requires \fBddcutil/libddcutil version 2.1.0+\fP, a GPU configured for DRM, and
 the \fB--enable-watch-displays\fP to be added to \fI[libddcutil] options\fP
 in \fB$HOME/.config/ddcutil/ddcutilrc\fP.
-If those prerequisites are not be met, the service will periodically poll for changes.
-If change detection using DRM isn't working as expected,
-polling can be forced by the
-.B --prefer-polling
-option.    The default polling interval is 30 seconds.
 
 Not all displays, GPU's, GPU-drivers, or cabling, provide the necessary support
 for detecting connection status changes by either method. Results may also vary
 depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland.
 Another issue is that DisplayPort behaves differently to DVI and HDMI when
-a display is turned off but remains connected.
+a display is turned off but remains connected.  Lastly, some drivers that
+support DMA don't properly support the necessary change detection features.
 
-Monitoring for changes can be toggled by altering the
-.B ServiceEmitSignals
-property.
 
 .SH SERVICE PROPERTIES
 

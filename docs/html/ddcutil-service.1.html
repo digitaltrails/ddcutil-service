@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Feb  8 08:31:48 2024 -->
+<!-- CreationDate: Thu Feb  8 14:14:16 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -58,11 +58,11 @@ Virtual Control Panel</p>
 <i>--help</i> | <i>--version</i> | <i>--introspect</i>
 <b><br>
 ddcutil-service</b> [ <b>--emit-signals</b> ] | [
-<b>--prefer-polling</b> ] | [ <b>--polling-interval</b>
-<i>seconds</i> ] | [ <b>--lock</b> ] | [ <b>--log-info</b> ]
-[ <b>--ddca-syslog-level</b> <i>N</i> ] | [
-<b>--ddca-init-options</b> <i>M</i> ] [ <b>--</b>
-<i>libddcutil ddc_init options...</i> ]</p>
+<b>--prefer-polling</b> ] | [ <b>--prefer-dma</b> ] | [
+<b>--polling-interval</b> <i>seconds</i> ] | [ <b>--lock</b>
+] | [ <b>--log-info</b> ] [ <b>--ddca-syslog-level</b>
+<i>N</i> ] | [ <b>--ddca-init-options</b> <i>M</i> ] [
+<b>--</b> <i>libddcutil ddc_init options...</i> ]</p>
 
 <h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
@@ -128,7 +128,18 @@ SIGNALS</b>.</p>
 
 <p style="margin-left:18%; margin-top: 1em">Set polling to
 be the preferred method for detecting display connectivity
-changes for the <b>ConnectedDisplaysChanged signal</b>.</p>
+changes for the <b>ConnectedDisplaysChanged signal</b>. This
+is the default.</p>
+
+<p style="margin-left:9%;"><b>--prefer-dma</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Use
+<b>libddcutil DMA-lookups</b> as the preferred method for
+detecting display connectivity changes for the
+<b>ConnectedDisplaysChanged signal</b>. This option should
+detect changes sooner with less overheads, but may fail to
+detect changes for some combinations or drivers and
+hardware.</p>
 
 <p style="margin-left:9%;"><b>--poll-interval</b>
 <i>seconds</i></p>
@@ -323,21 +334,32 @@ Bus</b> and search for <b>ddcutil-service.</b></p>
 
 
 <p style="margin-left:9%; margin-top: 1em">The service may
-raise a <b>ConnectedDisplaysChanged</b> D-Bus signal when a
-display undergoes a status change due to connectivity,
-hot-plug and DPMS events.</p>
+optionally raise a <b>ConnectedDisplaysChanged</b> D-Bus
+signal when a display undergoes a status change due to
+connectivity, hot-plug and DPMS events.</p>
 
-<p style="margin-left:9%; margin-top: 1em">Changes can be
-detected in one of two ways. The most efficient method
-requires <b>ddcutil/libddcutil version 2.1.0+</b>, a GPU
-configured for DRM, and the <b>--enable-watch-displays</b>
-to be added to <i>[libddcutil] options</i> in
-<b>$HOME/.config/ddcutil/ddcutilrc</b>. If those
-prerequisites are not be met, the service will periodically
-poll for changes. If change detection using DRM isn&rsquo;t
-working as expected, polling can be forced by the
-<b>--prefer-polling</b> option. The default polling interval
-is 30 seconds.</p>
+<p style="margin-left:9%; margin-top: 1em">Display change
+detection is optional: detection entails some overheads;
+detection may be unnecessary for display configurations that
+are static; detection may not work for some combinations of
+hardware and drivers.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Change detection
+can enabled by passing <b>--emit-signals</b> on the command
+line, or by setting the <b>ServiceEmitSignals</b>
+property.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Changes are
+detected in one of two ways. The service defaults to polling
+for changes by periodically issuing libddcutil DDCA detects,
+this is quite likely to work for a wide varienty of drivers
+and hardware. Alternatively the service can use libddcutil
+to provice a more efficient method for change detection, but
+this requires <b>ddcutil/libddcutil version 2.1.0+</b>, a
+GPU configured for DRM, and the
+<b>--enable-watch-displays</b> to be added to
+<i>[libddcutil] options</i> in
+<b>$HOME/.config/ddcutil/ddcutilrc</b>.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Not all
 displays, GPU&rsquo;s, GPU-drivers, or cabling, provide the
@@ -345,12 +367,9 @@ necessary support for detecting connection status changes by
 either method. Results may also vary depending on the mix of
 desktop components, such as KDE, Gnome, X11, and Wayland.
 Another issue is that DisplayPort behaves differently to DVI
-and HDMI when a display is turned off but remains
-connected.</p>
-
-<p style="margin-left:9%; margin-top: 1em">Monitoring for
-changes can be toggled by altering the
-<b>ServiceEmitSignals</b> property.</p>
+and HDMI when a display is turned off but remains connected.
+Lastly, some drivers that support DMA don&rsquo;t properly
+support the necessary change detection features.</p>
 
 <h2>SERVICE PROPERTIES
 <a name="SERVICE PROPERTIES"></a>

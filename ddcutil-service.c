@@ -61,25 +61,21 @@
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
-    #define HAS_OPTION_ARGUMENTS
-    #define HAS_DDCA_GET_SLEEP_MULTIPLIER
+    #define LIBDDCUTIL_HAS_OPTION_ARGUMENTS
+    #define LIBDDCUTIL_HAS_DDCA_GET_SLEEP_MULTIPLIER
 #elif DDCUTIL_VMAJOR >= 2
-    #define HAS_DISPLAYS_CHANGED_CALLBACK
-    #define HAS_OPTION_ARGUMENTS
-    #define HAS_INDIVIDUAL_SLEEP_MULTIPLIER
-    #define HAS_DYNAMIC_SLEEP
+    #define LIBDDCUTIL_HAS_CHANGES_CALLBACK
+    #define LIBDDCUTIL_HAS_OPTION_ARGUMENTS
+    #define LIBDDCUTIL_HAS_INDIVIDUAL_SLEEP_MULTIPLIER
+    #define LIBDDCUTIL_HAS_DYNAMIC_SLEEP
 #else
-    #define HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
+    #define LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
 
 
 static gboolean display_status_detection_enabled = FALSE;
 static gboolean enable_signals = FALSE;
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
-static gboolean prefer_polling = FALSE;
-#else
 static gboolean prefer_polling = TRUE;
-#endif
 static gboolean lock_properties = FALSE;
 
 #define MIN_POLL_SECONDS 10
@@ -97,7 +93,7 @@ static long poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
 */
 static long poll_cascade_interval_micros = (long) (DEFAULT_POLL_CASCADE_INTERVAL_SECONDS * 1000000);
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
 /**
  * Custom signal event data - used by the service's custom signal source
  */
@@ -545,7 +541,7 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
     g_dbus_method_invocation_return_value(invocation, result);
 
     gchar** argv;
-#if defined(HAS_OPTION_ARGUMENTS)
+#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     gchar* args_str = "";
     if (syslog_level != 0) {
         args_str = g_strdup_printf("%s --ddca-syslog-level=%d", args_str, syslog_level);
@@ -573,7 +569,7 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
     exit(0);
 }
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
 static void display_status_event_callback(DDCA_Display_Status_Event event);
 #endif
 
@@ -587,7 +583,7 @@ static void service_test(GVariant* parameters, GDBusMethodInvocation* invocation
     g_info("ServiceTest key=%s value=%s flags=%d", key, value, flags);
     const int final_status = 0;
     const char* final_message_text = "OK";
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
     if (strcmp(key, "create_event") == 0) {
         // For testing signalling without libddcutil
         DDCA_Display_Status_Event event;
@@ -1097,7 +1093,7 @@ static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invoc
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
     DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
     if (status == DDCRC_OK) {
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
         status = ddca_validate_display_ref(vdu_info->dref, TRUE);
 #else
     status = DDCRC_UNIMPLEMENTED;
@@ -1131,11 +1127,11 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
     g_info("GetSleepMultiplier display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
     double multiplier;
-#if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
+#if defined(LIBDDCUTIL_HAS_DDCA_GET_SLEEP_MULTIPLIER)
     multiplier = ddca_get_sleep_multiplier();
-#elif defined(HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
+#elif defined(LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
     multiplier = ddca_get_default_sleep_multiplier();
-#elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
+#elif defined(LIBDDCUTIL_HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
     status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
@@ -1177,11 +1173,11 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
     g_info("SetSleepMultiplier value=%f display_num=%d edid=%.30s...",
            new_multiplier, display_number, edid_encoded);
 
-#if defined(HAS_DDCA_GET_SLEEP_MULTIPLIER)
+#if defined(LIBDDCUTIL_HAS_DDCA_GET_SLEEP_MULTIPLIER)
     ddca_set_sleep_multiplier(new_multiplier);
-#elif defined(HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
+#elif defined(LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
     ddca_set_default_sleep_multiplier(new_multiplier);
-#elif defined(HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
+#elif defined(LIBDDCUTIL_HAS_INDIVIDUAL_SLEEP_MULTIPLIER)
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
     status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
@@ -1414,7 +1410,7 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
             g_message("ServiceEmitSignals using ddcutil-service polling");
         }
         else {
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
             if (enable_signals) {
                 g_message("ServiceEmitSignals using libddcutil change detection");
                 const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
@@ -1770,7 +1766,7 @@ static void enable_custom_source(GMainLoop* loop) {
     display_status_detection_enabled = TRUE;
 }
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
 /**
  * \brief called by libddcutil when a display status change occurs
  * \param event libddcutil event
@@ -1855,11 +1851,13 @@ int main(int argc, char* argv[]) {
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
     gboolean enable_display_status_events = FALSE;
-
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
+    gboolean prefer_dma = FALSE;
+#endif
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
 
-#if defined(HAS_OPTION_ARGUMENTS)
+#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
     gint ddca_init_options = 0; // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
 #endif
@@ -1874,10 +1872,16 @@ int main(int argc, char* argv[]) {
             "introspect", 'x', 0, G_OPTION_ARG_NONE, &introspect_request,
             "print introspection xml and exit", NULL
         },
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
         {
             "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
             "prefer polling for detecting display connection events", NULL
         },
+        {
+            "prefer-dma", 'd', 0, G_OPTION_ARG_NONE, &prefer_dma,
+            "prefer libddcutil DMA-lookups for detecting display connection events", NULL
+        },
+#endif
         {
             "poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_seconds,
             "polling interval in seconds, 10 minimum, 0 to disable polling", NULL
@@ -1891,14 +1895,14 @@ int main(int argc, char* argv[]) {
             "enable the D-Bus ConnectedDisplaysChanged signal and associated change monitoring", NULL
         },
         {
-            "lock", 'L', 0, G_OPTION_ARG_NONE, &lock_properties,
+            "lock", 'l', 0, G_OPTION_ARG_NONE, &lock_properties,
             "lock properties and sleep multipliers, make them all read only", NULL
         },
         {
-            "log-info", 'l', 0, G_OPTION_ARG_NONE, &log_info,
+            "log-info", 'i', 0, G_OPTION_ARG_NONE, &log_info,
             "log service info and debug messages", NULL
         },
-#if defined(HAS_OPTION_ARGUMENTS)
+#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
         {
             "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
             "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL
@@ -1955,7 +1959,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-#if defined(HAS_OPTION_ARGUMENTS)
+#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     // Handle ddcutil ddc_init() arguments
     char* argv_null_terminated[argc];
     for (int i = 0; i < argc; i++) {
@@ -1985,9 +1989,10 @@ int main(int argc, char* argv[]) {
     }
     else {
 
-#if defined(HAS_DISPLAYS_CHANGED_CALLBACK)
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
+        prefer_polling = !prefer_dma;
         if (prefer_polling) {
-            g_message("ConnectedDisplaysChanged signal - prefering polling instead of libddcutil change detection");
+            g_message("ConnectedDisplaysChanged signal - prefering polling for change detection");
         }
         else {
             const int rstatus = ddca_register_display_status_callback(display_status_event_callback);
