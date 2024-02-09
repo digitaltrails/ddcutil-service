@@ -264,12 +264,15 @@ and search for
 
 .SH SERVICE SIGNALS
 
+.TP
+.B ServiceInitialized
 At startup the service emits the
 .B ServiceInitialized
-D-Bus signal.  This provides clients with the means to restore
-any properties or settings they may require subsequent to any
-restart.
+D-Bus signal.  This signal provides clients with a way to detect a
+service restart and reinstate any custom service properties or settings.
 
+.TP
+.B ConnectedDisplaysChanged
 The service may optionally emit a
 .B ConnectedDisplaysChanged
 D-Bus signal when a display undergoes a status change

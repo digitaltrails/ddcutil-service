@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Feb  9 09:51:49 2024 -->
+<!-- CreationDate: Fri Feb  9 13:40:27 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -337,36 +337,41 @@ Bus</b> and search for <b>ddcutil-service.</b></p>
 </h2>
 
 
-<p style="margin-left:9%; margin-top: 1em">At startup the
-service emits the <b>ServiceInitialized</b> D-Bus signal.
-This provides clients with the means to restore any
-properties or settings they may require subsequent to any
-restart.</p>
 
-<p style="margin-left:9%; margin-top: 1em">The service may
-optionally emit a <b>ConnectedDisplaysChanged</b> D-Bus
-signal when a display undergoes a status change due to
-connectivity, hot-plug and DPMS events.</p>
+<p style="margin-left:9%; margin-top: 1em"><b>ServiceInitialized</b></p>
 
-<p style="margin-left:9%; margin-top: 1em">Display
+<p style="margin-left:18%;">At startup the service emits
+the <b>ServiceInitialized</b> D-Bus signal. This signal
+provides clients with a way to detect a service restart and
+reinstate any custom service properties or settings.</p>
+
+
+<p style="margin-left:9%;"><b>ConnectedDisplaysChanged</b></p>
+
+<p style="margin-left:18%;">The service may optionally emit
+a <b>ConnectedDisplaysChanged</b> D-Bus signal when a
+display undergoes a status change due to connectivity,
+hot-plug and DPMS events.</p>
+
+<p style="margin-left:18%; margin-top: 1em">Display
 change-detection is optional: detection entails some
 overheads; detection may be unnecessary for display
 configurations that are static; detection may not work for
 some combinations of hardware and drivers.</p>
 
 
-<p style="margin-left:9%; margin-top: 1em">Change-detection
+<p style="margin-left:18%; margin-top: 1em">Change-detection
 can enabled by passing <b>--emit-signals</b> on the command
 line, or by setting the <b>ServiceEmitSignals</b>
 property.</p>
 
-<p style="margin-left:9%; margin-top: 1em">To permanently
+<p style="margin-left:18%; margin-top: 1em">To permanently
 enable change-detection, the <b>--emit-signals</b> option
 can be appended to the <b>Exec</b> line of the system or
 user D-Bus <b>com.ddcutil.DdcutilService.service</b> file
 (see <b>FILES</b>).</p>
 
-<p style="margin-left:9%; margin-top: 1em">Changes are
+<p style="margin-left:18%; margin-top: 1em">Changes are
 detected in one of two ways. The service defaults to polling
 for changes by periodically issuing libddcutil DDCA detects,
 this is quite likely to work for a wide varienty of drivers
@@ -378,7 +383,7 @@ GPU configured for DRM, and the
 <i>[libddcutil] options</i> in
 <b>$HOME/.config/ddcutil/ddcutilrc</b>.</p>
 
-<p style="margin-left:9%; margin-top: 1em">Not all
+<p style="margin-left:18%; margin-top: 1em">Not all
 displays, GPU&rsquo;s, GPU-drivers, or cabling, provide the
 necessary support for detecting connection status changes by
 either method. Results may also vary depending on the mix of
