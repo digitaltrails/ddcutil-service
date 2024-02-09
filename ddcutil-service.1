@@ -317,9 +317,6 @@ support DMA don't properly support the necessary change detection features.
 
 .SH SERVICE PROPERTIES
 
-The service provides several D-Bus accessible properties for querying
-and adjusting its operation.
-
 .TP
 .B AttributesReturnedByDetect
 Query the fieldnames returned from the
@@ -511,7 +508,7 @@ can be used to interact with the service.
         int32:1 string:"" byte:0x10 uint16:10  uint32:0
 .fi
 
-.B Query or set the service logging level:
+.B Query or set the service logging level property:
 
 .nf
    busctl --user get-property com.ddcutil.DdcutilService /com/ddcutil/DdcutilObject \\
