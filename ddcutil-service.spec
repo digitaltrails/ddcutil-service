@@ -23,27 +23,25 @@ Release:        0
 Summary:        D-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 License:        GPL-2.0-or-later
 %if %{defined fedora_version}
-Group: Hardware/Other
+Group:          Hardware/Other
 %endif
 %if %{defined suse_version}
-Group: System/GUI/Other
+Group:          System/GUI/Other
 %endif
 URL:            https://github.com/digitaltrails/ddcutil-service
 Source0:        https://github.com/digitaltrails/ddcutil-service/archive/refs/tags/v1.0.0.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  gcc-c++
 BuildRequires:  libddcutil-devel >= 1.4.0
-BuildRequires:  libddcutil4 >= 1.4.0
 BuildRequires:  make
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(glib-2.0) >= 2.40
 %if %{defined fedora_version}
 Requires:       dbus-1-daemon
-Requires:       libddcutil4 >= 1.4.0
 %endif
 %if %{defined suse_version}
 Requires:       dbus-1
-Requires:       libddcutil4 >= 1.4.0
 %endif
+Recommends:     ddcutil-i2c-udev-rules
 
 %description
 ddcutil-service is D-Bus service wrapper for libddcutil which
@@ -66,6 +64,10 @@ install -m 0755 %{name} %{buildroot}/%{_bindir}/%{name}
 install -m 0644 com.ddcutil.DdcutilService.service %{buildroot}%{_datadir}/dbus-1/services/
 install -m 0755 examples/* %{buildroot}%{_datadir}/%{name}/examples/
 install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
+install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}.conf
+
+%post
+modprobe i2c-dev
 
 %files
 %license COPYING
@@ -87,5 +89,7 @@ install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
 %{_datadir}/%{name}/examples/dbus-set-polling-interval.bash
 %{_datadir}/%{name}/examples/dbus-send-introspect.bash
 %{_datadir}/%{name}/examples/dbus-send-detect.bash
+%dir %{_prefix}/lib/modules-load.d
+%{_prefix}/lib/modules-load.d/%{name}.conf
 
 %changelog
