@@ -50,6 +50,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <glob.h>
+#include <unistd.h>
 #include <spawn.h>
 
 #include <ddcutil_c_api.h>
@@ -77,6 +79,10 @@ static gboolean display_status_detection_enabled = FALSE;
 static gboolean enable_signals = FALSE;
 static gboolean prefer_polling = TRUE;
 static gboolean lock_properties = FALSE;
+
+#define VERIFY_I2C
+
+static int service_broken_error = -1;
 
 #define MIN_POLL_SECONDS 10
 #define DEFAULT_POLL_SECONDS 30
@@ -358,6 +364,8 @@ typedef enum
     DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
     DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
     DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
+    DDCUTIL_SERVICE_I2C_DEV_NO_MODULE,
+    DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS,
     DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
 } DdcutilServiceError;
 
@@ -367,6 +375,8 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
     { DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED, "com.ddcutil.DdcutilService.Error.MultiplierLocked" },
     { DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
     { DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds" },
+    { DDCUTIL_SERVICE_I2C_DEV_NO_MODULE, "com.ddcutil.DdcutilService.Error.I2cDevNoModule" },
+    { DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS, "com.ddcutil.DdcutilService.Error.I2cDevNoPermissions" },
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
@@ -1198,6 +1208,49 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 }
 
 /**
+ * \brief Verify that the kernel module appears to be loaded and devices are accessable.
+ *
+ * Sets the global service_broken_error to the g_dbus error code, or -1 if no errors.
+ *
+ * \return true if everything is OK
+ */
+static bool verify_i2c_dev() {
+#if defined(VERIFY_I2C)
+    g_message("Checking i2c-dev dependencies (i2c-dev kernel module and device permissions)...");
+    service_broken_error = -1;
+    int rw_count = 0;
+    glob_t matches;
+    if (glob("/dev/i2c-*", 0, NULL, &matches) == 0) {
+        for (int i = 0; i < matches.gl_pathc; i++) {
+            if (access(matches.gl_pathv[i], R_OK|W_OK) == F_OK) {
+                g_message("Device %s is R/W accessible", matches.gl_pathv[i]);
+                rw_count++;
+            }
+            else {
+                g_message("Device %s is not R/W accessible", matches.gl_pathv[i]);
+            }
+        }
+        if (rw_count > 0) {
+            g_message("Found %d i2c-dev devices that are R/W accessible.", rw_count);
+        }
+        else {
+            g_warning("Found %lu i2c-dev devices, but none are accessible: missing permissions (udev-rule/group)?",
+                matches.gl_pathc);
+            service_broken_error = DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS;
+        }
+    }
+    if (matches.gl_pathc == 0) {
+        g_warning("No devices matching /dev/i2c-* in /dev: is the i2c-dev kernel module loaded?");
+        service_broken_error = DDCUTIL_SERVICE_I2C_DEV_NO_MODULE;
+    }
+    globfree(&matches);
+    return rw_count > 0;
+#else
+    return TRUE;
+#endif
+}
+
+/**
  * @brief Handles DdcutilService D-Bus method-calls by passing them to implementating functions.
  *
  * This handler is registered with glib's D-Bus main loop to handle DdcutilService
@@ -1218,6 +1271,30 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 static void handle_method_call(GDBusConnection* connection, const gchar* sender, const gchar* object_path,
                                const gchar* interface_name, const gchar* method_name, GVariant* parameters,
                                GDBusMethodInvocation* invocation, gpointer user_data) {
+
+    if (service_broken_error != -1) {
+        g_message("Service currently broken, checking again...");
+        verify_i2c_dev();  // See if things are now fixed
+        if (service_broken_error != -1) { // Still broken
+            const char *message;
+            switch (service_broken_error) {
+                case DDCUTIL_SERVICE_I2C_DEV_NO_MODULE:
+                    message = "The i2c-dev kernel module does not appear to be loaded.";
+                break;
+                case DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS:
+                    message = "The i2c-dev devices /dev/i2c-* are not R/W accessible "
+                              "(possible missing udev-rule or group membership).";
+                break;
+                default:
+                    message = ddcutil_service_error_entries[service_broken_error].dbus_error_name;
+                break;
+            }
+            g_dbus_method_invocation_return_error(invocation, service_error_quark,
+                service_broken_error, message);
+            return;
+        }
+    }
+
     if (g_strcmp0(method_name, "Detect") == 0) {
         detect(parameters, invocation);
     }
@@ -1974,6 +2051,8 @@ int main(int argc, char* argv[]) {
         g_print("%s\n", formatted_xml->str);
         exit(1);
     }
+
+    verify_i2c_dev();
 
 #if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     // Handle ddcutil ddc_init() arguments
