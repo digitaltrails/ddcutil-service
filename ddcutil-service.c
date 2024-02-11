@@ -634,8 +634,7 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     DDCA_Display_Info_List* dlist = NULL;
     const DDCA_Status list_status = ddca_get_display_info_list2(flags != 0, &dlist);
     char* list_message_text = get_status_message(list_status);
-
-    g_info("Detect status=%d message=%s", list_status, list_message_text);
+    int vdu_count = 0;
 
     // see https://docs.gtk.org/glib/struct.VariantBuilder.html
 
@@ -643,37 +642,43 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     GVariantBuilder* detected_displays_builder = &detected_displays_builder_instance;
 
     g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqsu)"));
-    for (int ndx = 0; ndx < dlist->ct; ndx++) {
-        const DDCA_Display_Info* vdu_info = &dlist->info[ndx];
-        gchar* safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
-        gchar* safe_model = sanitize_utf8(vdu_info->model_name); //"xxxxwww\xF0\xA4\xADiii" );
-        gchar* safe_sn = sanitize_utf8(vdu_info->sn);
-        gchar* edid_encoded = edid_encode(vdu_info->edid_bytes);
-        g_info("Detected %s %s %s display_num=%d edid=%.30s...",
-               safe_mfg_id, safe_model, safe_sn, vdu_info->dispno, edid_encoded);
 
-        g_variant_builder_add(
-            detected_displays_builder,
-            "(iiisssqsu)",
-            vdu_info->dispno, vdu_info->usb_bus, vdu_info->usb_device,
-            safe_mfg_id, safe_model, safe_sn,
-            vdu_info->product_code,
-            edid_encoded,
-            edid_to_binary_serial_number(vdu_info->edid_bytes));
-        g_free(safe_mfg_id);
-        g_free(safe_model);
-        g_free(safe_sn);
-        g_free(edid_encoded);
+    if (list_status != DDCRC_OK) {
+        g_warning("Detect failed to obtain VDU list - list-status=%d message=%s", list_status, list_message_text);
+    }
+    else {
+        vdu_count = dlist->ct;
+        for (int ndx = 0; ndx < vdu_count; ndx++) {
+            const DDCA_Display_Info* vdu_info = &dlist->info[ndx];
+            gchar* safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
+            gchar* safe_model = sanitize_utf8(vdu_info->model_name); //"xxxxwww\xF0\xA4\xADiii" );
+            gchar* safe_sn = sanitize_utf8(vdu_info->sn);
+            gchar* edid_encoded = edid_encode(vdu_info->edid_bytes);
+            g_info("Detected %s %s %s display_num=%d edid=%.30s...",
+                   safe_mfg_id, safe_model, safe_sn, vdu_info->dispno, edid_encoded);
+            g_variant_builder_add(
+                detected_displays_builder,
+                "(iiisssqsu)",
+                vdu_info->dispno, vdu_info->usb_bus, vdu_info->usb_device,
+                safe_mfg_id, safe_model, safe_sn,
+                vdu_info->product_code,
+                edid_encoded,
+                edid_to_binary_serial_number(vdu_info->edid_bytes));
+            g_free(safe_mfg_id);
+            g_free(safe_model);
+            g_free(safe_sn);
+            g_free(edid_encoded);
+        }
+        ddca_free_display_info_list(dlist);
     }
 
     const int final_status = (detect_status != 0) ? detect_status : list_status;
     const char* final_message_text = (detect_status != 0) ? detect_message_text : list_message_text;
 
     GVariant* result = g_variant_new("(ia(iiisssqsu)is)",
-                                     dlist->ct, detected_displays_builder, final_status, final_message_text);
+                                     vdu_count, detected_displays_builder, final_status, final_message_text);
 
     g_dbus_method_invocation_return_value(invocation, result); // Think this frees the result.
-    ddca_free_display_info_list(dlist);
     free(list_message_text);
     free(detect_message_text);
 }
@@ -1216,8 +1221,28 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
  */
 static bool verify_i2c_dev() {
 #if defined(VERIFY_I2C)
-    g_message("Checking i2c-dev dependencies (i2c-dev kernel module and device permissions)...");
-    service_broken_error = -1;
+    g_message("Verifying libddcutil and i2c-dev dependencies (i2c-dev kernel module and device permissions)...");
+
+    service_broken_error = -1;  // Assume OK
+
+    // First just check if detect is finding anything - if it is, i2c-dev must be OK
+    const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
+    if (detect_status == DDCRC_OK) {
+        DDCA_Display_Info_List* dlist = NULL;
+        const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+        if (list_status == DDCRC_OK) {
+            const int vdu_count = dlist->ct;
+            ddca_free_display_info_list(dlist);
+            if (vdu_count > 0) {
+                g_message("Detected VDU-count=%d - skipping i2c-dev verification", vdu_count);
+                return TRUE;
+            }
+            // May or may not be a problem with i2c-dev - might be normal
+            g_message("Failed to detect any VDUs - will check i2c-dev");
+        }
+    }
+
+    // Check if i2c-dev devices exist and are r/w accessible
     int rw_count = 0;
     glob_t matches;
     if (glob("/dev/i2c-*", 0, NULL, &matches) == 0) {
