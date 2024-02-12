@@ -1246,21 +1246,22 @@ static bool verify_i2c_dev() {
     int rw_count = 0;
     glob_t matches;
     if (glob("/dev/i2c-*", 0, NULL, &matches) == 0) {
-        for (int i = 0; i < matches.gl_pathc; i++) {
+        const unsigned long dev_count = matches.gl_pathc;
+        for (unsigned long i = 0; i < dev_count && rw_count <= 1000; i++) {  // Boilerplate limit of 1000
             if (access(matches.gl_pathv[i], R_OK|W_OK) == F_OK) {
-                g_message("Device %s is R/W accessible", matches.gl_pathv[i]);
+                g_debug("Device %s is R/W accessible", matches.gl_pathv[i]);
                 rw_count++;
             }
             else {
-                g_message("Device %s is not R/W accessible", matches.gl_pathv[i]);
+                g_debug("Device %s is not R/W accessible", matches.gl_pathv[i]);
             }
         }
         if (rw_count > 0) {
-            g_message("Found %d i2c-dev devices that are R/W accessible.", rw_count);
+            g_message("Found %d i2c-dev devices that are R/W accessible - good!", rw_count);
         }
         else {
             g_warning("Found %lu i2c-dev devices, but none are accessible: missing permissions (udev-rule/group)?",
-                matches.gl_pathc);
+                dev_count);
             service_broken_error = DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS;
         }
     }
