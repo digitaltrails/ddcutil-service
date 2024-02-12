@@ -2,7 +2,7 @@
 # spec file for package ddcutil-service
 #
 # Copyright (c) 2024 SUSE LLC
-# Copyright (c) 2021-2023 Michael Hamilton <michael@actrix.gen.nz>
+# Copyright (c) 2024 Michael Hamilton <michael@actrix.gen.nz>
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -66,8 +66,9 @@ install -m 0755 examples/* %{buildroot}%{_datadir}/%{name}/examples/
 install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
 install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}.conf
 
+# The post modprobe is helpful for the user, but not really necessary, don't error if it fails
 %post
-modprobe i2c-dev
+%{_prefix}/sbin/modprobe i2c-dev ||:
 
 %files
 %license COPYING
