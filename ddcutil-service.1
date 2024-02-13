@@ -131,11 +131,12 @@ Default 0.5 seconds,  minimum 0.1 seconds.
 .TP
 .B "--lock"
 
-Make all service properties and sleep-multipliers readonly so
-that clients cannot change them. This options provides a way to
+Lock the configuration.  Disable the \fBSetSleepMultiplier\fP
+and \fBRestart\fP methods.  Make all properties read-only.
+This options provides a way to
 lockdown the service to the configuration passed on the command line.
-The lock is provided to assist with managing conflicts
-when more than one ddcutil application is in use at the same time.
+The lock is provided to assist with avoiding conflicts
+when more than one ddcutil-service client is in use at the same time.
 
 .TP
 .B "--log_info"
@@ -391,7 +392,7 @@ Not all options are applicable to all methods.
 .B ServiceParametersLocked
 Returns whether the
 .B --lock
-command line argument has been used to make all properties and sleep-multipliers read-only.
+command line argument has been used.
 
 .TP
 .B ServicePollInterval
@@ -425,11 +426,10 @@ returned by each method call.
 The service may also issue the following exceptions when attempting to set properties or call methods:
 
 .TP
-.B com.ddcutil.DdcutilService.Error.PropertiesLocked
-The \fB--lock\fP options has prevented a client from setting a property.
-.TP
-.B com.ddcutil.DdcutilService.Error.MultiplierLocked
-The \fB--lock\fP options has prevented a client from setting a property.
+.B com.ddcutil.DdcutilService.Error.ConfigurationLocked
+The \fB--lock\fP options has prevented a client from altering a configuration
+settings.  This includes using the \fBSetSleepMultiplier\fP method, \fBRestart\fP method,
+ or setting any property value.
 .TP
 .B com.ddcutil.DdcutilService.Error.InvalidPollSeconds
 An attempt was made to set \fBServicePollInterval\fP to a value outside its accepted range.

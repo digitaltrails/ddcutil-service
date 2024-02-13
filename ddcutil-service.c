@@ -78,7 +78,7 @@
 static gboolean display_status_detection_enabled = FALSE;
 static gboolean enable_signals = FALSE;
 static gboolean prefer_polling = TRUE;
-static gboolean lock_properties = FALSE;
+static gboolean lock_configuration = FALSE;
 
 #define VERIFY_I2C
 
@@ -360,8 +360,7 @@ static const gchar introspection_xml[] =
 
 typedef enum
 {
-    DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED,
-    DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
+    DDCUTIL_SERVICE_CONFIGURATION_LOCKED,
     DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
     DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
     DDCUTIL_SERVICE_I2C_DEV_NO_MODULE,
@@ -371,8 +370,7 @@ typedef enum
 
 static const GDBusErrorEntry ddcutil_service_error_entries[] =
 {
-    { DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED, "com.ddcutil.DdcutilService.Error.PropertiesLocked" },
-    { DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED, "com.ddcutil.DdcutilService.Error.MultiplierLocked" },
+    { DDCUTIL_SERVICE_CONFIGURATION_LOCKED, "com.ddcutil.DdcutilService.Error.ConfigurationLocked" },
     { DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
     { DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds" },
     { DDCUTIL_SERVICE_I2C_DEV_NO_MODULE, "com.ddcutil.DdcutilService.Error.I2cDevNoModule" },
@@ -545,6 +543,11 @@ extern char** environ;
  * @param invocation the originating D-Bus call - returning a value to it before terminating the current process.
  */
 static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
+    if (lock_configuration) {
+        g_dbus_method_invocation_return_error(invocation, service_error_quark, DDCUTIL_SERVICE_CONFIGURATION_LOCKED,
+            "Failed to restart the service: configuration locked by --lock command line argument.");
+        return;
+    }
     char* libopts;
     u_int32_t syslog_level;
     u_int32_t opts;
@@ -1181,9 +1184,9 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
     double new_multiplier;
     DDCA_Status status = 0;
 
-    if(lock_properties) {
-        g_dbus_method_invocation_return_error(invocation, service_error_quark, DDCUTIL_SERVICE_SET_MULTIPLIER_LOCKED,
-            "Failed to set multiplier because of command line argument: --lock");
+    if(lock_configuration) {
+        g_dbus_method_invocation_return_error(invocation, service_error_quark, DDCUTIL_SERVICE_CONFIGURATION_LOCKED,
+            "Failed to set_sleep_multiplier: configuration locked by --lock command line argument.");
         return;
     }
 
@@ -1449,7 +1452,7 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
         ret = value;
     }
     else if (g_strcmp0(property_name, "ServiceParametersLocked") == 0) {
-        ret = g_variant_new_boolean(lock_properties);
+        ret = g_variant_new_boolean(lock_configuration);
     }
     else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
         ret = g_variant_new_uint32(poll_interval_micros / 1000000);
@@ -1483,11 +1486,11 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
 static gboolean handle_set_property(GDBusConnection* connection, const gchar* sender, const gchar* object_path,
                                     const gchar* interface_name, const gchar* property_name, GVariant* value,
                                     GError** error, gpointer user_data) {
-    if (lock_properties) {
+    if (lock_configuration) {
         g_set_error (error,
              service_error_quark,
-             DDCUTIL_SERVICE_SET_PROPERTIES_LOCKED,
-             "Failed to set %s - properties have been locked by the command line argument: --lock",
+             DDCUTIL_SERVICE_CONFIGURATION_LOCKED,
+             "Failed to set %s property: configuration locked by --lock command line argument.",
              property_name);
         g_warning((*error)->message);
         return FALSE;
@@ -2014,8 +2017,8 @@ int main(int argc, char* argv[]) {
             "enable the D-Bus ConnectedDisplaysChanged signal and associated change monitoring", NULL
         },
         {
-            "lock", 'l', 0, G_OPTION_ARG_NONE, &lock_properties,
-            "lock properties and sleep multipliers, make them all read only", NULL
+            "lock", 'l', 0, G_OPTION_ARG_NONE, &lock_configuration,
+            "lock configuration, make properties and sleep-multipliers read only, disable the restart method", NULL
         },
         {
             "log-info", 'i', 0, G_OPTION_ARG_NONE, &log_info,
@@ -2057,7 +2060,7 @@ int main(int argc, char* argv[]) {
               DDCUTIL_DBUS_INTERFACE_VERSION_STRING, ddca_ddcutil_extended_version_string());
     g_message("ServiceInfoLogging %s", is_service_info_logging() ? "enabled" : "disabled");
 
-    if (lock_properties) {
+    if (lock_configuration) {
         g_message("All properties and sleep-multipliers are read only (--lock passed)");
     }
 
