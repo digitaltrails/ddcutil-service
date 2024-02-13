@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Feb  9 13:44:12 2024 -->
+<!-- CreationDate: Tue Feb 13 13:27:41 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -27,7 +27,13 @@
 <a href="#SERVICE METHODS">SERVICE METHODS</a><br>
 <a href="#SERVICE SIGNALS">SERVICE SIGNALS</a><br>
 <a href="#SERVICE PROPERTIES">SERVICE PROPERTIES</a><br>
+<a href="#SERVICE ERRORS">SERVICE ERRORS</a><br>
+<a href="#Errors forwarded from libddcutil">Errors forwarded from libddcutil</a><br>
+<a href="#Exceptions">Exceptions</a><br>
 <a href="#FILES">FILES</a><br>
+<a href="#EXECUTION ENVIRONMENT">EXECUTION ENVIRONMENT</a><br>
+<a href="#NVIDIA PROPRIETARY DRIVER">NVIDIA PROPRIETARY DRIVER</a><br>
+<a href="#VIRTUAL MACHINES">VIRTUAL MACHINES</a><br>
 <a href="#EXAMPLES">EXAMPLES</a><br>
 <a href="#LIMITATIONS">LIMITATIONS</a><br>
 <a href="#SEE ALSO">SEE ALSO</a><br>
@@ -498,6 +504,68 @@ cleared.</p>
 be queried and set using utilities such as <b>busctl,
 d-bus-send,</b> and <b>d-feet,</b> see <b>EXAMPLES.</b></p>
 
+<h2>SERVICE ERRORS
+<a name="SERVICE ERRORS"></a>
+</h2>
+
+
+<h3>Errors forwarded from libddcutil
+<a name="Errors forwarded from libddcutil"></a>
+</h3>
+
+
+<p style="margin-left:9%; margin-top: 1em">Status codes and
+error messages from <b>libddcutil</b> are passed back to
+clients as part of the data returned by each method
+call.</p>
+
+<h3>Exceptions
+<a name="Exceptions"></a>
+</h3>
+
+
+<p style="margin-left:9%; margin-top: 1em">The service may
+also issue the following exceptions when attempting to set
+properties or call methods: <b><br>
+com.ddcutil.DdcutilService.Error.PropertiesLocked</b></p>
+
+<p style="margin-left:18%;">The <b>--lock</b> options has
+prevented a client from setting a property.</p>
+
+
+<p style="margin-left:9%;"><b>com.ddcutil.DdcutilService.Error.MultiplierLocked</b></p>
+
+<p style="margin-left:18%;">The <b>--lock</b> options has
+prevented a client from setting a property.</p>
+
+
+<p style="margin-left:9%;"><b>com.ddcutil.DdcutilService.Error.InvalidPollSeconds</b></p>
+
+<p style="margin-left:18%;">An attempt was made to set
+<b>ServicePollInterval</b> to a value outside its accepted
+range.</p>
+
+
+<p style="margin-left:9%;"><b>com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds</b></p>
+
+<p style="margin-left:18%;">An attempt was made to set
+<b>ServicePollCascadeInterval</b> to a value outside its
+accepted range.</p>
+
+
+<p style="margin-left:9%;"><b>com.ddcutil.DdcutilService.Error.I2cDevNoModule</b></p>
+
+<p style="margin-left:18%;">At startup no <b>/dev/i2c</b>
+devices are present and an attempt to verify communications
+via i2c failed.</p>
+
+
+<p style="margin-left:9%;"><b>com.ddcutil.DdcutilService.Error.I2cDevNoPermissions</b></p>
+
+<p style="margin-left:18%;">At startup it was found that
+the user/service lacked read/write access to the
+<b>/dev/i2c</b> devices.</p>
+
 <h2>FILES
 <a name="FILES"></a>
 </h2>
@@ -543,6 +611,42 @@ details.</p>
 several example scripts, including <b>dbus-send</b>
 bash-scripts and <b>python3</b> clients for D-Bus
 <b>dasbus</b> and <b>QtDBus</b> APIs.</p>
+
+<h2>EXECUTION ENVIRONMENT
+<a name="EXECUTION ENVIRONMENT"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">The service
+relies on <b>libddcutil</b> which requires read/write access
+to the <b>/dev/i2c</b> devices. See
+&acirc;&uml;http://www.ddcutil.com/i2c_permissions&acirc;&copy;.</p>
+
+<p style="margin-left:9%; margin-top: 1em">At startup
+<b>ddcutil-service</b> will attempt to verify that
+<b>i2c-dev</b> module is loaded and that the permissions for
+<b>/dev/i2c</b> are set appropriately. If these checks fail,
+method calls will error until the problem is resolved.</p>
+
+<h2>NVIDIA PROPRIETARY DRIVER
+<a name="NVIDIA PROPRIETARY DRIVER"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Some Nvidia
+cards using the proprietary Nvidia driver require special
+settings to properly enable I2C support. See
+&acirc;&uml;http://www.ddcutil.com/nvidia&acirc;&copy;.</p>
+
+<h2>VIRTUAL MACHINES
+<a name="VIRTUAL MACHINES"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Virtualized
+video drivers in VMWare and VirtualBox do not provide I2C
+emulation. It may be possible to forward D-BUS over
+<b>ssh</b> to side step this issue.</p>
 
 <h2>EXAMPLES
 <a name="EXAMPLES"></a>
