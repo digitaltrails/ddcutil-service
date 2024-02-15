@@ -1,0 +1,39 @@
+#!/bin/bash
+
+man_stylesheet="/usr/share/xml/docbook/stylesheet/nwalsh/1.79.2/manpages/docbook.xsl"
+xhtml_stylesheet="/usr/share/xml/docbook/stylesheet/nwalsh/1.79.2/xhtml/docbook.xsl"
+
+extra_man_info="\
+<info>\
+  <title>ddcutil-service interface</title>\
+  <author>\
+    <firstname>Michael</firstname><surname>Hamilton</surname>\
+    <personblurb>Developer</personblurb>\
+  </author>\
+  <legalnotice>\
+    <para>\
+      Copyright (C) 2023,2024 Michael Hamilton.\
+    </para>\
+    <para>\
+      ddcutil‐service is free software; you can redistribute it and/or modify it\
+      under the terms of the GNU General Public License as published by the\
+      Free Software Foundation; either version 2, or (at your option) any later version.\
+    </para>\
+  </legalnotice>\
+</info>\
+<refmeta>\
+  <xrefentrytitle>ddcutil-service</xrefentrytitle>\
+  <manvolnum>7</manvolnum>\
+  <refmiscinfo class='source'>ddcutil-service</refmiscinfo>\
+  <refmiscinfo class='manual'>Miscellaneous</refmiscinfo>\
+"
+
+make
+./ddcutil-service --introspect > ddcutil-service-introspect.xml
+gdbus-codegen --generate-docbook docbook ddcutil-service-introspect.xml
+
+sed "s?<refmeta>?$extra_man_info?" < docbook-com.ddcutil.DdcutilInterface.xml > docbook-com.ddcutil.DdcutilInterface-man.xml
+
+xsltproc $xhtml_stylesheet docbook-com.ddcutil.DdcutilInterface-man.xml > ddcutil-service-docbook.html 
+xsltproc $man_stylesheet docbook-com.ddcutil.DdcutilInterface-man.xml 
+mv com.ddcutil.DdcutilInterface.7 ddcutil-service.7 

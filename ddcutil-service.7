@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 02/15/2024
+.\"      Date: 02/16/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "02/15/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "02/16/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-com.ddcutil.DdcutilInterface \- D?Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
+com.ddcutil.DdcutilInterface \- D\-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 .SH "METHODS"
 .sp
 .nf
@@ -152,7 +152,7 @@ ServicePollCascadeInterval  readwrite  d
 .\}
 .SH "DESCRIPTION"
 .PP
-ddcutil?service is D?Bus service wrapper for libddcutil which implements the VESA DDC Monitor Control Command Set\&. Most things that can be controlled using a monitor?s on?screen display can be controlled by this service\&.
+ddcutil\-service is D\-Bus service wrapper for libddcutil which implements the VESA DDC Monitor Control Command Set\&. Most things that can be controlled using a monitor?s on?screen display can be controlled by this service\&.
 .PP
 For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or poweredup VDUs changes, whereas the DDCA display numbers may be reallocated\&.
 .PP
@@ -174,7 +174,7 @@ Restart (IN  s text_options,
 .RE
 .\}
 .PP
-Causes the service to restart with the supplied parameters\&.
+Restarts the service with the supplied parameters\&.
 .PP
 If the service is configuration\-locked, an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error is raised\&.
 .PP
@@ -220,9 +220,14 @@ Detect (IN  u            flags,
 .PP
 Issues a detect and returns the VDUs detected\&.
 .PP
+The array
+\fIdetected_displays\fR
+will be of length
+\fInumber_of_displays\fR\&.
+.PP
 Each element of
 \fIdetected_displays\fR
-array will contain the fields specified by the property AttributesReturnedByDetect\&. The fields will include the libddcutil display\-number and a base64\-encoded VDU EDID\&.
+array will contain the fields specified by the AttributesReturnedByDetect property\&. The fields will include the libddcutil display\-number and a base64\-encoded EDID\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
@@ -231,7 +236,8 @@ If set to 1, any invalid VDUs will be included in the results\&.
 .PP
 OUT i \fInumber_of_displays\fR:
 .RS 4
-The number of VDUs detected (the length of detected_displays)\&.
+The number of VDUs detected (the length of
+\fIdetected_displays\fR)\&.
 .RE
 .PP
 OUT a(iiisssqsu) \fIdetected_displays\fR:
@@ -270,21 +276,27 @@ GetVcp (IN  i display_number,
 .PP
 Retrieve the value for a VCP\-code for the specified VDU\&.
 .PP
-Although most VCP values are 8\-bit, and only some 16\-bit, the result returned will always be 16 bit (in order to simplify the API)\&.
+For simplicity the
+\fIvcp_current_value\fR
+returned will always be 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
+.PP
+The
+\fIvcp_formatted_value\fR
+contains the current value along with any related info, such as the maximum value, its similar to the output of the ddcutil getvcp shell\-command\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
-the libddcutil/ddcutil display number to query
+The libddcutil/ddcutil display number to query
 .RE
 .PP
 IN s \fIedid_txt\fR:
 .RS 4
-the base\-64 encoded EDID of the display
+The base\-64 encoded EDID of the display
 .RE
 .PP
 IN y \fIvcp_code\fR:
 .RS 4
-the VPC\-code to query, for example, 16 (0x10) is brightness\&.
+The VPC\-code to query, for example, 16 (0x10) is brightness\&.
 .RE
 .PP
 IN u \fIflags\fR:
@@ -294,17 +306,17 @@ If 1, the edid_txt is matched as a unique prefex of the EDID\&.
 .PP
 OUT q \fIvcp_current_value\fR:
 .RS 4
-the current numeric value as a unified 16 bit integer\&.
+The current numeric value as a unified 16 bit integer\&.
 .RE
 .PP
 OUT q \fIvcp_max_value\fR:
 .RS 4
-the maximum possible value, to allow for easy calculation of current/max\&.
+The maximum possible value, to allow for easy calculation of current/max\&.
 .RE
 .PP
 OUT s \fIvcp_formatted_value\fR:
 .RS 4
-for convienience a formatted summary is also returned\&.
+A formatted version of the value including related info such as the max\-value\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
@@ -336,7 +348,9 @@ GetMultipleVcp (IN  i       display_number,
 .PP
 Retrieves several different VCP values for the specified VDU\&. This is a convienience method provided to more efficiently utilise D\-Bus\&.
 .PP
-Although most VCP values are 8\-bit, and only some 16\-bit, the results returned will always be 16 bit (in order to simplify the API)\&.
+Each entry in
+\fIvcp_current_value\fR
+array is a VCP\-code along with its current, maximum and formatted values (the same as those returned by GetVcp)\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -350,7 +364,7 @@ the base\-64 encoded EDID of the display
 .PP
 IN ay \fIvcp_code\fR:
 .RS 4
-the VPC\-code to query, for example, 16 (0x10) is brightness\&.
+the VPC\-code to query\&.
 .RE
 .PP
 IN u \fIflags\fR:
@@ -360,7 +374,7 @@ If 1, the edid_txt is matched as a unique prefex of the EDID\&.
 .PP
 OUT a(yqqs) \fIvcp_current_value\fR:
 .RS 4
-.sp
+An array of VCP\-codes and values\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
@@ -390,13 +404,11 @@ SetVcp (IN  i display_number,
 .RE
 .\}
 .PP
-.PP
-values are 8\-bit, but some may be 16\-bit)\&.
-\fIflags\fR: If 1, the edid_txt is matched as a unique prefex of the EDID\&.
-\fIerror_status\fR: A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
-\fIerror_message\fR: Text message for error_status\&.
-.PP
 Set the value for a VCP\-code for the specified VDU\&.
+.PP
+For simplicity the
+\fIvcp_new_value\fR
+is always passed as a 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -410,27 +422,27 @@ the base\-64 encoded EDID of the display
 .PP
 IN y \fIvcp_code\fR:
 .RS 4
-the VPC\-code to query, for example, 16 (0x10) is brightness\&.
+the VPC\-code to query\&.
 .RE
 .PP
 IN q \fIvcp_new_value\fR:
 .RS 4
-the numeric value as a unified 16 bit integer (most
+the numeric value as a 16 bit integer\&.
 .RE
 .PP
 IN u \fIflags\fR:
 .RS 4
-.sp
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-.sp
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
 .RS 4
-.sp
+Text message for error_status\&.
 .RE
 .SS "The GetVcpMetadata() method"
 .sp
@@ -470,7 +482,7 @@ the base\-64 encoded EDID of the display
 .PP
 IN y \fIvcp_code\fR:
 .RS 4
-the VPC code to query, for example, 16 (0x10) is brightness\&.
+the VPC\-code to query\&.
 .RE
 .PP
 IN u \fIflags\fR:
@@ -485,7 +497,7 @@ the feature name for the VCP\-code
 .PP
 OUT s \fIfeature_description\fR:
 .RS 4
-the feature description, if any, of the vcp_code\&.
+the feature description, if any, of the VCP\-code\&.
 .RE
 .PP
 OUT b \fIis_read_only\fR:
@@ -510,7 +522,7 @@ True if the feature is complex (multi\-byte)\&.
 .PP
 OUT b \fIis_continuous\fR:
 .RS 4
-True in the feature is a continuous value (not an enumeration)\&.
+True in the feature is a continuous value (it is not an enumeration)\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
@@ -539,7 +551,7 @@ GetCapabilitiesString (IN  i display_number,
 .RE
 .\}
 .PP
-Retrieve the capabilities metadata for a VDU in a format similar to that output by ddcutil detect (similar enough for parsing by common code)\&.
+Retrieve the capabilities metadata for a VDU in a format similar to that output by the ddcutil detect shell\-command (similar enough for parsing by common code)\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -593,7 +605,9 @@ GetCapabilitiesMetadata (IN  i             display_number,
 .PP
 Retrieve the capabilities metadata for a VDU in a parsed dictionary structure indexed by VCP code\&.
 .PP
-The capabilities dictionary is the most interesting result, each VCP\-code entry consists of the VCP\-Code key with data: feature\-name, feature\-description, and for non\-continuous features, a non\-empty array of possible values with value\-names\&.
+The
+\fIcapabilities\fR
+out parameter is an array of dictionary entries\&. Each entry consists of a VCP\-code along with a struct containing the feature\-name, feature\-description, and an array of permitted\-values\&. For features that have continuous values, the associated permitted\-value array will be empty\&. For non\-continuous features, the permitted\-value array will contain a dictionary entry for each permitted value, each entry containing a permiited\-value and value\-name\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -664,6 +678,10 @@ Retrieve the libddcutil display state\&.
 .PP
 Depending on the hardware and drivers, this method might return anything useful\&.
 .PP
+For libddcutil prior to 2\&.1, the method will return a libddcutil
+\fIerror_status\fR
+of DDCRC_UNIMPLEMENTED\&.
+.PP
 IN i \fIdisplay_number\fR:
 .RS 4
 the libddcutil/ddcutil display number to query
@@ -705,7 +723,9 @@ GetSleepMultiplier (IN  i display_number,
 .RE
 .\}
 .PP
-Get the current libddcutil sleep multiplier for the specified VDU\&. In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be ncessary (due to problem hardware)\&.
+Get the current libddcutil sleep multiplier for the specified VDU\&.
+.PP
+In more recent versions of libddcutil this value is generally managed automatically\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -753,7 +773,11 @@ SetSleepMultiplier (IN  i display_number,
 .RE
 .\}
 .PP
-Set the libddcutil sleep multiplier for the specified VDU\&. In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be ncessary (due to problem hardware)\&.
+Set the libddcutil sleep multiplier for the specified VDU\&.
+.PP
+In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be ncessary (due to problem hardware)\&.
+.PP
+Prior to taking manual control of the sleep\-multiplier, the DdcutilDynamicSleep property should be set to false to prevent the multiplier from being automatically retuned\&.
 .PP
 If the service is configuration\-locked, an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error is raised\&.
 .PP
@@ -803,6 +827,10 @@ ConnectedDisplaysChanged (s edid_txt,
 .PP
 Where hardware and drivers support it, this signal will be raised if a displays connection status changes due to cabling, power, or DPMS\&.
 .PP
+The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property that can actually be signaled (the possibilities cannot be determined programatically)\&.
+.PP
+Requires the ServiceEmitSignals property to be set to true\&.
+.PP
 s \fIedid_txt\fR:
 .RS 4
 The base\-64 encoded EDID of the display\&.
@@ -829,7 +857,7 @@ ServiceInitialized (u flags);
 .RE
 .\}
 .PP
-When the service is initialized, this signal will be raised so that clients can get an oportunity to adjust the configuration of the service by altering properties or by calling methods\&.
+This signal is raised when the service is initialized\&. It provides clients with a way to detect restarts and reinstate properties or other settings\&.
 .PP
 u \fIflags\fR:
 .RS 4
@@ -848,7 +876,7 @@ AttributesReturnedByDetect  readable   as
 .RE
 .\}
 .PP
-.PP
+The text names of each of the fields in the array of structs returned by the Detect method\&.
 .SS "The "StatusValues" property"
 .sp
 .if n \{\
@@ -861,7 +889,9 @@ StatusValues  readable   a{is}
 .RE
 .\}
 .PP
-.PP
+The list of libddcutil status values and their text names that might be returned in the
+\fIerror_status\fR
+out\-parameter of most of the service methods\&.
 .SS "The "DdcutilVersion" property"
 .sp
 .if n \{\
@@ -874,7 +904,7 @@ DdcutilVersion  readable   s
 .RE
 .\}
 .PP
-.PP
+The ddcutil version number for the linked libddcutil\&.
 .SS "The "DdcutilVerifySetVcp" property"
 .sp
 .if n \{\
@@ -887,7 +917,9 @@ DdcutilVerifySetVcp  readwrite  b
 .RE
 .\}
 .PP
+Within libddcutil each setvcp is verified by internal check using a getvcp\&. This verfication step can be enabled or disabled by altering this property\&.
 .PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "DdcutilDynamicSleep" property"
 .sp
 .if n \{\
@@ -900,7 +932,9 @@ DdcutilDynamicSleep  readwrite  b
 .RE
 .\}
 .PP
+Enables/disables automatic adjustment of the sleep\-multiplier\&. Before using the SetSleepMultiplier method, this property should be set to false to stop any automatic retuning of the multiplier\&.
 .PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "DdcutilOutputLevel" property"
 .sp
 .if n \{\
@@ -913,7 +947,9 @@ DdcutilOutputLevel  readwrite  u
 .RE
 .\}
 .PP
+Change the libddcutil diagnostic output\-level\&. See the libddcutil/ddcutil documentation for details\&.
 .PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "DisplayEventTypes" property"
 .sp
 .if n \{\
@@ -926,7 +962,7 @@ DisplayEventTypes  readable   a{is}
 .RE
 .\}
 .PP
-.PP
+A list of the event types sent by the ConnectedDisplaysChanged signal along with their text names\&. Events are included for display connection/disconnection (hotplug), DPMS?sleep, and DPMS?wake\&. If the list is empty, the GPU, GPU?driver, or libddcutil version doesn?t support display event detection\&.
 .SS "The "ServiceInterfaceVersion" property"
 .sp
 .if n \{\
@@ -939,7 +975,7 @@ ServiceInterfaceVersion  readable   s
 .RE
 .\}
 .PP
-.PP
+The interface version of this service\&. Providing the major number remains the same, the service remains backward compatibility with existing clients\&.
 .SS "The "ServiceInfoLogging" property"
 .sp
 .if n \{\
@@ -952,7 +988,9 @@ ServiceInfoLogging  readwrite  b
 .RE
 .\}
 .PP
+Enables/disables info and debug level logging within the service executable\&. (The service using glib logging\&.)
 .PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "ServiceEmitSignals" property"
 .sp
 .if n \{\
@@ -965,7 +1003,9 @@ ServiceEmitSignals  readwrite  b
 .RE
 .\}
 .PP
+Because VDU connectivity change detection involves some polling, this property can be used to disable it if it is unecessary\&. For example, where the configuration of VDUs is fixed\&.
 .PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "ServiceFlagOptions" property"
 .sp
 .if n \{\
@@ -978,7 +1018,9 @@ ServiceFlagOptions  readable   a{is}
 .RE
 .\}
 .PP
-.PP
+The list of available
+\fIflags\fR
+values that can be passed to the service methods\&. Not all options are applicable to all methods\&.
 .SS "The "ServiceParametersLocked" property"
 .sp
 .if n \{\
@@ -992,6 +1034,7 @@ ServiceParametersLocked  readable   b
 .\}
 .PP
 .PP
+Indicates whether the ??lock command line argument has been used to prevent configuration changes via method calls and property changes\&.
 .SS "The "ServicePollInterval" property"
 .sp
 .if n \{\
@@ -1004,7 +1047,11 @@ ServicePollInterval  readwrite  u
 .RE
 .\}
 .PP
+Query or set the display change detection poll?interval performed by the service (minimum 10 seconds, zero to disable polling)\&.
 .PP
+If libddcutil supports change detection and it works for hardware, drivers and cabling in use, internal polling by the service may be unecessary, in which case polling can be turned off by setting the interval to zero\&.
+.PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "ServicePollCascadeInterval" property"
 .sp
 .if n \{\
@@ -1017,7 +1064,9 @@ ServicePollCascadeInterval  readwrite  d
 .RE
 .\}
 .PP
+Query or set the display change detection poll?cascade?interval (minimum 0\&.1 seconds)\&. When dealing with a cascade of events, for example, when several VDUs are set to DPMS sleep, polling occurs more frequently until the cascade is cleared\&.
 .PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SH "AUTHOR"
 .PP
 \fBMichael Hamilton\fR

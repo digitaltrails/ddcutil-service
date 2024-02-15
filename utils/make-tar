@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]
+then
+    echo "ERROR: please supply version parameter, e.g. 1.5.1 [git|local]"
+    exit 1
+fi
+version="$1"
+source="$2"
+
+git archive --format tgz --prefix=ddcutil-service-$version/ HEAD > $HOME/rpmbuild/SOURCES/ddcutil-service-$version.tar.gz
+

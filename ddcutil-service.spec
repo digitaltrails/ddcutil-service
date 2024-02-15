@@ -58,12 +58,14 @@ display can be controlled by this service.
 %install
 install -d -m 0755 %{buildroot}%{_bindir} \
                    %{buildroot}%{_mandir}/man1/ \
+                   %{buildroot}%{_mandir}/man7/ \
                    %{buildroot}%{_datadir}/%{name}/examples \
                    %{buildroot}%{_datadir}/dbus-1/services
 install -m 0755 %{name} %{buildroot}/%{_bindir}/%{name}
 install -m 0644 com.ddcutil.DdcutilService.service %{buildroot}%{_datadir}/dbus-1/services/
 install -m 0755 examples/* %{buildroot}%{_datadir}/%{name}/examples/
 install -m 0644 %{name}.1 %{buildroot}%{_mandir}/man1/
+install -m 0644 %{name}.7 %{buildroot}%{_mandir}/man7/
 install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}.conf
 
 # The post modprobe is helpful for the user, but not really necessary, don't error if it fails
@@ -79,6 +81,7 @@ install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}
 %{_bindir}/%{name}
 %{_datadir}/dbus-1/services/com.ddcutil.DdcutilService.service
 %{_mandir}/man1/%{name}.1%{?ext_man}
+%{_mandir}/man7/%{name}.7%{?ext_man}
 %{_datadir}/%{name}/examples/dbus-enable-info-logging.bash
 %{_datadir}/%{name}/examples/dbus-send-query-brightness.bash
 %{_datadir}/%{name}/examples/ddcutil-dasbus-client.py

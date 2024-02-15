@@ -197,16 +197,18 @@ static GDBusNodeInfo* introspection_data = NULL;
 /**
  * Introspection data for the service we are exporting
  * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
- * TODO Needs Documentation, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
+ * Uses GTK-Doc comment blocks, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
+ * The @my_parameter anotation formats properly.  The #my_property:property and #my_sig::signal anotations
+ * don't format at all, so I'm not using them.
  */
 static const gchar introspection_xml[] = R"(
 
 <node>
     <!--
         com.ddcutil.DdcutilInterface:
-        @short_description: D‐Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
+        @short_description: D&#45;Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 
-        ddcutil‐service  is  D‐Bus  service wrapper for libddcutil which implements the VESA
+        ddcutil&#45;service  is  D&#45;Bus  service wrapper for libddcutil which implements the VESA
         DDC Monitor Control Command Set.  Most things that can be controlled using a monitor’s
         on‐screen display can be controlled by this service.
 
@@ -230,7 +232,7 @@ static const gchar introspection_xml[] = R"(
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
-        Causes the service to restart with the supplied parameters.
+        Restarts the service with the supplied parameters.
 
         If the service is configuration-locked, an com.ddcutil.DdcutilService.Error.ConfigurationLocked
         error is raised.
@@ -246,16 +248,18 @@ static const gchar introspection_xml[] = R"(
     <!--
         Detect:
         @flags: If set to 1, any invalid VDUs will be included in the results.
-        @number_of_displays: The number of VDUs detected (the length of detected_displays).
+        @number_of_displays: The number of VDUs detected (the length of @detected_displays).
         @detected_displays: An array of structures describing the VDUs.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Issues a detect and returns the VDUs detected.
 
+        The array @detected_displays will be of length @number_of_displays.
+
         Each element of @detected_displays array will contain the fields
-        specified by the property AttributesReturnedByDetect.  The fields
-        will include the libddcutil display-number and a base64-encoded VDU EDID.
+        specified by the AttributesReturnedByDetect property.  The fields
+        will include the libddcutil display-number and a base64-encoded EDID.
     -->
     <method name='Detect'>
         <arg name='flags' type='u' direction='in'/>
@@ -267,20 +271,23 @@ static const gchar introspection_xml[] = R"(
 
     <!--
         GetVcp:
-        @display_number: the libddcutil/ddcutil display number to query
-        @edid_txt: the base-64 encoded EDID of the display
-        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
+        @display_number: The libddcutil/ddcutil display number to query
+        @edid_txt: The base-64 encoded EDID of the display
+        @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
         @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
-        @vcp_current_value: the current numeric value as a unified 16 bit integer.
-        @vcp_max_value: the maximum possible value, to allow for easy calculation of current/max.
-        @vcp_formatted_value: for convienience a formatted summary is also returned.
+        @vcp_current_value: The current numeric value as a unified 16 bit integer.
+        @vcp_max_value: The maximum possible value, to allow for easy calculation of current/max.
+        @vcp_formatted_value: A formatted version of the value including related info such as the max-value.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieve the value for a VCP-code for the specified VDU.
 
-        Although most VCP values are 8-bit, and only some 16-bit, the result returned will
-        always be 16 bit (in order to simplify the API).
+        For simplicity the @vcp_current_value returned will always be 16 bit integer (most
+        VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+
+        The @vcp_formatted_value contains the current value along with any related info,
+        such as the maximum value, its similar to the output of the ddcutil getvcp shell-command.
     -->
     <method name='GetVcp'>
         <arg name='display_number' type='i' direction='in'/>
@@ -298,84 +305,85 @@ static const gchar introspection_xml[] = R"(
         GetMultipleVcp:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
+        @vcp_code: the VPC-code to query.
         @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
-        @vcp_formatted_value: for convienience a formatted summary is also returned.
+        @vcp_current_value: An array of VCP-codes and values.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieves several different VCP values for the specified VDU. This is a convienience
         method provided to more efficiently utilise D-Bus.
 
-
-        Although most VCP values are 8-bit, and only some 16-bit, the results returned will
-        always be 16 bit (in order to simplify the API).
+        Each entry in @vcp_current_value array is a VCP-code along with its
+        current, maximum and formatted values (the same as those returned by GetVcp).
     -->
     <method name='GetMultipleVcp'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='vcp_code' type='ay' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='vcp_code' type='ay' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
         SetVcp:
         @display_number: the libddcutil/ddcutil display number to alter
         @edid_txt: the base-64 encoded EDID of the display
-        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
-        @vcp_new_value: the numeric value as a unified 16 bit integer (most
-        values are 8-bit, but some may be 16-bit).
+        @vcp_code: the VPC-code to query.
+        @vcp_new_value: the numeric value as a 16 bit integer.
         @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Set the value for a VCP-code for the specified VDU.
+
+        For simplicity the @vcp_new_value is always passed as a 16 bit integer (most
+        VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
     -->
     <method name='SetVcp'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='vcp_code' type='y' direction='in'/>
-      <arg name='vcp_new_value' type='q' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='vcp_code' type='y' direction='in'/>
+        <arg name='vcp_new_value' type='q' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
         GetVcpMetadata:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @vcp_code: the VPC code to query, for example, 16 (0x10) is brightness.
+        @vcp_code: the VPC-code to query.
         @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
         @feature_name: the feature name for the VCP-code
-        @feature_description: the feature description, if any, of the vcp_code.
+        @feature_description: the feature description, if any, of the VCP-code.
         @is_read_only: True if the feature is read-only.
         @is_write_only: True if the feature is write-only (for example, a code that turns the VDU off).
         @is_rw: True if the feature is readable and writable.
         @is_complex: True if the feature is complex (multi-byte).
-        @is_continuous: True in the feature is a continuous value (not an enumeration).
+        @is_continuous: True in the feature is a continuous value (it is not an enumeration).
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieve the metadata for a VCP-code for the specified VDU.
     -->
     <method name='GetVcpMetadata'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='vcp_code' type='y' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='feature_name' type='s' direction='out'/>
-      <arg name='feature_description' type='s' direction='out'/>
-      <arg name='is_read_only' type='b' direction='out'/>
-      <arg name='is_write_only' type='b' direction='out'/>
-      <arg name='is_rw' type='b' direction='out'/>
-      <arg name='is_complex' type='b' direction='out'/>
-      <arg name='is_continuous' type='b' direction='out'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='vcp_code' type='y' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='feature_name' type='s' direction='out'/>
+        <arg name='feature_description' type='s' direction='out'/>
+        <arg name='is_read_only' type='b' direction='out'/>
+        <arg name='is_write_only' type='b' direction='out'/>
+        <arg name='is_rw' type='b' direction='out'/>
+        <arg name='is_complex' type='b' direction='out'/>
+        <arg name='is_continuous' type='b' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
@@ -387,16 +395,16 @@ static const gchar introspection_xml[] = R"(
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
-        Retrieve the capabilities metadata for a VDU in a format similar to that output by ddcutil detect
-        (similar enough for parsing by common code).
+        Retrieve the capabilities metadata for a VDU in a format similar to that output by
+        the ddcutil detect shell-command (similar enough for parsing by common code).
     -->
     <method name='GetCapabilitiesString'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='capabilities_text' type='s' direction='out'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='capabilities_text' type='s' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
@@ -415,22 +423,24 @@ static const gchar introspection_xml[] = R"(
         Retrieve the capabilities metadata for a VDU in a parsed dictionary structure
         indexed by VCP code.
 
-        The capabilities dictionary is the most interesting result, each VCP-code
-        entry consists of the VCP-Code key with data: feature-name, feature-description,
-        and for non-continuous features, a non-empty array of possible values with
-        value-names.
+        The @capabilities out parameter is an array of dictionary entries.  Each entry consists
+        of a VCP-code along with a struct containing the feature-name, feature-description,
+        and an array of permitted-values. For features that have continuous values, the associated
+        permitted-value array will be empty.  For non-continuous features, the permitted-value
+        array will contain a dictionary entry for each permitted value, each entry containing
+        a permiited-value and value-name.
     -->
     <method name='GetCapabilitiesMetadata'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='model_name' type='s' direction='out'/>
-      <arg name='mccs_major' type='y' direction='out'/>
-      <arg name='mccs_minor' type='y' direction='out'/>
-      <arg name='commands' type='a{ys}' direction='out'/>
-      <arg name='capabilities' type='a{y(ssa{ys})}' direction='out'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='model_name' type='s' direction='out'/>
+        <arg name='mccs_major' type='y' direction='out'/>
+        <arg name='mccs_minor' type='y' direction='out'/>
+        <arg name='commands' type='a{ys}' direction='out'/>
+        <arg name='capabilities' type='a{y(ssa{ys})}' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
@@ -446,13 +456,16 @@ static const gchar introspection_xml[] = R"(
         Depending on the hardware and drivers, this method might return anything
         useful.
 
+        For libddcutil prior to 2.1, the method will return a libddcutil
+        @error_status of DDCRC_UNIMPLEMENTED.
+
     -->
     <method name='GetDisplayState'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='status' type='i' direction='out'/>
-      <arg name='message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='status' type='i' direction='out'/>
+        <arg name='message' type='s' direction='out'/>
     </method>
 
     <!--
@@ -466,16 +479,16 @@ static const gchar introspection_xml[] = R"(
         @error_message: Text message for error_status.
 
         Get the current libddcutil sleep multiplier for the specified VDU.
-        In more recent versions of libddcutil this is generally managed automatically,
-        but this method is provided should manual control be ncessary (due to problem hardware).
+
+        In more recent versions of libddcutil this value is generally managed automatically.
     -->
     <method name='GetSleepMultiplier'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='current_multiplier' type='d' direction='out'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='current_multiplier' type='d' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
@@ -489,19 +502,23 @@ static const gchar introspection_xml[] = R"(
         @error_message: Text message for error_status.
 
         Set the libddcutil sleep multiplier for the specified VDU.
+
         In more recent versions of libddcutil this is generally managed automatically,
         but this method is provided should manual control be ncessary (due to problem hardware).
+
+        Prior to taking manual control of the sleep-multiplier, the DdcutilDynamicSleep property
+        should be set to false to prevent the multiplier from being automatically retuned.
 
         If the service is configuration-locked, an com.ddcutil.DdcutilService.Error.ConfigurationLocked
         error is raised.
     -->
     <method name='SetSleepMultiplier'>
-      <arg name='display_number' type='i' direction='in'/>
-      <arg name='edid_txt' type='s' direction='in'/>
-      <arg name='new_multiplier' type='d' direction='in'/>
-      <arg name='flags' type='u' direction='in'/>
-      <arg name='error_status' type='i' direction='out'/>
-      <arg name='error_message' type='s' direction='out'/>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='new_multiplier' type='d' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
     </method>
 
     <!--
@@ -512,11 +529,16 @@ static const gchar introspection_xml[] = R"(
 
         Where hardware and drivers support it, this signal will be raised if a displays
         connection status changes due to cabling, power, or DPMS.
+
+        The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property
+        that can actually be signaled (the possibilities cannot be determined programatically).
+
+        Requires the ServiceEmitSignals property to be set to true.
     -->
     <signal name='ConnectedDisplaysChanged'>
-      <arg type='s' name='edid_txt'/>
-      <arg type='i' name='event_type'/>
-      <arg type='u' name='flags'/>
+        <arg type='s' name='edid_txt'/>
+        <arg type='i' name='event_type'/>
+        <arg type='u' name='flags'/>
     </signal>
 
 
@@ -524,30 +546,157 @@ static const gchar introspection_xml[] = R"(
         ServiceInitialized:
         @flags: For furture use.
 
-        When the service is initialized, this signal will be raised so that clients
-        can get an oportunity to adjust the configuration of the service by altering
-        properties or by calling methods.
+        This signal is raised when the service is initialized.  It provides
+        clients with a way to detect restarts and reinstate properties or
+        other settings.
     -->
     <signal name='ServiceInitialized'>
-      <arg type='u' name='flags'/>
+        <arg type='u' name='flags'/>
     </signal>
 
+    <!--
+        AttributesReturnedByDetect:
+
+        The text names of each of the fields in the array of structs returned by the Detect method.
+    -->
     <property type='as' name='AttributesReturnedByDetect' access='read'/>
+
+    <!--
+        StatusValues:
+
+        The list of libddcutil status values and their text names that might be returned
+        in the @error_status out-parameter of most of the service methods.
+    -->
     <property type='a{is}' name='StatusValues' access='read'/>
 
+    <!--
+        DdcutilVersion:
+
+        The ddcutil version number for the linked libddcutil.
+    -->
     <property type='s' name='DdcutilVersion' access='read'/>
+
+    <!--
+        DdcutilVerifySetVcp:
+
+        Within libddcutil each setvcp is verified by internal check using a getvcp.
+        This verfication step can be enabled or disabled by altering this property.
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>
+
+    <!--
+        DdcutilDynamicSleep:
+
+        Enables/disables automatic adjustment of the sleep-multiplier. Before
+        using the SetSleepMultiplier method, this property should be set to false
+        to stop any automatic retuning of the multiplier.
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>
+
+    <!--
+        DdcutilOutputLevel:
+
+        Change the libddcutil diagnostic output-level.  See the libddcutil/ddcutil
+        documentation for details.
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='u' name='DdcutilOutputLevel' access='readwrite'/>
 
+    <!--
+        DisplayEventTypes:
+
+        A list of the event types sent by the ConnectedDisplaysChanged signal along with
+        their text names.  Events  are  included  for  display  connection/disconnection
+        (hotplug),  DPMS‐sleep,  and DPMS‐wake.  If the list is empty, the GPU, GPU‐driver,
+        or libddcutil version doesn’t support display event detection.
+    -->
     <property type='a{is}' name='DisplayEventTypes' access='read'/>
 
+    <!--
+        ServiceInterfaceVersion:
+
+        The interface version of this service.  Providing the major number remains
+        the same, the service remains backward compatibility with existing clients.
+    -->
     <property type='s' name='ServiceInterfaceVersion' access='read'/>
+
+    <!--
+        ServiceInfoLogging:
+
+        Enables/disables info and debug level logging within the service executable.
+        (The service using glib logging.)
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='b' name='ServiceInfoLogging' access='readwrite'/>
+
+    <!--
+        ServiceEmitSignals:
+
+        Because VDU connectivity change detection involves some polling, this
+        property can be used to disable it if it is unecessary.  For example, where
+        the configuration of VDUs is fixed.
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='b' name='ServiceEmitSignals' access='readwrite'/>
+
+    <!--
+        ServiceFlagOptions:
+
+        The list of available @flags values that can be passed to the service methods.
+        Not all options are applicable to all methods.
+    -->
     <property type='a{is}' name='ServiceFlagOptions' access='read'/>
+
+    <!--
+        ServiceParametersLocked:
+        Indicates whether the ‐‐lock command line argument has been used to prevent
+        configuration changes via method calls and property changes.
+    -->
     <property type='b' name='ServiceParametersLocked' access='read'/>
+    <!--
+        ServicePollInterval:
+
+        Query or set the display change detection poll‐interval performed by the service
+        (minimum 10 seconds, zero to disable polling).
+
+        If libddcutil supports change detection and it works for hardware, drivers and cabling
+        in use, internal polling by the service may be unecessary, in which case polling can be
+        turned off by setting the interval to zero.
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='u' name='ServicePollInterval' access='readwrite'/>
+
+    <!--
+        ServicePollCascadeInterval:
+
+        Query  or  set  the display change detection poll‐cascade‐interval (minimum 0.1 seconds).
+        When dealing with a cascade of events, for example, when several VDUs are set to DPMS sleep,
+        polling occurs more frequently until the cascade is cleared.
+
+        Attempting to set this property when the service is configuration-locked
+        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+        being raised.
+    -->
     <property type='d' name='ServicePollCascadeInterval' access='readwrite'/>
 
   </interface>
