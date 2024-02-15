@@ -1,0 +1,1032 @@
+'\" t
+.\"     Title: com.ddcutil.DdcutilInterface
+.\"    Author: Michael Hamilton
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 02/15/2024
+.\"    Manual: Miscellaneous
+.\"    Source: ddcutil-service
+.\"  Language: English
+.\"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "02/15/2024" "ddcutil\-service" "Miscellaneous"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+com.ddcutil.DdcutilInterface \- D?Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
+.SH "METHODS"
+.sp
+.nf
+Restart                 (IN  s             text_options,
+                         IN  u             syslog_level,
+                         IN  u             flags,
+                         OUT i             error_status,
+                         OUT s             error_message);
+Detect                  (IN  u             flags,
+                         OUT i             number_of_displays,
+                         OUT a(iiisssqsu)  detected_displays,
+                         OUT i             error_status,
+                         OUT s             error_message);
+GetVcp                  (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  y             vcp_code,
+                         IN  u             flags,
+                         OUT q             vcp_current_value,
+                         OUT q             vcp_max_value,
+                         OUT s             vcp_formatted_value,
+                         OUT i             error_status,
+                         OUT s             error_message);
+GetMultipleVcp          (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  ay            vcp_code,
+                         IN  u             flags,
+                         OUT a(yqqs)       vcp_current_value,
+                         OUT i             error_status,
+                         OUT s             error_message);
+SetVcp                  (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  y             vcp_code,
+                         IN  q             vcp_new_value,
+                         IN  u             flags,
+                         OUT i             error_status,
+                         OUT s             error_message);
+GetVcpMetadata          (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  y             vcp_code,
+                         IN  u             flags,
+                         OUT s             feature_name,
+                         OUT s             feature_description,
+                         OUT b             is_read_only,
+                         OUT b             is_write_only,
+                         OUT b             is_rw,
+                         OUT b             is_complex,
+                         OUT b             is_continuous,
+                         OUT i             error_status,
+                         OUT s             error_message);
+GetCapabilitiesString   (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  u             flags,
+                         OUT s             capabilities_text,
+                         OUT i             error_status,
+                         OUT s             error_message);
+GetCapabilitiesMetadata (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  u             flags,
+                         OUT s             model_name,
+                         OUT y             mccs_major,
+                         OUT y             mccs_minor,
+                         OUT a{ys}         commands,
+                         OUT a{y(ssa{ys})} capabilities,
+                         OUT i             error_status,
+                         OUT s             error_message);
+GetDisplayState         (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  u             flags,
+                         OUT i             status,
+                         OUT s             message);
+GetSleepMultiplier      (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  u             flags,
+                         OUT d             current_multiplier,
+                         OUT i             error_status,
+                         OUT s             error_message);
+SetSleepMultiplier      (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  d             new_multiplier,
+                         IN  u             flags,
+                         OUT i             error_status,
+                         OUT s             error_message);
+.fi
+.SH "SIGNALS"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ConnectedDisplaysChanged (s edid_txt,
+                          i event_type,
+                          u flags);
+ServiceInitialized       (u flags);
+.fi
+.if n \{\
+.RE
+.\}
+.SH "PROPERTIES"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+AttributesReturnedByDetect  readable   as
+StatusValues                readable   a{is}
+DdcutilVersion              readable   s
+DdcutilVerifySetVcp         readwrite  b
+DdcutilDynamicSleep         readwrite  b
+DdcutilOutputLevel          readwrite  u
+DisplayEventTypes           readable   a{is}
+ServiceInterfaceVersion     readable   s
+ServiceInfoLogging          readwrite  b
+ServiceEmitSignals          readwrite  b
+ServiceFlagOptions          readable   a{is}
+ServiceParametersLocked     readable   b
+ServicePollInterval         readwrite  u
+ServicePollCascadeInterval  readwrite  d
+.fi
+.if n \{\
+.RE
+.\}
+.SH "DESCRIPTION"
+.PP
+ddcutil?service is D?Bus service wrapper for libddcutil which implements the VESA DDC Monitor Control Command Set\&. Most things that can be controlled using a monitor?s on?screen display can be controlled by this service\&.
+.PP
+For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or poweredup VDUs changes, whereas the DDCA display numbers may be reallocated\&.
+.PP
+As a convienience for passing EDIDs using the command line, methods that accept an EDID identifier also accept a flag value which will cause the EDID passed to be matched as a prefix of a possible EDID (so all 128 bytes need not be entered)\&.
+.SH "METHOD DETAILS"
+.SS "The Restart() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Restart (IN  s text_options,
+         IN  u syslog_level,
+         IN  u flags,
+         OUT i error_status,
+         OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Causes the service to restart with the supplied parameters\&.
+.PP
+If the service is configuration\-locked, an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error is raised\&.
+.PP
+IN s \fItext_options\fR:
+.RS 4
+Text options to be passed to libddcutil ddca_init()\&.
+.RE
+.PP
+IN u \fIsyslog_level\fR:
+.RS 4
+The libddcutil syslog level\&.
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+For furture use\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The Detect() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Detect (IN  u            flags,
+        OUT i            number_of_displays,
+        OUT a(iiisssqsu) detected_displays,
+        OUT i            error_status,
+        OUT s            error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Issues a detect and returns the VDUs detected\&.
+.PP
+Each element of
+\fIdetected_displays\fR
+array will contain the fields specified by the property AttributesReturnedByDetect\&. The fields will include the libddcutil display\-number and a base64\-encoded VDU EDID\&.
+.PP
+IN u \fIflags\fR:
+.RS 4
+If set to 1, any invalid VDUs will be included in the results\&.
+.RE
+.PP
+OUT i \fInumber_of_displays\fR:
+.RS 4
+The number of VDUs detected (the length of detected_displays)\&.
+.RE
+.PP
+OUT a(iiisssqsu) \fIdetected_displays\fR:
+.RS 4
+An array of structures describing the VDUs\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The GetVcp() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetVcp (IN  i display_number,
+        IN  s edid_txt,
+        IN  y vcp_code,
+        IN  u flags,
+        OUT q vcp_current_value,
+        OUT q vcp_max_value,
+        OUT s vcp_formatted_value,
+        OUT i error_status,
+        OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Retrieve the value for a VCP\-code for the specified VDU\&.
+.PP
+Although most VCP values are 8\-bit, and only some 16\-bit, the result returned will always be 16 bit (in order to simplify the API)\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN y \fIvcp_code\fR:
+.RS 4
+the VPC\-code to query, for example, 16 (0x10) is brightness\&.
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT q \fIvcp_current_value\fR:
+.RS 4
+the current numeric value as a unified 16 bit integer\&.
+.RE
+.PP
+OUT q \fIvcp_max_value\fR:
+.RS 4
+the maximum possible value, to allow for easy calculation of current/max\&.
+.RE
+.PP
+OUT s \fIvcp_formatted_value\fR:
+.RS 4
+for convienience a formatted summary is also returned\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The GetMultipleVcp() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetMultipleVcp (IN  i       display_number,
+                IN  s       edid_txt,
+                IN  ay      vcp_code,
+                IN  u       flags,
+                OUT a(yqqs) vcp_current_value,
+                OUT i       error_status,
+                OUT s       error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Retrieves several different VCP values for the specified VDU\&. This is a convienience method provided to more efficiently utilise D\-Bus\&.
+.PP
+Although most VCP values are 8\-bit, and only some 16\-bit, the results returned will always be 16 bit (in order to simplify the API)\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN ay \fIvcp_code\fR:
+.RS 4
+the VPC\-code to query, for example, 16 (0x10) is brightness\&.
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT a(yqqs) \fIvcp_current_value\fR:
+.RS 4
+.sp
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The SetVcp() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+SetVcp (IN  i display_number,
+        IN  s edid_txt,
+        IN  y vcp_code,
+        IN  q vcp_new_value,
+        IN  u flags,
+        OUT i error_status,
+        OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+values are 8\-bit, but some may be 16\-bit)\&.
+\fIflags\fR: If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+\fIerror_status\fR: A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+\fIerror_message\fR: Text message for error_status\&.
+.PP
+Set the value for a VCP\-code for the specified VDU\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to alter
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN y \fIvcp_code\fR:
+.RS 4
+the VPC\-code to query, for example, 16 (0x10) is brightness\&.
+.RE
+.PP
+IN q \fIvcp_new_value\fR:
+.RS 4
+the numeric value as a unified 16 bit integer (most
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+.sp
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+.sp
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+.sp
+.RE
+.SS "The GetVcpMetadata() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetVcpMetadata (IN  i display_number,
+                IN  s edid_txt,
+                IN  y vcp_code,
+                IN  u flags,
+                OUT s feature_name,
+                OUT s feature_description,
+                OUT b is_read_only,
+                OUT b is_write_only,
+                OUT b is_rw,
+                OUT b is_complex,
+                OUT b is_continuous,
+                OUT i error_status,
+                OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Retrieve the metadata for a VCP\-code for the specified VDU\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN y \fIvcp_code\fR:
+.RS 4
+the VPC code to query, for example, 16 (0x10) is brightness\&.
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT s \fIfeature_name\fR:
+.RS 4
+the feature name for the VCP\-code
+.RE
+.PP
+OUT s \fIfeature_description\fR:
+.RS 4
+the feature description, if any, of the vcp_code\&.
+.RE
+.PP
+OUT b \fIis_read_only\fR:
+.RS 4
+True if the feature is read\-only\&.
+.RE
+.PP
+OUT b \fIis_write_only\fR:
+.RS 4
+True if the feature is write\-only (for example, a code that turns the VDU off)\&.
+.RE
+.PP
+OUT b \fIis_rw\fR:
+.RS 4
+True if the feature is readable and writable\&.
+.RE
+.PP
+OUT b \fIis_complex\fR:
+.RS 4
+True if the feature is complex (multi\-byte)\&.
+.RE
+.PP
+OUT b \fIis_continuous\fR:
+.RS 4
+True in the feature is a continuous value (not an enumeration)\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The GetCapabilitiesString() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetCapabilitiesString (IN  i display_number,
+                       IN  s edid_txt,
+                       IN  u flags,
+                       OUT s capabilities_text,
+                       OUT i error_status,
+                       OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Retrieve the capabilities metadata for a VDU in a format similar to that output by ddcutil detect (similar enough for parsing by common code)\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT s \fIcapabilities_text\fR:
+.RS 4
+the capability string for the VDU\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The GetCapabilitiesMetadata() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetCapabilitiesMetadata (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  u             flags,
+                         OUT s             model_name,
+                         OUT y             mccs_major,
+                         OUT y             mccs_minor,
+                         OUT a{ys}         commands,
+                         OUT a{y(ssa{ys})} capabilities,
+                         OUT i             error_status,
+                         OUT s             error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Retrieve the capabilities metadata for a VDU in a parsed dictionary structure indexed by VCP code\&.
+.PP
+The capabilities dictionary is the most interesting result, each VCP\-code entry consists of the VCP\-Code key with data: feature\-name, feature\-description, and for non\-continuous features, a non\-empty array of possible values with value\-names\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT s \fImodel_name\fR:
+.RS 4
+parsed model name string
+.RE
+.PP
+OUT y \fImccs_major\fR:
+.RS 4
+MCCS major version number byte\&.
+.RE
+.PP
+OUT y \fImccs_minor\fR:
+.RS 4
+MCCS minor version number byte\&.
+.RE
+.PP
+OUT a{ys} \fIcommands\fR:
+.RS 4
+supported commands as a dictionary indexed by command number\&.
+.RE
+.PP
+OUT a{y(ssa{ys})} \fIcapabilities\fR:
+.RS 4
+supported VCP features as a dictionary indexed by VCP\-code\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The GetDisplayState() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetDisplayState (IN  i display_number,
+                 IN  s edid_txt,
+                 IN  u flags,
+                 OUT i status,
+                 OUT s message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Retrieve the libddcutil display state\&.
+.PP
+Depending on the hardware and drivers, this method might return anything useful\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT i \fIstatus\fR:
+.RS 4
+A libddcutil display status\&.
+.RE
+.PP
+OUT s \fImessage\fR:
+.RS 4
+Text message for display status\&.
+.RE
+.SS "The GetSleepMultiplier() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+GetSleepMultiplier (IN  i display_number,
+                    IN  s edid_txt,
+                    IN  u flags,
+                    OUT d current_multiplier,
+                    OUT i error_status,
+                    OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Get the current libddcutil sleep multiplier for the specified VDU\&. In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be ncessary (due to problem hardware)\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT d \fIcurrent_multiplier\fR:
+.RS 4
+the sleep multiplier\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The SetSleepMultiplier() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+SetSleepMultiplier (IN  i display_number,
+                    IN  s edid_txt,
+                    IN  d new_multiplier,
+                    IN  u flags,
+                    OUT i error_status,
+                    OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Set the libddcutil sleep multiplier for the specified VDU\&. In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be ncessary (due to problem hardware)\&.
+.PP
+If the service is configuration\-locked, an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error is raised\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+The libddcutil/ddcutil display number to query
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+The base\-64 encoded EDID of the display
+.RE
+.PP
+IN d \fInew_multiplier\fR:
+.RS 4
+The sleep multiplier\&.
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SH "SIGNAL DETAILS"
+.SS "The "ConnectedDisplaysChanged" signal"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ConnectedDisplaysChanged (s edid_txt,
+                          i event_type,
+                          u flags);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Where hardware and drivers support it, this signal will be raised if a displays connection status changes due to cabling, power, or DPMS\&.
+.PP
+s \fIedid_txt\fR:
+.RS 4
+The base\-64 encoded EDID of the display\&.
+.RE
+.PP
+i \fIevent_type\fR:
+.RS 4
+A value macthing one of those from the DisplayEventTypes property\&.
+.RE
+.PP
+u \fIflags\fR:
+.RS 4
+For furture use\&.
+.RE
+.SS "The "ServiceInitialized" signal"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceInitialized (u flags);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+When the service is initialized, this signal will be raised so that clients can get an oportunity to adjust the configuration of the service by altering properties or by calling methods\&.
+.PP
+u \fIflags\fR:
+.RS 4
+For furture use\&.
+.RE
+.SH "PROPERTY DETAILS"
+.SS "The "AttributesReturnedByDetect" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+AttributesReturnedByDetect  readable   as
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "StatusValues" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+StatusValues  readable   a{is}
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "DdcutilVersion" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+DdcutilVersion  readable   s
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "DdcutilVerifySetVcp" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+DdcutilVerifySetVcp  readwrite  b
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "DdcutilDynamicSleep" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+DdcutilDynamicSleep  readwrite  b
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "DdcutilOutputLevel" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+DdcutilOutputLevel  readwrite  u
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "DisplayEventTypes" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+DisplayEventTypes  readable   a{is}
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServiceInterfaceVersion" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceInterfaceVersion  readable   s
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServiceInfoLogging" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceInfoLogging  readwrite  b
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServiceEmitSignals" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceEmitSignals  readwrite  b
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServiceFlagOptions" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceFlagOptions  readable   a{is}
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServiceParametersLocked" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceParametersLocked  readable   b
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServicePollInterval" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServicePollInterval  readwrite  u
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SS "The "ServicePollCascadeInterval" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServicePollCascadeInterval  readwrite  d
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+.SH "AUTHOR"
+.PP
+\fBMichael Hamilton\fR
+.RS 4
+.RE
+.SH "COPYRIGHT"
+.br
+.PP
+Copyright (C) 2023,2024 Michael Hamilton\&.
+.PP
+ddcutil\(hyservice is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2, or (at your option) any later version\&.
+.sp

@@ -74,6 +74,7 @@
     #define LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
 
+#undef XML_FROM_INTROSPECTED_DATA
 
 static gboolean display_status_detection_enabled = FALSE;
 static gboolean enable_signals = FALSE;
@@ -198,161 +199,360 @@ static GDBusNodeInfo* introspection_data = NULL;
  * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
  * TODO Needs Documentation, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
  */
-static const gchar introspection_xml[] =
+static const gchar introspection_xml[] = R"(
 
-        "<node>"
-        "  <interface name='com.ddcutil.DdcutilInterface'>"
+<node>
+    <!--
+        com.ddcutil.DdcutilInterface:
+        @short_description: D‐Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 
-        "    <method name='Restart'>"
-        "      <arg name='text_options' type='s' direction='in'/>"
-        "      <arg name='syslog_level' type='u' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        ddcutil‐service  is  D‐Bus  service wrapper for libddcutil which implements the VESA
+        DDC Monitor Control Command Set.  Most things that can be controlled using a monitor’s
+        on‐screen display can be controlled by this service.
 
-        "    <method name='Detect'>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='number_of_displays' type='i' direction='out'/>"
-        "      <arg name='detected_displays' type='a(iiisssqsu)' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
 
-        "    <method name='GetVcp'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='vcp_code' type='y' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='vcp_current_value' type='q' direction='out'/>"
-        "      <arg name='vcp_max_value' type='q' direction='out'/>"
-        "      <arg name='vcp_formatted_value' type='s' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        For many of the methods a VDU can be specified by either passing the DDC display_number
+        or DDC EDID. The EDID is the more stable identifier, it remains unchanged if the number
+        of connected or poweredup VDUs changes, whereas the DDCA display numbers may be reallocated.
 
-        "    <method name='GetMultipleVcp'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='vcp_code' type='ay' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        As a convienience for passing EDIDs using the command line, methods that accept an EDID
+        identifier also accept a flag value which will cause the EDID passed to be matched as
+        a prefix of a possible EDID (so all 128 bytes need not be entered).
 
-        "    <method name='SetVcp'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='vcp_code' type='y' direction='in'/>"
-        "      <arg name='vcp_new_value' type='q' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+    -->
+    <interface name='com.ddcutil.DdcutilInterface'>
 
-        "    <method name='GetVcpMetadata'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='vcp_code' type='y' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='feature_name' type='s' direction='out'/>"
-        "      <arg name='feature_description' type='s' direction='out'/>"
-        "      <arg name='is_read_only' type='b' direction='out'/>"
-        "      <arg name='is_write_only' type='b' direction='out'/>"
-        "      <arg name='is_rw' type='b' direction='out'/>"
-        "      <arg name='is_complex' type='b' direction='out'/>"
-        "      <arg name='is_continuous' type='b' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+    <!--
+        Restart:
+        @text_options: Text options to be passed to libddcutil ddca_init().
+        @syslog_level: The libddcutil syslog level.
+        @flags: For furture use.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
 
-        "    <method name='GetCapabilitiesString'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='capabilities_text' type='s' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        Causes the service to restart with the supplied parameters.
 
-        "    <method name='GetCapabilitiesMetadata'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='model_name' type='s' direction='out'/>"
-        "      <arg name='mccs_major' type='y' direction='out'/>"
-        "      <arg name='mccs_minor' type='y' direction='out'/>"
-        "      <arg name='commands' type='a{ys}' direction='out'/>"
-        "      <arg name='capabilities' type='a{y(ssa{ys})}' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        If the service is configuration-locked, an com.ddcutil.DdcutilService.Error.ConfigurationLocked
+        error is raised.
+    -->
+    <method name='Restart'>
+        <arg name='text_options' type='s' direction='in'/>
+        <arg name='syslog_level' type='u' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
+    </method>
 
-        "    <method name='GetDisplayState'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+    <!--
+        Detect:
+        @flags: If set to 1, any invalid VDUs will be included in the results.
+        @number_of_displays: The number of VDUs detected (the length of detected_displays).
+        @detected_displays: An array of structures describing the VDUs.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
 
-        "    <method name='GetSleepMultiplier'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='current_multiplier' type='d' direction='out'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        Issues a detect and returns the VDUs detected.
 
-        "    <method name='SetSleepMultiplier'>"
-        "      <arg name='display_number' type='i' direction='in'/>"
-        "      <arg name='edid_txt' type='s' direction='in'/>"
-        "      <arg name='new_multiplier' type='d' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+        Each element of @detected_displays array will contain the fields
+        specified by the property AttributesReturnedByDetect.  The fields
+        will include the libddcutil display-number and a base64-encoded VDU EDID.
+    -->
+    <method name='Detect'>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='number_of_displays' type='i' direction='out'/>
+        <arg name='detected_displays' type='a(iiisssqsu)' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
+        </method>
 
-        "    <method name='ServiceTest'>"
-        "      <arg name='key' type='s' direction='in'/>"
-        "      <arg name='value' type='s' direction='in'/>"
-        "      <arg name='flags' type='u' direction='in'/>"
-        "      <arg name='error_status' type='i' direction='out'/>"
-        "      <arg name='error_message' type='s' direction='out'/>"
-        "    </method>"
+    <!--
+        GetVcp:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @vcp_current_value: the current numeric value as a unified 16 bit integer.
+        @vcp_max_value: the maximum possible value, to allow for easy calculation of current/max.
+        @vcp_formatted_value: for convienience a formatted summary is also returned.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
 
-        "    <signal name='ConnectedDisplaysChanged'>"
-        "      <arg type='s' name='edid'/>"
-        "      <arg type='i' name='event_type'/>"
-        "      <arg type='u' name='flags'/>"
-        "    </signal>"
+        Retrieve the value for a VCP-code for the specified VDU.
 
-        "    <signal name='ServiceInitialized'>"
-        "      <arg type='u' name='flags'/>"
-        "    </signal>"
+        Although most VCP values are 8-bit, and only some 16-bit, the result returned will
+        always be 16 bit (in order to simplify the API).
+    -->
+    <method name='GetVcp'>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='vcp_code' type='y' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='vcp_current_value' type='q' direction='out'/>
+        <arg name='vcp_max_value' type='q' direction='out'/>
+        <arg name='vcp_formatted_value' type='s' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
+    </method>
 
-        "    <property type='as' name='AttributesReturnedByDetect' access='read'/>"
-        "    <property type='a{is}' name='StatusValues' access='read'/>"
+    <!--
+        GetMultipleVcp:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @vcp_formatted_value: for convienience a formatted summary is also returned.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
 
-        "    <property type='s' name='DdcutilVersion' access='read'/>"
-        "    <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>"
-        "    <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>"
-        "    <property type='u' name='DdcutilOutputLevel' access='readwrite'/>"
+        Retrieves several different VCP values for the specified VDU. This is a convienience
+        method provided to more efficiently utilise D-Bus.
 
-        "    <property type='a{is}' name='DisplayEventTypes' access='read'/>"
 
-        "    <property type='s' name='ServiceInterfaceVersion' access='read'/>"
-        "    <property type='b' name='ServiceInfoLogging' access='readwrite'/>"
-        "    <property type='b' name='ServiceEmitSignals' access='readwrite'/>"
-        "    <property type='a{is}' name='ServiceFlagOptions' access='read'/>"
-        "    <property type='b' name='ServiceParametersLocked' access='read'/>"
-        "    <property type='u' name='ServicePollInterval' access='readwrite'/>"
-        "    <property type='d' name='ServicePollCascadeInterval' access='readwrite'/>"
+        Although most VCP values are 8-bit, and only some 16-bit, the results returned will
+        always be 16 bit (in order to simplify the API).
+    -->
+    <method name='GetMultipleVcp'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='vcp_code' type='ay' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='vcp_current_value' type='a(yqqs)' direction='out'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
 
-        "  </interface>"
-        "</node>";
+    <!--
+        SetVcp:
+        @display_number: the libddcutil/ddcutil display number to alter
+        @edid_txt: the base-64 encoded EDID of the display
+        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
+        @vcp_new_value: the numeric value as a unified 16 bit integer (most
+        values are 8-bit, but some may be 16-bit).
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Set the value for a VCP-code for the specified VDU.
+    -->
+    <method name='SetVcp'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='vcp_code' type='y' direction='in'/>
+      <arg name='vcp_new_value' type='q' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        GetVcpMetadata:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @vcp_code: the VPC code to query, for example, 16 (0x10) is brightness.
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @feature_name: the feature name for the VCP-code
+        @feature_description: the feature description, if any, of the vcp_code.
+        @is_read_only: True if the feature is read-only.
+        @is_write_only: True if the feature is write-only (for example, a code that turns the VDU off).
+        @is_rw: True if the feature is readable and writable.
+        @is_complex: True if the feature is complex (multi-byte).
+        @is_continuous: True in the feature is a continuous value (not an enumeration).
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Retrieve the metadata for a VCP-code for the specified VDU.
+    -->
+    <method name='GetVcpMetadata'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='vcp_code' type='y' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='feature_name' type='s' direction='out'/>
+      <arg name='feature_description' type='s' direction='out'/>
+      <arg name='is_read_only' type='b' direction='out'/>
+      <arg name='is_write_only' type='b' direction='out'/>
+      <arg name='is_rw' type='b' direction='out'/>
+      <arg name='is_complex' type='b' direction='out'/>
+      <arg name='is_continuous' type='b' direction='out'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        GetCapabilitiesString:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @capabilities_text: the capability string for the VDU.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Retrieve the capabilities metadata for a VDU in a format similar to that output by ddcutil detect
+        (similar enough for parsing by common code).
+    -->
+    <method name='GetCapabilitiesString'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='capabilities_text' type='s' direction='out'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        GetCapabilitiesMetadata:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @model_name: parsed model name string
+        @mccs_major: MCCS major version number byte.
+        @mccs_minor: MCCS minor version number byte.
+        @commands: supported commands as a dictionary indexed by command number.
+        @capabilities: supported VCP features as a dictionary indexed by VCP-code.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Retrieve the capabilities metadata for a VDU in a parsed dictionary structure
+        indexed by VCP code.
+
+        The capabilities dictionary is the most interesting result, each VCP-code
+        entry consists of the VCP-Code key with data: feature-name, feature-description,
+        and for non-continuous features, a non-empty array of possible values with
+        value-names.
+    -->
+    <method name='GetCapabilitiesMetadata'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='model_name' type='s' direction='out'/>
+      <arg name='mccs_major' type='y' direction='out'/>
+      <arg name='mccs_minor' type='y' direction='out'/>
+      <arg name='commands' type='a{ys}' direction='out'/>
+      <arg name='capabilities' type='a{y(ssa{ys})}' direction='out'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        GetDisplayState:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @status: A libddcutil display status.
+        @message: Text message for display status.
+
+        Retrieve the libddcutil display state.
+
+        Depending on the hardware and drivers, this method might return anything
+        useful.
+
+    -->
+    <method name='GetDisplayState'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='status' type='i' direction='out'/>
+      <arg name='message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        GetSleepMultiplier:
+        @display_number: the libddcutil/ddcutil display number to query
+        @edid_txt: the base-64 encoded EDID of the display
+        @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @current_multiplier: the sleep multiplier.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Get the current libddcutil sleep multiplier for the specified VDU.
+        In more recent versions of libddcutil this is generally managed automatically,
+        but this method is provided should manual control be ncessary (due to problem hardware).
+    -->
+    <method name='GetSleepMultiplier'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='current_multiplier' type='d' direction='out'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        SetSleepMultiplier:
+        @display_number: The libddcutil/ddcutil display number to query
+        @edid_txt: The base-64 encoded EDID of the display
+        @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
+        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @new_multiplier: The sleep multiplier.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Set the libddcutil sleep multiplier for the specified VDU.
+        In more recent versions of libddcutil this is generally managed automatically,
+        but this method is provided should manual control be ncessary (due to problem hardware).
+
+        If the service is configuration-locked, an com.ddcutil.DdcutilService.Error.ConfigurationLocked
+        error is raised.
+    -->
+    <method name='SetSleepMultiplier'>
+      <arg name='display_number' type='i' direction='in'/>
+      <arg name='edid_txt' type='s' direction='in'/>
+      <arg name='new_multiplier' type='d' direction='in'/>
+      <arg name='flags' type='u' direction='in'/>
+      <arg name='error_status' type='i' direction='out'/>
+      <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
+        ConnectedDisplaysChanged:
+        @edid_txt: The base-64 encoded EDID of the display.
+        @event_type: A value macthing one of those from the DisplayEventTypes property.
+        @flags: For furture use.
+
+        Where hardware and drivers support it, this signal will be raised if a displays
+        connection status changes due to cabling, power, or DPMS.
+    -->
+    <signal name='ConnectedDisplaysChanged'>
+      <arg type='s' name='edid_txt'/>
+      <arg type='i' name='event_type'/>
+      <arg type='u' name='flags'/>
+    </signal>
+
+
+    <!--
+        ServiceInitialized:
+        @flags: For furture use.
+
+        When the service is initialized, this signal will be raised so that clients
+        can get an oportunity to adjust the configuration of the service by altering
+        properties or by calling methods.
+    -->
+    <signal name='ServiceInitialized'>
+      <arg type='u' name='flags'/>
+    </signal>
+
+    <property type='as' name='AttributesReturnedByDetect' access='read'/>
+    <property type='a{is}' name='StatusValues' access='read'/>
+
+    <property type='s' name='DdcutilVersion' access='read'/>
+    <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>
+    <property type='b' name='DdcutilDynamicSleep' access='readwrite'/>
+    <property type='u' name='DdcutilOutputLevel' access='readwrite'/>
+
+    <property type='a{is}' name='DisplayEventTypes' access='read'/>
+
+    <property type='s' name='ServiceInterfaceVersion' access='read'/>
+    <property type='b' name='ServiceInfoLogging' access='readwrite'/>
+    <property type='b' name='ServiceEmitSignals' access='readwrite'/>
+    <property type='a{is}' name='ServiceFlagOptions' access='read'/>
+    <property type='b' name='ServiceParametersLocked' access='read'/>
+    <property type='u' name='ServicePollInterval' access='readwrite'/>
+    <property type='d' name='ServicePollCascadeInterval' access='readwrite'/>
+
+  </interface>
+</node>
+)";
 
 /* ----------------------------------------------------------------------------------------------------
  * GLib error message definitions.
@@ -590,32 +790,6 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
 static void display_status_event_callback(DDCA_Display_Status_Event event);
 #endif
 
-static void service_test(GVariant* parameters, GDBusMethodInvocation* invocation) {
-    char* key;
-    char* value;
-    u_int32_t flags;
-
-    g_variant_get(parameters, "(ssu)", &key, &value, &flags);
-
-    g_info("ServiceTest key=%s value=%s flags=%d", key, value, flags);
-    const int final_status = 0;
-    const char* final_message_text = "OK";
-#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-    if (strcmp(key, "create_event") == 0) {
-        // For testing signalling without libddcutil
-        DDCA_Display_Status_Event event;
-        event.dref = NULL;
-        event.event_type = flags == 0 ? DDCA_EVENT_DISPLAY_DISCONNECTED : flags;
-        event.io_path.io_mode = 0;
-        event.io_path.path.hiddev_devno = 2;
-        event.timestamp_nanos = 0;
-        display_status_event_callback(event);
-    }
-#endif
-    GVariant* result = g_variant_new("(is)", final_status, final_message_text);
-
-    g_dbus_method_invocation_return_value(invocation, result);
-}
 
 /**
  * @brief Implements the DdcutilService Detect method
@@ -1357,9 +1531,6 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
     else if (g_strcmp0(method_name, "Restart") == 0) {
         restart(parameters, invocation);
     }
-    else if (g_strcmp0(method_name, "ServiceTest") == 0) {
-        service_test(parameters, invocation);
-    }
 }
 
 /**
@@ -2071,11 +2242,10 @@ int main(int argc, char* argv[]) {
 
     if (introspect_request) {
 #if defined(XML_FROM_INTROSPECTED_DATA)
-    GString *formatted_xml = g_string_new("");
-    g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml); // Create XML from the registered service
+        GString *formatted_xml = g_string_new("");
+        g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml); // Create XML from the registered service
 #else
         GString* formatted_xml = g_string_new(introspection_xml);
-        g_string_replace(formatted_xml, ">", ">\n", 0); // Creat XML from the embedded string constant
 #endif
         g_print("%s\n", formatted_xml->str);
         exit(1);
