@@ -32,11 +32,16 @@ Several bash and python scripts that demonstrate using the service are included 
 folder.  They cover the use of the `dbus-send` command line utiltity
 and the python `dasbus` and `QtDBus` libraries. 
 
-Also see the [ddcutil-service.1](https://htmlpreview.github.io/?raw.githubusercontent.com/digitaltrails/ddcutil-service/master/docs/html/ddcutil-service.1.html)
-man page.
-
 The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
 to eventually package it with ddcutil/libddcutil.
+
+### Command-line and API Documentation
+
+Detailed documentation can be found in the two manual pages:
+
+- [ddcutil-service.1](https://htmlpreview.github.io/?raw.githubusercontent.com/digitaltrails/ddcutil-service/master/docs/html/ddcutil-service.1.html) - Command line options and service overview. 
+- [ddcutil-service.7](https://htmlpreview.github.io/?raw.githubusercontent.com/digitaltrails/ddcutil-service/master/docs/html/ddcutil-service.7.html) - Detailed D-Bus API documentation.
+
 
 ### Installing the DdcutilService as a dbus-daemon auto-started service
 
