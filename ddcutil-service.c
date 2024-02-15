@@ -198,7 +198,7 @@ static GDBusNodeInfo* introspection_data = NULL;
  * Introspection data for the service we are exporting
  * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
  * Uses GTK-Doc comment blocks, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
- * The @my_parameter anotation formats properly.  The #my_property:property and #my_sig::signal anotations
+ * The @my_parameter anotation formats properly.  The #my_property:property and #my_sig::signal annotations
  * don't format at all, so I'm not using them.
  */
 static const gchar introspection_xml[] = R"(
@@ -274,7 +274,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @vcp_current_value: The current numeric value as a unified 16 bit integer.
         @vcp_max_value: The maximum possible value, to allow for easy calculation of current/max.
         @vcp_formatted_value: A formatted version of the value including related info such as the max-value.
@@ -306,7 +306,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @vcp_current_value: An array of VCP-codes and values.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
@@ -333,7 +333,7 @@ static const gchar introspection_xml[] = R"(
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
         @vcp_new_value: the numeric value as a 16 bit integer.
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
@@ -357,7 +357,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @feature_name: the feature name for the VCP-code
         @feature_description: the feature description, if any, of the VCP-code.
         @is_read_only: True if the feature is read-only.
@@ -390,7 +390,7 @@ static const gchar introspection_xml[] = R"(
         GetCapabilitiesString:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @capabilities_text: the capability string for the VDU.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
@@ -411,7 +411,7 @@ static const gchar introspection_xml[] = R"(
         GetCapabilitiesMetadata:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @model_name: parsed model name string
         @mccs_major: MCCS major version number byte.
         @mccs_minor: MCCS minor version number byte.
@@ -447,7 +447,7 @@ static const gchar introspection_xml[] = R"(
         GetDisplayState:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @status: A libddcutil display status.
         @message: Text message for display status.
 
@@ -473,7 +473,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @current_multiplier: the sleep multiplier.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
@@ -496,7 +496,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @new_multiplier: The sleep multiplier.
         @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
