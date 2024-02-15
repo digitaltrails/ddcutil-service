@@ -206,11 +206,11 @@ static const gchar introspection_xml[] = R"(
 <node>
     <!--
         com.ddcutil.DdcutilInterface:
-        @short_description: D&#45;Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
+        @short_description: D-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 
-        ddcutil&#45;service  is  D&#45;Bus  service wrapper for libddcutil which implements the VESA
-        DDC Monitor Control Command Set.  Most things that can be controlled using a monitor’s
-        on‐screen display can be controlled by this service.
+        ddcutil-service  is  D-Bus  service wrapper for libddcutil which implements the VESA
+        DDC Monitor Control Command Set.  Most things that can be controlled using a monitor's
+        on-screen display can be controlled by this service.
 
 
         For many of the methods a VDU can be specified by either passing the DDC display_number
@@ -618,7 +618,7 @@ static const gchar introspection_xml[] = R"(
 
         A list of the event types sent by the ConnectedDisplaysChanged signal along with
         their text names.  Events  are  included  for  display  connection/disconnection
-        (hotplug),  DPMS‐sleep,  and DPMS‐wake.  If the list is empty, the GPU, GPU‐driver,
+        (hotplug),  DPMS-sleep,  and DPMS-wake.  If the list is empty, the GPU, GPU-driver,
         or libddcutil version doesn’t support display event detection.
     -->
     <property type='a{is}' name='DisplayEventTypes' access='read'/>
@@ -666,14 +666,14 @@ static const gchar introspection_xml[] = R"(
 
     <!--
         ServiceParametersLocked:
-        Indicates whether the ‐‐lock command line argument has been used to prevent
+        Indicates whether the lock command line argument has been used to prevent
         configuration changes via method calls and property changes.
     -->
     <property type='b' name='ServiceParametersLocked' access='read'/>
     <!--
         ServicePollInterval:
 
-        Query or set the display change detection poll‐interval performed by the service
+        Query or set the display change detection poll-interval performed by the service
         (minimum 10 seconds, zero to disable polling).
 
         If libddcutil supports change detection and it works for hardware, drivers and cabling
@@ -689,7 +689,7 @@ static const gchar introspection_xml[] = R"(
     <!--
         ServicePollCascadeInterval:
 
-        Query  or  set  the display change detection poll‐cascade‐interval (minimum 0.1 seconds).
+        Query  or  set  the display change detection poll-cascade-interval (minimum 0.1 seconds).
         When dealing with a cascade of events, for example, when several VDUs are set to DPMS sleep,
         polling occurs more frequently until the cascade is cleared.
 
