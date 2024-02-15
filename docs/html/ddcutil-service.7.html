@@ -1,0 +1,1311 @@
+<!-- Creator     : groff version 1.23.0 -->
+<!-- CreationDate: Fri Feb 16 11:38:58 2024 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<title>COM.DDCUTIL.DDCU</title>
+
+</head>
+<body>
+
+<h1 align="center">COM.DDCUTIL.DDCU</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#METHODS">METHODS</a><br>
+<a href="#SIGNALS">SIGNALS</a><br>
+<a href="#PROPERTIES">PROPERTIES</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#METHOD DETAILS">METHOD DETAILS</a><br>
+<a href="#The Restart() method">The Restart() method</a><br>
+<a href="#The Detect() method">The Detect() method</a><br>
+<a href="#The GetVcp() method">The GetVcp() method</a><br>
+<a href="#The GetMultipleVcp() method">The GetMultipleVcp() method</a><br>
+<a href="#The SetVcp() method">The SetVcp() method</a><br>
+<a href="#The GetVcpMetadata() method">The GetVcpMetadata() method</a><br>
+<a href="#The GetCapabilitiesString() method">The GetCapabilitiesString() method</a><br>
+<a href="#The GetCapabilitiesMetadata() method">The GetCapabilitiesMetadata() method</a><br>
+<a href="#The GetDisplayState() method">The GetDisplayState() method</a><br>
+<a href="#The GetSleepMultiplier() method">The GetSleepMultiplier() method</a><br>
+<a href="#The SetSleepMultiplier() method">The SetSleepMultiplier() method</a><br>
+<a href="#SIGNAL DETAILS">SIGNAL DETAILS</a><br>
+<a href="#The ConnectedDisplaysChanged&quot; signal&quot;">The ConnectedDisplaysChanged&quot; signal&quot;</a><br>
+<a href="#The ServiceInitialized&quot; signal&quot;">The ServiceInitialized&quot; signal&quot;</a><br>
+<a href="#PROPERTY DETAILS">PROPERTY DETAILS</a><br>
+<a href="#The AttributesReturnedByDetect&quot; property&quot;">The AttributesReturnedByDetect&quot; property&quot;</a><br>
+<a href="#The StatusValues&quot; property&quot;">The StatusValues&quot; property&quot;</a><br>
+<a href="#The DdcutilVersion&quot; property&quot;">The DdcutilVersion&quot; property&quot;</a><br>
+<a href="#The DdcutilVerifySetVcp&quot; property&quot;">The DdcutilVerifySetVcp&quot; property&quot;</a><br>
+<a href="#The DdcutilDynamicSleep&quot; property&quot;">The DdcutilDynamicSleep&quot; property&quot;</a><br>
+<a href="#The DdcutilOutputLevel&quot; property&quot;">The DdcutilOutputLevel&quot; property&quot;</a><br>
+<a href="#The DisplayEventTypes&quot; property&quot;">The DisplayEventTypes&quot; property&quot;</a><br>
+<a href="#The ServiceInterfaceVersion&quot; property&quot;">The ServiceInterfaceVersion&quot; property&quot;</a><br>
+<a href="#The ServiceInfoLogging&quot; property&quot;">The ServiceInfoLogging&quot; property&quot;</a><br>
+<a href="#The ServiceEmitSignals&quot; property&quot;">The ServiceEmitSignals&quot; property&quot;</a><br>
+<a href="#The ServiceFlagOptions&quot; property&quot;">The ServiceFlagOptions&quot; property&quot;</a><br>
+<a href="#The ServiceParametersLocked&quot; property&quot;">The ServiceParametersLocked&quot; property&quot;</a><br>
+<a href="#The ServicePollInterval&quot; property&quot;">The ServicePollInterval&quot; property&quot;</a><br>
+<a href="#The ServicePollCascadeInterval&quot; property&quot;">The ServicePollCascadeInterval&quot; property&quot;</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
+
+<hr>
+
+
+<h2>NAME
+<a name="NAME"></a>
+</h2>
+
+
+
+<p style="margin-left:9%; margin-top: 1em">com.ddcutil.DdcutilInterface
+&minus; D&minus;Bus service for libddcutil VESA DDC Monitor
+Virtual Control Panel</p>
+
+<h2>METHODS
+<a name="METHODS"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Restart (IN s
+text_options, <br>
+IN u syslog_level, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+Detect (IN u flags, <br>
+OUT i number_of_displays, <br>
+OUT a(iiisssqsu) detected_displays, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+GetVcp (IN i display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN u flags, <br>
+OUT q vcp_current_value, <br>
+OUT q vcp_max_value, <br>
+OUT s vcp_formatted_value, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+GetMultipleVcp (IN i display_number, <br>
+IN s edid_txt, <br>
+IN ay vcp_code, <br>
+IN u flags, <br>
+OUT a(yqqs) vcp_current_value, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+SetVcp (IN i display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN q vcp_new_value, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+GetVcpMetadata (IN i display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN u flags, <br>
+OUT s feature_name, <br>
+OUT s feature_description, <br>
+OUT b is_read_only, <br>
+OUT b is_write_only, <br>
+OUT b is_rw, <br>
+OUT b is_complex, <br>
+OUT b is_continuous, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+GetCapabilitiesString (IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT s capabilities_text, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+GetCapabilitiesMetadata (IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT s model_name, <br>
+OUT y mccs_major, <br>
+OUT y mccs_minor, <br>
+OUT a{ys} commands, <br>
+OUT a{y(ssa{ys})} capabilities, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+GetDisplayState (IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT i status, <br>
+OUT s message); <br>
+GetSleepMultiplier (IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT d current_multiplier, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+SetSleepMultiplier (IN i display_number, <br>
+IN s edid_txt, <br>
+IN d new_multiplier, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<h2>SIGNALS
+<a name="SIGNALS"></a>
+</h2>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ConnectedDisplaysChanged
+(s edid_txt, <br>
+i event_type, <br>
+u flags); <br>
+ServiceInitialized (u flags);</p>
+
+<h2>PROPERTIES
+<a name="PROPERTIES"></a>
+</h2>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">AttributesReturnedByDetect
+readable as <br>
+StatusValues readable a{is} <br>
+DdcutilVersion readable s <br>
+DdcutilVerifySetVcp readwrite b <br>
+DdcutilDynamicSleep readwrite b <br>
+DdcutilOutputLevel readwrite u <br>
+DisplayEventTypes readable a{is} <br>
+ServiceInterfaceVersion readable s <br>
+ServiceInfoLogging readwrite b <br>
+ServiceEmitSignals readwrite b <br>
+ServiceFlagOptions readable a{is} <br>
+ServiceParametersLocked readable b <br>
+ServicePollInterval readwrite u <br>
+ServicePollCascadeInterval readwrite d</p>
+
+<h2>DESCRIPTION
+<a name="DESCRIPTION"></a>
+</h2>
+
+
+
+<p style="margin-left:9%; margin-top: 1em">ddcutil&minus;service
+is D&minus;Bus service wrapper for libddcutil which
+implements the VESA DDC Monitor Control Command Set. Most
+things that can be controlled using a monitor's
+on&minus;screen display can be controlled by this
+service.</p>
+
+<p style="margin-left:9%; margin-top: 1em">For many of the
+methods a VDU can be specified by either passing the DDC
+display_number or DDC EDID. The EDID is the more stable
+identifier, it remains unchanged if the number of connected
+or poweredup VDUs changes, whereas the DDCA display numbers
+may be reallocated.</p>
+
+<p style="margin-left:9%; margin-top: 1em">As a
+convienience for passing EDIDs using the command line,
+methods that accept an EDID identifier also accept a flag
+value which will cause the EDID passed to be matched as a
+prefix of a possible EDID (so all 128 bytes need not be
+entered).</p>
+
+<h2>METHOD DETAILS
+<a name="METHOD DETAILS"></a>
+</h2>
+
+
+<h3>The Restart() method
+<a name="The Restart() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">Restart (IN s
+text_options, <br>
+IN u syslog_level, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Restarts the
+service with the supplied parameters.</p>
+
+<p style="margin-left:9%; margin-top: 1em">If the service
+is configuration&minus;locked, an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+is raised.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>text_options</i>:</p>
+
+<p style="margin-left:14%;">Text options to be passed to
+libddcutil ddca_init().</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>syslog_level</i>:</p>
+
+<p style="margin-left:14%;">The libddcutil syslog
+level.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">For furture use.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The Detect() method
+<a name="The Detect() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">Detect (IN u
+flags, <br>
+OUT i number_of_displays, <br>
+OUT a(iiisssqsu) detected_displays, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Issues a detect
+and returns the VDUs detected.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The array
+<i>detected_displays</i> will be of length
+<i>number_of_displays</i>.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Each element of
+<i>detected_displays</i> array will contain the fields
+specified by the AttributesReturnedByDetect property. The
+fields will include the libddcutil display&minus;number and
+a base64&minus;encoded EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If set to 1, any invalid VDUs
+will be included in the results.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>number_of_displays</i>:</p>
+
+<p style="margin-left:14%;">The number of VDUs detected
+(the length of <i>detected_displays</i>).</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT a(iiisssqsu)
+<i>detected_displays</i>:</p>
+
+<p style="margin-left:14%;">An array of structures
+describing the VDUs.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The GetVcp() method
+<a name="The GetVcp() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">GetVcp (IN i
+display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN u flags, <br>
+OUT q vcp_current_value, <br>
+OUT q vcp_max_value, <br>
+OUT s vcp_formatted_value, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Retrieve the
+value for a VCP&minus;code for the specified VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">For simplicity
+the <i>vcp_current_value</i> returned will always be 16 bit
+integer (most VCP values are single byte 8&minus;bit
+intergers, very few are two&minus;byte 16&minus;bit).</p>
+
+<p style="margin-left:9%; margin-top: 1em">The
+<i>vcp_formatted_value</i> contains the current value along
+with any related info, such as the maximum value, its
+similar to the output of the ddcutil getvcp
+shell&minus;command.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">The libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">The base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN y
+<i>vcp_code</i>:</p>
+
+<p style="margin-left:14%;">The VPC&minus;code to query,
+for example, 16 (0x10) is brightness.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT q
+<i>vcp_current_value</i>:</p>
+
+<p style="margin-left:14%;">The current numeric value as a
+unified 16 bit integer.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT q
+<i>vcp_max_value</i>:</p>
+
+<p style="margin-left:14%;">The maximum possible value, to
+allow for easy calculation of current/max.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>vcp_formatted_value</i>:</p>
+
+<p style="margin-left:14%;">A formatted version of the
+value including related info such as the
+max&minus;value.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The GetMultipleVcp() method
+<a name="The GetMultipleVcp() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">GetMultipleVcp
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN ay vcp_code, <br>
+IN u flags, <br>
+OUT a(yqqs) vcp_current_value, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Retrieves
+several different VCP values for the specified VDU. This is
+a convienience method provided to more efficiently utilise
+D&minus;Bus.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Each entry in
+<i>vcp_current_value</i> array is a VCP&minus;code along
+with its current, maximum and formatted values (the same as
+those returned by GetVcp).</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN ay
+<i>vcp_code</i>:</p>
+
+<p style="margin-left:14%;">the VPC&minus;code to
+query.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT a(yqqs)
+<i>vcp_current_value</i>:</p>
+
+<p style="margin-left:14%;">An array of VCP&minus;codes and
+values.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The SetVcp() method
+<a name="The SetVcp() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">SetVcp (IN i
+display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN q vcp_new_value, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Set the value
+for a VCP&minus;code for the specified VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">For simplicity
+the <i>vcp_new_value</i> is always passed as a 16 bit
+integer (most VCP values are single byte 8&minus;bit
+intergers, very few are two&minus;byte 16&minus;bit).</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to alter</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN y
+<i>vcp_code</i>:</p>
+
+<p style="margin-left:14%;">the VPC&minus;code to
+query.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN q
+<i>vcp_new_value</i>:</p>
+
+<p style="margin-left:14%;">the numeric value as a 16 bit
+integer.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The GetVcpMetadata() method
+<a name="The GetVcpMetadata() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">GetVcpMetadata
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN u flags, <br>
+OUT s feature_name, <br>
+OUT s feature_description, <br>
+OUT b is_read_only, <br>
+OUT b is_write_only, <br>
+OUT b is_rw, <br>
+OUT b is_complex, <br>
+OUT b is_continuous, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Retrieve the
+metadata for a VCP&minus;code for the specified VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN y
+<i>vcp_code</i>:</p>
+
+<p style="margin-left:14%;">the VPC&minus;code to
+query.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>feature_name</i>:</p>
+
+<p style="margin-left:14%;">the feature name for the
+VCP&minus;code</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>feature_description</i>:</p>
+
+<p style="margin-left:14%;">the feature description, if
+any, of the VCP&minus;code.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT b
+<i>is_read_only</i>:</p>
+
+<p style="margin-left:14%;">True if the feature is
+read&minus;only.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT b
+<i>is_write_only</i>:</p>
+
+<p style="margin-left:14%;">True if the feature is
+write&minus;only (for example, a code that turns the VDU
+off).</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT b
+<i>is_rw</i>:</p>
+
+<p style="margin-left:14%;">True if the feature is readable
+and writable.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT b
+<i>is_complex</i>:</p>
+
+<p style="margin-left:14%;">True if the feature is complex
+(multi&minus;byte).</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT b
+<i>is_continuous</i>:</p>
+
+<p style="margin-left:14%;">True in the feature is a
+continuous value (it is not an enumeration).</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The GetCapabilitiesString() method
+<a name="The GetCapabilitiesString() method"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">GetCapabilitiesString
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT s capabilities_text, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Retrieve the
+capabilities metadata for a VDU in a format similar to that
+output by the ddcutil detect shell&minus;command (similar
+enough for parsing by common code).</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>capabilities_text</i>:</p>
+
+<p style="margin-left:14%;">the capability string for the
+VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The GetCapabilitiesMetadata() method
+<a name="The GetCapabilitiesMetadata() method"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">GetCapabilitiesMetadata
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT s model_name, <br>
+OUT y mccs_major, <br>
+OUT y mccs_minor, <br>
+OUT a{ys} commands, <br>
+OUT a{y(ssa{ys})} capabilities, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Retrieve the
+capabilities metadata for a VDU in a parsed dictionary
+structure indexed by VCP code.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The
+<i>capabilities</i> out parameter is an array of dictionary
+entries. Each entry consists of a VCP&minus;code along with
+a struct containing the feature&minus;name,
+feature&minus;description, and an array of
+permitted&minus;values. For features that have continuous
+values, the associated permitted&minus;value array will be
+empty. For non&minus;continuous features, the
+permitted&minus;value array will contain a dictionary entry
+for each permitted value, each entry containing a
+permiited&minus;value and value&minus;name.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>model_name</i>:</p>
+
+<p style="margin-left:14%;">parsed model name string</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT y
+<i>mccs_major</i>:</p>
+
+<p style="margin-left:14%;">MCCS major version number
+byte.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT y
+<i>mccs_minor</i>:</p>
+
+<p style="margin-left:14%;">MCCS minor version number
+byte.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT a{ys}
+<i>commands</i>:</p>
+
+<p style="margin-left:14%;">supported commands as a
+dictionary indexed by command number.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT
+a{y(ssa{ys})} <i>capabilities</i>:</p>
+
+<p style="margin-left:14%;">supported VCP features as a
+dictionary indexed by VCP&minus;code.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The GetDisplayState() method
+<a name="The GetDisplayState() method"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">GetDisplayState
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT i status, <br>
+OUT s message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Retrieve the
+libddcutil display state.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Depending on the
+hardware and drivers, this method might return anything
+useful.</p>
+
+<p style="margin-left:9%; margin-top: 1em">For libddcutil
+prior to 2.1, the method will return a libddcutil
+<i>error_status</i> of DDCRC_UNIMPLEMENTED.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil display
+status.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>message</i>:</p>
+
+<p style="margin-left:14%;">Text message for display
+status.</p>
+
+<h3>The GetSleepMultiplier() method
+<a name="The GetSleepMultiplier() method"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">GetSleepMultiplier
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN u flags, <br>
+OUT d current_multiplier, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Get the current
+libddcutil sleep multiplier for the specified VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">In more recent
+versions of libddcutil this value is generally managed
+automatically.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT d
+<i>current_multiplier</i>:</p>
+
+<p style="margin-left:14%;">the sleep multiplier.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The SetSleepMultiplier() method
+<a name="The SetSleepMultiplier() method"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">SetSleepMultiplier
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN d new_multiplier, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Set the
+libddcutil sleep multiplier for the specified VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">In more recent
+versions of libddcutil this is generally managed
+automatically, but this method is provided should manual
+control be ncessary (due to problem hardware).</p>
+
+<p style="margin-left:9%; margin-top: 1em">Prior to taking
+manual control of the sleep&minus;multiplier, the
+DdcutilDynamicSleep property should be set to false to
+prevent the multiplier from being automatically retuned.</p>
+
+<p style="margin-left:9%; margin-top: 1em">If the service
+is configuration&minus;locked, an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+is raised.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">The libddcutil/ddcutil display
+number to query</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">The base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN d
+<i>new_multiplier</i>:</p>
+
+<p style="margin-left:14%;">The sleep multiplier.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the edid_txt is matched
+as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h2>SIGNAL DETAILS
+<a name="SIGNAL DETAILS"></a>
+</h2>
+
+
+<h3>The ConnectedDisplaysChanged&quot; signal&quot;
+<a name="The ConnectedDisplaysChanged&quot; signal&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ConnectedDisplaysChanged
+(s edid_txt, <br>
+i event_type, <br>
+u flags);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Where hardware
+and drivers support it, this signal will be raised if a
+displays connection status changes due to cabling, power, or
+DPMS.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The hardware,
+cabling and drivers determines which of states listed by
+DisplayEventTypes property that can actually be signaled
+(the possibilities cannot be determined
+programatically).</p>
+
+<p style="margin-left:9%; margin-top: 1em">Requires the
+ServiceEmitSignals property to be set to true.</p>
+
+<p style="margin-left:9%; margin-top: 1em">s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">The base&minus;64 encoded EDID
+of the display.</p>
+
+<p style="margin-left:9%; margin-top: 1em">i
+<i>event_type</i>:</p>
+
+<p style="margin-left:14%;">A value macthing one of those
+from the DisplayEventTypes property.</p>
+
+<p style="margin-left:9%; margin-top: 1em">u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">For furture use.</p>
+
+<h3>The ServiceInitialized&quot; signal&quot;
+<a name="The ServiceInitialized&quot; signal&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceInitialized
+(u flags);</p>
+
+<p style="margin-left:9%; margin-top: 1em">This signal is
+raised when the service is initialized. It provides clients
+with a way to detect restarts and reinstate properties or
+other settings.</p>
+
+<p style="margin-left:9%; margin-top: 1em">u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">For furture use.</p>
+
+<h2>PROPERTY DETAILS
+<a name="PROPERTY DETAILS"></a>
+</h2>
+
+
+<h3>The AttributesReturnedByDetect&quot; property&quot;
+<a name="The AttributesReturnedByDetect&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">AttributesReturnedByDetect
+readable as</p>
+
+<p style="margin-left:9%; margin-top: 1em">The text names
+of each of the fields in the array of structs returned by
+the Detect method.</p>
+
+<h3>The StatusValues&quot; property&quot;
+<a name="The StatusValues&quot; property&quot;"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">StatusValues
+readable a{is}</p>
+
+<p style="margin-left:9%; margin-top: 1em">The list of
+libddcutil status values and their text names that might be
+returned in the <i>error_status</i> out&minus;parameter of
+most of the service methods.</p>
+
+<h3>The DdcutilVersion&quot; property&quot;
+<a name="The DdcutilVersion&quot; property&quot;"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">DdcutilVersion
+readable s</p>
+
+<p style="margin-left:9%; margin-top: 1em">The ddcutil
+version number for the linked libddcutil.</p>
+
+<h3>The DdcutilVerifySetVcp&quot; property&quot;
+<a name="The DdcutilVerifySetVcp&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">DdcutilVerifySetVcp
+readwrite b</p>
+
+<p style="margin-left:9%; margin-top: 1em">Within
+libddcutil each setvcp is verified by internal check using a
+getvcp. This verfication step can be enabled or disabled by
+altering this property.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h3>The DdcutilDynamicSleep&quot; property&quot;
+<a name="The DdcutilDynamicSleep&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">DdcutilDynamicSleep
+readwrite b</p>
+
+
+<p style="margin-left:9%; margin-top: 1em">Enables/disables
+automatic adjustment of the sleep&minus;multiplier. Before
+using the SetSleepMultiplier method, this property should be
+set to false to stop any automatic retuning of the
+multiplier.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h3>The DdcutilOutputLevel&quot; property&quot;
+<a name="The DdcutilOutputLevel&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">DdcutilOutputLevel
+readwrite u</p>
+
+<p style="margin-left:9%; margin-top: 1em">Change the
+libddcutil diagnostic output&minus;level. See the
+libddcutil/ddcutil documentation for details.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h3>The DisplayEventTypes&quot; property&quot;
+<a name="The DisplayEventTypes&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">DisplayEventTypes
+readable a{is}</p>
+
+<p style="margin-left:9%; margin-top: 1em">A list of the
+event types sent by the ConnectedDisplaysChanged signal
+along with their text names. Events are included for display
+connection/disconnection (hotplug), DPMS&minus;sleep, and
+DPMS&minus;wake. If the list is empty, the GPU,
+GPU&minus;driver, or libddcutil version doesn?t support
+display event detection.</p>
+
+<h3>The ServiceInterfaceVersion&quot; property&quot;
+<a name="The ServiceInterfaceVersion&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceInterfaceVersion
+readable s</p>
+
+<p style="margin-left:9%; margin-top: 1em">The interface
+version of this service. Providing the major number remains
+the same, the service remains backward compatibility with
+existing clients.</p>
+
+<h3>The ServiceInfoLogging&quot; property&quot;
+<a name="The ServiceInfoLogging&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceInfoLogging
+readwrite b</p>
+
+
+<p style="margin-left:9%; margin-top: 1em">Enables/disables
+info and debug level logging within the service executable.
+(The service using glib logging.)</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h3>The ServiceEmitSignals&quot; property&quot;
+<a name="The ServiceEmitSignals&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceEmitSignals
+readwrite b</p>
+
+<p style="margin-left:9%; margin-top: 1em">Because VDU
+connectivity change detection involves some polling, this
+property can be used to disable it if it is unecessary. For
+example, where the configuration of VDUs is fixed.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h3>The ServiceFlagOptions&quot; property&quot;
+<a name="The ServiceFlagOptions&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceFlagOptions
+readable a{is}</p>
+
+<p style="margin-left:9%; margin-top: 1em">The list of
+available <i>flags</i> values that can be passed to the
+service methods. Not all options are applicable to all
+methods.</p>
+
+<h3>The ServiceParametersLocked&quot; property&quot;
+<a name="The ServiceParametersLocked&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceParametersLocked
+readable b</p>
+
+<p style="margin-left:9%; margin-top: 1em">Indicates
+whether the lock command line argument has been used to
+prevent configuration changes via method calls and property
+changes.</p>
+
+<h3>The ServicePollInterval&quot; property&quot;
+<a name="The ServicePollInterval&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServicePollInterval
+readwrite u</p>
+
+<p style="margin-left:9%; margin-top: 1em">Query or set the
+display change detection poll&minus;interval performed by
+the service (minimum 10 seconds, zero to disable
+polling).</p>
+
+<p style="margin-left:9%; margin-top: 1em">If libddcutil
+supports change detection and it works for hardware, drivers
+and cabling in use, internal polling by the service may be
+unecessary, in which case polling can be turned off by
+setting the interval to zero.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h3>The ServicePollCascadeInterval&quot; property&quot;
+<a name="The ServicePollCascadeInterval&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServicePollCascadeInterval
+readwrite d</p>
+
+<p style="margin-left:9%; margin-top: 1em">Query or set the
+display change detection poll&minus;cascade&minus;interval
+(minimum 0.1 seconds). When dealing with a cascade of
+events, for example, when several VDUs are set to DPMS
+sleep, polling occurs more frequently until the cascade is
+cleared.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Attempting to
+set this property when the service is
+configuration&minus;locked will result in an
+com.ddcutil.DdcutilService.Error.ConfigurationLocked error
+being raised.</p>
+
+<h2>AUTHOR
+<a name="AUTHOR"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em"><b>Michael
+Hamilton</b></p>
+
+<h2>COPYRIGHT
+<a name="COPYRIGHT"></a>
+</h2>
+
+
+<p style="margin-left:9%; margin-top: 1em">Copyright (C)
+2023,2024 Michael Hamilton.</p>
+
+<p style="margin-left:9%; margin-top: 1em">ddcutil-service
+is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2,
+or (at your option) any later version.</p>
+<hr>
+</body>
+</html>
