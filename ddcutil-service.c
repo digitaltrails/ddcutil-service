@@ -1641,8 +1641,8 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
                     message = ddcutil_service_error_entries[service_broken_error].dbus_error_name;
                 break;
             }
-            g_dbus_method_invocation_return_error(invocation, service_error_quark,
-                service_broken_error, message);
+            g_dbus_method_invocation_return_error(invocation, service_error_quark, service_broken_error,
+                "%s", message);
             return;
         }
     }
