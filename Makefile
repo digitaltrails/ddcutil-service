@@ -21,6 +21,7 @@ $(EXE): $(SOURCE)
 
 install: $(EXE)
 	sed 's?/usr/bin/?$(BIN_DIR)/?' < $(SERVICE_FILE) > $(SERVICE_FILE).tmp
+	mkdir -p $(SERVICES_DIR) $(BIN_DIR)
 	install $(SERVICE_FILE).tmp $(SERVICES_DIR)/$(SERVICE_FILE)
 	install $(EXE) $(BIN_DIR)
 
