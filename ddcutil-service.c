@@ -69,7 +69,7 @@
     #define LIBDDCUTIL_HAS_CHANGES_CALLBACK
     #define LIBDDCUTIL_HAS_OPTION_ARGUMENTS
     #define LIBDDCUTIL_HAS_INDIVIDUAL_SLEEP_MULTIPLIER
-    #define LIBDDCUTIL_HAS_DYNAMIC_SLEEP
+    #define LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN
 #else
     #define LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
@@ -1552,21 +1552,21 @@ static bool verify_i2c_dev() {
     service_broken_error = -1;  // Assume OK
 
     // First just check if detect is finding anything - if it is, i2c-dev must be OK
-    const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
-    if (detect_status == DDCRC_OK) {
-        DDCA_Display_Info_List* dlist = NULL;
-        const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
-        if (list_status == DDCRC_OK) {
-            const int vdu_count = dlist->ct;
-            ddca_free_display_info_list(dlist);
-            if (vdu_count > 0) {
-                g_message("Detected VDU-count=%d - skipping i2c-dev verification", vdu_count);
-                return TRUE;
-            }
-            // May or may not be a problem with i2c-dev - might be normal
-            g_message("Failed to detect any VDUs - will check i2c-dev");
-        }
-    }
+    // const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
+    // if (detect_status == DDCRC_OK) {
+    //     DDCA_Display_Info_List* dlist = NULL;
+    //     const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+    //     if (list_status == DDCRC_OK) {
+    //         const int vdu_count = dlist->ct;
+    //         ddca_free_display_info_list(dlist);
+    //         if (vdu_count > 0) {
+    //             g_message("Detected VDU-count=%d - skipping i2c-dev verification", vdu_count);
+    //             return TRUE;
+    //         }
+    //         // May or may not be a problem with i2c-dev - might be normal
+    //         g_message("Failed to detect any VDUs - will check i2c-dev");
+    //     }
+    // }
 
     // Check if i2c-dev devices exist and are r/w accessible
     int rw_count = 0;
@@ -1641,8 +1641,7 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
                     message = ddcutil_service_error_entries[service_broken_error].dbus_error_name;
                 break;
             }
-            g_dbus_method_invocation_return_error(invocation, service_error_quark, service_broken_error,
-                "%s", message);
+            g_dbus_method_invocation_return_error(invocation, service_error_quark, service_broken_error, "%s", message);
             return;
         }
     }
@@ -1715,10 +1714,8 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
         ret = g_variant_new_boolean(ddca_is_verify_enabled());
     }
     else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
-#if defined(HAS_DYNAMIC_SLEEP)
-        if (strcmp(ddca_ddcutil_version_string(), "2.0.0") != 0) {
-            ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
-        }
+#if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
+        ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
 #else
         ret = g_variant_new_boolean(FALSE);
 #endif
@@ -1819,10 +1816,10 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         ddca_enable_verify(g_variant_get_boolean(value));
     }
     else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
-#if defined(HAS_DYNAMIC_SLEEP)
+#if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
         ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
 #else
-        g_warning("Dynamic sleep not supported by this version of libddcutil");
+        g_warning("Dynamic sleep boolean not supported by this version of libddcutil");
 #endif
     }
     else if (g_strcmp0(property_name, "DdcutilOutputLevel") == 0) {
@@ -2413,6 +2410,10 @@ int main(int argc, char* argv[]) {
     ddca_init_options |= DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG;
     g_message("Calling ddca_init %d %d '%s'", ddca_syslog_level, ddca_init_options, arg_string);
     ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
+#endif
+
+#if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
+    g_message("ddca_is_dynamic_sleep_enabled()=%s", ddca_is_dynamic_sleep_enabled() ? "enabled" : "disabled");
 #endif
 
     const guint owner_id = g_bus_own_name(
