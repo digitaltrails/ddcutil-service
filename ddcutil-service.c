@@ -1552,21 +1552,21 @@ static bool verify_i2c_dev() {
     service_broken_error = -1;  // Assume OK
 
     // First just check if detect is finding anything - if it is, i2c-dev must be OK
-    // const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
-    // if (detect_status == DDCRC_OK) {
-    //     DDCA_Display_Info_List* dlist = NULL;
-    //     const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
-    //     if (list_status == DDCRC_OK) {
-    //         const int vdu_count = dlist->ct;
-    //         ddca_free_display_info_list(dlist);
-    //         if (vdu_count > 0) {
-    //             g_message("Detected VDU-count=%d - skipping i2c-dev verification", vdu_count);
-    //             return TRUE;
-    //         }
-    //         // May or may not be a problem with i2c-dev - might be normal
-    //         g_message("Failed to detect any VDUs - will check i2c-dev");
-    //     }
-    // }
+    const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
+    if (detect_status == DDCRC_OK) {
+        DDCA_Display_Info_List* dlist = NULL;
+        const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+        if (list_status == DDCRC_OK) {
+            const int vdu_count = dlist->ct;
+            ddca_free_display_info_list(dlist);
+            if (vdu_count > 0) {
+                g_message("Detected VDU-count=%d - skipping i2c-dev verification", vdu_count);
+                return TRUE;
+            }
+            // May or may not be a problem with i2c-dev - might be normal
+            g_message("Failed to detect any VDUs - will check i2c-dev");
+        }
+    }
 
     // Check if i2c-dev devices exist and are r/w accessible
     int rw_count = 0;
@@ -1718,6 +1718,7 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
         ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
 #else
         ret = g_variant_new_boolean(FALSE);
+        g_warning("DdcutilDynamicSleep not supported by this version of libddcutil");
 #endif
     }
     else if (g_strcmp0(property_name, "AttributesReturnedByDetect") == 0) {
@@ -2397,8 +2398,6 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    verify_i2c_dev();
-
 #if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     // Handle ddcutil ddc_init() arguments
     char* argv_null_terminated[argc];
@@ -2411,6 +2410,8 @@ int main(int argc, char* argv[]) {
     g_message("Calling ddca_init %d %d '%s'", ddca_syslog_level, ddca_init_options, arg_string);
     ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
 #endif
+
+    verify_i2c_dev();
 
 #if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
     g_message("ddca_is_dynamic_sleep_enabled()=%s", ddca_is_dynamic_sleep_enabled() ? "enabled" : "disabled");
