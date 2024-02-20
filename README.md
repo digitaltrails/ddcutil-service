@@ -85,3 +85,9 @@ advice provided during the development of this service.
 
 Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec.
 
+### Version History
+
+- 2.0.1
+
+  - Fix some compiler warnings that only appear on Ubuntu.
+  - Fix run time error when used with libddcutil >= 2.1.
