@@ -89,5 +89,5 @@ Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec.
 
 - 1.0.1
 
-  - Fix some compiler warnings that only appear on Ubuntu.
-  - Fix run time error when used with libddcutil >= 2.1.
+  - Use gcc with -Wformat-security for safety and to match Arch and Ubuntu defaults.
+  - Calling ddca_init() before verify_i2c() to fix runtime error for libddcutil >= 2.1.
