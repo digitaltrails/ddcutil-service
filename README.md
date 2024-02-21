@@ -80,15 +80,16 @@ https://github.com/digitaltrails/vdu_controls
 
 ### Acknowledgements
 
-Thanks go out to Sanford Rockowitz for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
+Thanks go out to Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)) for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
 advice provided during the development of this service.
 
-Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; Johan Grande
-for the Ubuntu patches; and Mark Wagie for AUR packaging.
+Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; Johan Grande ([nahoj](https://github.com/nahoj))
+for the Ubuntu patches; and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
 
 ### Version History
 
 - 1.0.1
-
   - Use gcc with -Wformat-security for safety and to match Arch and Ubuntu defaults.
   - Calling ddca_init() before verify_i2c() to fix runtime error for libddcutil >= 2.1.
+- 1.0.0
+  - Initial Release
