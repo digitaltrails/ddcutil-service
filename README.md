@@ -83,8 +83,8 @@ https://github.com/digitaltrails/vdu_controls
 Thanks go out to Sanford Rockowitz for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
 advice provided during the development of this service.
 
-Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec, and Johan Grande
-for the Ubuntu patches.
+Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; Johan Grande
+for the Ubuntu patches; and Mark Wagie for AUR packaging.
 
 ### Version History
 
