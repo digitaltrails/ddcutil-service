@@ -45,10 +45,19 @@ Detailed documentation can be found in the two manual pages:
 
 ### Installing the DdcutilService as a dbus-daemon auto-started service
 
-#### Unoffical/Community OpenSUSE RPM
+#### Installation via prebuilt binaries 
 
-I have build an _unofficial/community_ RPM for OpenSUSE Tumbeweed, see 
-[https://software.opensuse.org/package/ddcutil-service](https://software.opensuse.org/package/ddcutil-service)
+###### OpenSUSE Tumbleweed RPM:
+
+There is an official Tumbleweed RPM:
+
+ - https://software.opensuse.org/package/ddcutil-service
+
+The same page also provides links to unoffical builds I've done for Leap.
+
+###### AUR (Arch Linux User Repository):
+
+ - https://aur.archlinux.org/packages/ddcutil-service
 
 #### Installation via Makefile
 
