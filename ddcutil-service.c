@@ -59,7 +59,7 @@
 #include <ddcutil_macros.h>
 
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.1"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.2"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -77,7 +77,7 @@
 #undef XML_FROM_INTROSPECTED_DATA
 
 static gboolean display_status_detection_enabled = FALSE;
-static gboolean enable_signals = FALSE;
+static gboolean enable_hotplug_signals = FALSE;
 static gboolean prefer_polling = TRUE;
 static gboolean lock_configuration = FALSE;
 
@@ -974,6 +974,18 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     }
     else {
         vdu_count = dlist->ct;
+#if defined(TEST_LAPTOP_BOGUS_VDU)
+        g_variant_builder_add(
+            detected_displays_builder,
+            "(iiisssqsu)",
+            -1, -1, 0,
+            g_strdup(""), g_strdup(""), g_strdup(""),
+            0,
+            g_strdup("123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789"
+            "-123456789-123456789-12345678"),
+            0);
+        vdu_count++;
+#endif
         for (int ndx = 0; ndx < vdu_count; ndx++) {
             const DDCA_Display_Info* vdu_info = &dlist->info[ndx];
             gchar* safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
@@ -1758,7 +1770,7 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
         ret = g_variant_new_boolean(is_service_info_logging());
     }
     else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
-        ret = g_variant_new_boolean(enable_signals);
+        ret = g_variant_new_boolean(enable_hotplug_signals);
     }
     else if (g_strcmp0(property_name, "ServiceFlagOptions") == 0) {
         GVariantBuilder* builder = g_variant_builder_new(G_VARIANT_TYPE("a{is}"));
@@ -1832,14 +1844,21 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
     }
     else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
-        enable_signals = g_variant_get_boolean(value);
-        g_message("ServiceEmitSignals set property to %s", enable_signals ? "enabled" : "disabled");
+        enable_hotplug_signals = g_variant_get_boolean(value);
+        g_message("ServiceEmitSignals set property to %s", enable_hotplug_signals ? "enabled" : "disabled");
         if (prefer_polling) {
-            g_message("ServiceEmitSignals using ddcutil-service polling");
+             if (enable_hotplug_signals) {
+                if (poll_interval_micros == 0) {  // If not already set
+                    poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
+                }
+                g_message("ServiceEmitSignals ddcutil-service polling every %ld seconds", poll_interval_micros/1000000);
+            }
         }
         else {
+            g_message("Detect changes using libddcutil callbacks.");
+            poll_interval_micros = 0;
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-            if (enable_signals) {
+            if (enable_hotplug_signals) {
                 g_message("ServiceEmitSignals using libddcutil change detection");
                 const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status != DDCRC_OK) {
@@ -2070,7 +2089,7 @@ typedef struct {
 static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
     // g_debug("prepare");
     *timeout_millis = 5000; // This doesn't appear to be strict, after an event it doesn't seem to apply for a while???
-    if (!enable_signals) {
+    if (!enable_hotplug_signals) {
         return FALSE;
     }
 
@@ -2290,7 +2309,6 @@ int main(int argc, char* argv[]) {
     gboolean version_request = FALSE;     // WARNING gboolean is int sized, do not substitute bool or
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
-    gboolean enable_display_status_events = FALSE;
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
     gboolean prefer_dma = FALSE;
 #endif
@@ -2331,7 +2349,7 @@ int main(int argc, char* argv[]) {
             "polling minimum interval between cascading events in seconds, 0.1 minimum", NULL
         },
         {
-            "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_display_status_events,
+            "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_hotplug_signals,
             "enable the D-Bus ConnectedDisplaysChanged signal and associated change monitoring", NULL
         },
         {
@@ -2428,7 +2446,7 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    if (!enable_display_status_events) {
+    if (!enable_hotplug_signals) {
         g_message("ConnectedDisplaysChanged signals and connectivity monitoring are disabled.");
         poll_interval_micros = 0;  // Disable internal polling
     }
@@ -2497,9 +2515,8 @@ int main(int argc, char* argv[]) {
             g_message("Set ConnectedDisplaysChanged event cascade interval to %5.3f seconds",
                 poll_cascade_interval_micros / 1000000.0);
         }
-
-        enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
     }
+    enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
 
     g_main_loop_run(main_loop);
     g_bus_unown_name(owner_id);

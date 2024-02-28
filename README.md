@@ -97,6 +97,9 @@ for the Ubuntu patches; and Mark Wagie ([yochananmarqos](https://github.com/yoch
 
 ### Version History
 
+- 1.0.2
+  - Fix ServiceEmitSignals property assignment so that it correctly toggles hotplug signals.
+  - Fix hotplug polling so that it remains an option no matter what version of libddcutil is in use. 
 - 1.0.1
   - Use gcc with -Wformat-security for safety and to match Arch and Ubuntu defaults.
   - Calling ddca_init() before verify_i2c() to fix runtime error for libddcutil >= 2.1.
