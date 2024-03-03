@@ -577,7 +577,7 @@ static const gchar introspection_xml[] = R"(
         @client_name: The D-Bus client-name that requested the change (eases filtering signals caused by self).
         @client_context: The client-context passed to SetVcpWithContext (empty string if none).
         @flags: no currently in use.
-        This signal will be raised if a SetVcp method call succeeds.
+        This signal will be raised if a SetVcp or SetVcpWithContext method call succeeds.
     -->
     <signal name='VcpValueChanged'>
         <arg name='display_number' type='i'/>

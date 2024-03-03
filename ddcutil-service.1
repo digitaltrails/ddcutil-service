@@ -210,9 +210,10 @@ If the method succeeds, it will also emit a D-Bus \fBVcpValueChanged\fP signal.
 
 .TP
 .B SetVcpWithContext
-As with \fBSetVcp\fP but also return a client supplied context string in the
-emitted D-Bus \fBVcpValueChanged\fP signal. The client context may be of
-use to signal recipients for interpreting the origin of the change.
+As with \fBSetVcp\fP, but also accept a client supplied context string
+to be returned with the emitted D-Bus \fBVcpValueChanged\fP signal.
+The client-context may be of use to signal recipients for interpreting the
+origin of the change.
 
 .TP
 .B GetCapabiltiesMetadata
