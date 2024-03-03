@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Feb 22 07:30:12 2024 -->
+<!-- CreationDate: Mon Mar  4 10:04:40 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -31,6 +31,7 @@
 <a href="#The GetVcp() method">The GetVcp() method</a><br>
 <a href="#The GetMultipleVcp() method">The GetMultipleVcp() method</a><br>
 <a href="#The SetVcp() method">The SetVcp() method</a><br>
+<a href="#The SetVcpWithContext() method">The SetVcpWithContext() method</a><br>
 <a href="#The GetVcpMetadata() method">The GetVcpMetadata() method</a><br>
 <a href="#The GetCapabilitiesString() method">The GetCapabilitiesString() method</a><br>
 <a href="#The GetCapabilitiesMetadata() method">The GetCapabilitiesMetadata() method</a><br>
@@ -39,6 +40,7 @@
 <a href="#The SetSleepMultiplier() method">The SetSleepMultiplier() method</a><br>
 <a href="#SIGNAL DETAILS">SIGNAL DETAILS</a><br>
 <a href="#The ConnectedDisplaysChanged&quot; signal&quot;">The ConnectedDisplaysChanged&quot; signal&quot;</a><br>
+<a href="#The VcpValueChanged&quot; signal&quot;">The VcpValueChanged&quot; signal&quot;</a><br>
 <a href="#The ServiceInitialized&quot; signal&quot;">The ServiceInitialized&quot; signal&quot;</a><br>
 <a href="#PROPERTY DETAILS">PROPERTY DETAILS</a><br>
 <a href="#The AttributesReturnedByDetect&quot; property&quot;">The AttributesReturnedByDetect&quot; property&quot;</a><br>
@@ -50,6 +52,7 @@
 <a href="#The DisplayEventTypes&quot; property&quot;">The DisplayEventTypes&quot; property&quot;</a><br>
 <a href="#The ServiceInterfaceVersion&quot; property&quot;">The ServiceInterfaceVersion&quot; property&quot;</a><br>
 <a href="#The ServiceInfoLogging&quot; property&quot;">The ServiceInfoLogging&quot; property&quot;</a><br>
+<a href="#The ServiceEmitConnectivitySignals&quot; property&quot;">The ServiceEmitConnectivitySignals&quot; property&quot;</a><br>
 <a href="#The ServiceEmitSignals&quot; property&quot;">The ServiceEmitSignals&quot; property&quot;</a><br>
 <a href="#The ServiceFlagOptions&quot; property&quot;">The ServiceFlagOptions&quot; property&quot;</a><br>
 <a href="#The ServiceParametersLocked&quot; property&quot;">The ServiceParametersLocked&quot; property&quot;</a><br>
@@ -110,6 +113,14 @@ IN q vcp_new_value, <br>
 IN u flags, <br>
 OUT i error_status, <br>
 OUT s error_message); <br>
+SetVcpWithContext (IN i display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN q vcp_new_value, <br>
+IN s client_context, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
 GetVcpMetadata (IN i display_number, <br>
 IN s edid_txt, <br>
 IN y vcp_code, <br>
@@ -167,6 +178,13 @@ OUT s error_message);</p>
 (s edid_txt, <br>
 i event_type, <br>
 u flags); <br>
+VcpValueChanged (i display_number, <br>
+s edid_txt, <br>
+y vcp_code, <br>
+q vcp_new_value, <br>
+s source_client_name, <br>
+s source_client_context, <br>
+u flags); <br>
 ServiceInitialized (u flags);</p>
 
 <h2>PROPERTIES
@@ -185,6 +203,7 @@ DdcutilOutputLevel readwrite u <br>
 DisplayEventTypes readable a{is} <br>
 ServiceInterfaceVersion readable s <br>
 ServiceInfoLogging readwrite b <br>
+ServiceEmitConnectivitySignals readwrite b <br>
 ServiceEmitSignals readwrite b <br>
 ServiceFlagOptions readable a{is} <br>
 ServiceParametersLocked readable b <br>
@@ -378,8 +397,8 @@ for example, 16 (0x10) is brightness.</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT q
 <i>vcp_current_value</i>:</p>
@@ -457,8 +476,8 @@ query.</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT a(yqqs)
 <i>vcp_current_value</i>:</p>
@@ -527,8 +546,80 @@ integer.</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCA_OK (zero) if no errors have occured.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The SetVcpWithContext() method
+<a name="The SetVcpWithContext() method"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">SetVcpWithContext
+(IN i display_number, <br>
+IN s edid_txt, <br>
+IN y vcp_code, <br>
+IN q vcp_new_value, <br>
+IN s client_context, <br>
+IN u flags, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Set the value
+for a VCP&minus;code for the specified VDU.</p>
+
+<p style="margin-left:9%; margin-top: 1em">For simplicity
+the <i>vcp_new_value</i> is always passed as a 16 bit
+integer (most VCP values are single byte 8&minus;bit
+intergers, very few are two&minus;byte 16&minus;bit).</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the libddcutil/ddcutil display
+number to alter</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">the base&minus;64 encoded EDID
+of the display</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN y
+<i>vcp_code</i>:</p>
+
+<p style="margin-left:14%;">the VPC&minus;code to
+query.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN q
+<i>vcp_new_value</i>:</p>
+
+<p style="margin-left:14%;">the numeric value as a 16 bit
+integer.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN s
+<i>client_context</i>:</p>
+
+<p style="margin-left:14%;">a client&minus;context string
+that will be returned with the VcpValueChanged signal.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>error_status</i>:</p>
@@ -586,8 +677,8 @@ query.</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>feature_name</i>:</p>
@@ -678,8 +769,8 @@ of the display</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>capabilities_text</i>:</p>
@@ -748,8 +839,8 @@ of the display</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>model_name</i>:</p>
@@ -831,8 +922,8 @@ of the display</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>status</i>:</p>
@@ -882,8 +973,8 @@ of the display</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT d
 <i>current_multiplier</i>:</p>
@@ -954,8 +1045,8 @@ of the display</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">If 1, the edid_txt is matched
-as a unique prefex of the EDID.</p>
+<p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
+matched as a unique prefex of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>error_status</i>:</p>
@@ -997,7 +1088,8 @@ DisplayEventTypes property that can actually be signaled
 programatically).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Requires the
-ServiceEmitSignals property to be set to true.</p>
+ServiceEmitConnectivitySignals property to be set to
+true.</p>
 
 <p style="margin-left:9%; margin-top: 1em">s
 <i>edid_txt</i>:</p>
@@ -1015,6 +1107,57 @@ from the DisplayEventTypes property.</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">For furture use.</p>
+
+<h3>The VcpValueChanged&quot; signal&quot;
+<a name="The VcpValueChanged&quot; signal&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">VcpValueChanged
+(i display_number, <br>
+s edid_txt, <br>
+y vcp_code, <br>
+q vcp_new_value, <br>
+s source_client_name, <br>
+s source_client_context, <br>
+u flags);</p>
+
+<p style="margin-left:9%; margin-top: 1em">This signal will
+be raised if a SetVcp method call succeeds.</p>
+
+<p style="margin-left:9%; margin-top: 1em">i
+<i>display_number</i>:</p>
+
+<p style="margin-left:14%;">the display number</p>
+
+<p style="margin-left:9%; margin-top: 1em">s
+<i>edid_txt</i>:</p>
+
+<p style="margin-left:14%;">The base&minus;64 encoded EDID
+of the display.</p>
+
+<p style="margin-left:9%; margin-top: 1em">y
+<i>vcp_code</i>:</p>
+
+<p style="margin-left:14%;">The VCP code whose value
+changed.</p>
+
+<p style="margin-left:9%; margin-top: 1em">q
+<i>vcp_new_value</i>:</p>
+
+<p style="margin-left:14%;">The new value.</p>
+
+<p style="margin-left:9%; margin-top: 1em">s
+<i>source_client_name</i>:</p>
+
+<p style="margin-left:9%; margin-top: 1em">s
+<i>source_client_context</i>:</p>
+
+<p style="margin-left:9%; margin-top: 1em">u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">no currently in use.</p>
 
 <h3>The ServiceInitialized&quot; signal&quot;
 <a name="The ServiceInitialized&quot; signal&quot;"></a>
@@ -1189,13 +1332,13 @@ configuration&minus;locked will result in an
 com.ddcutil.DdcutilService.Error.ConfigurationLocked error
 being raised.</p>
 
-<h3>The ServiceEmitSignals&quot; property&quot;
-<a name="The ServiceEmitSignals&quot; property&quot;"></a>
+<h3>The ServiceEmitConnectivitySignals&quot; property&quot;
+<a name="The ServiceEmitConnectivitySignals&quot; property&quot;"></a>
 </h3>
 
 
 
-<p style="margin-left:14%; margin-top: 1em">ServiceEmitSignals
+<p style="margin-left:14%; margin-top: 1em">ServiceEmitConnectivitySignals
 readwrite b</p>
 
 <p style="margin-left:9%; margin-top: 1em">Because VDU
@@ -1208,6 +1351,19 @@ set this property when the service is
 configuration&minus;locked will result in an
 com.ddcutil.DdcutilService.Error.ConfigurationLocked error
 being raised.</p>
+
+<h3>The ServiceEmitSignals&quot; property&quot;
+<a name="The ServiceEmitSignals&quot; property&quot;"></a>
+</h3>
+
+
+
+<p style="margin-left:14%; margin-top: 1em">ServiceEmitSignals
+readwrite b</p>
+
+<p style="margin-left:9%; margin-top: 1em">Deprecated, name
+was too generic, replaced by
+ServiceEmitConnectivitySignals</p>
 
 <h3>The ServiceFlagOptions&quot; property&quot;
 <a name="The ServiceFlagOptions&quot; property&quot;"></a>

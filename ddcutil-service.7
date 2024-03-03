@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 02/16/2024
+.\"      Date: 03/04/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "02/16/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "03/04/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -62,6 +62,14 @@ SetVcp                  (IN  i             display_number,
                          IN  s             edid_txt,
                          IN  y             vcp_code,
                          IN  q             vcp_new_value,
+                         IN  u             flags,
+                         OUT i             error_status,
+                         OUT s             error_message);
+SetVcpWithContext       (IN  i             display_number,
+                         IN  s             edid_txt,
+                         IN  y             vcp_code,
+                         IN  q             vcp_new_value,
+                         IN  s             client_context,
                          IN  u             flags,
                          OUT i             error_status,
                          OUT s             error_message);
@@ -121,6 +129,13 @@ SetSleepMultiplier      (IN  i             display_number,
 ConnectedDisplaysChanged (s edid_txt,
                           i event_type,
                           u flags);
+VcpValueChanged          (i display_number,
+                          s edid_txt,
+                          y vcp_code,
+                          q vcp_new_value,
+                          s source_client_name,
+                          s source_client_context,
+                          u flags);
 ServiceInitialized       (u flags);
 .fi
 .if n \{\
@@ -132,20 +147,21 @@ ServiceInitialized       (u flags);
 .RS 4
 .\}
 .nf
-AttributesReturnedByDetect  readable   as
-StatusValues                readable   a{is}
-DdcutilVersion              readable   s
-DdcutilVerifySetVcp         readwrite  b
-DdcutilDynamicSleep         readwrite  b
-DdcutilOutputLevel          readwrite  u
-DisplayEventTypes           readable   a{is}
-ServiceInterfaceVersion     readable   s
-ServiceInfoLogging          readwrite  b
-ServiceEmitSignals          readwrite  b
-ServiceFlagOptions          readable   a{is}
-ServiceParametersLocked     readable   b
-ServicePollInterval         readwrite  u
-ServicePollCascadeInterval  readwrite  d
+AttributesReturnedByDetect      readable   as
+StatusValues                    readable   a{is}
+DdcutilVersion                  readable   s
+DdcutilVerifySetVcp             readwrite  b
+DdcutilDynamicSleep             readwrite  b
+DdcutilOutputLevel              readwrite  u
+DisplayEventTypes               readable   a{is}
+ServiceInterfaceVersion         readable   s
+ServiceInfoLogging              readwrite  b
+ServiceEmitConnectivitySignals  readwrite  b
+ServiceEmitSignals              readwrite  b
+ServiceFlagOptions              readable   a{is}
+ServiceParametersLocked         readable   b
+ServicePollInterval             readwrite  u
+ServicePollCascadeInterval      readwrite  d
 .fi
 .if n \{\
 .RE
@@ -301,7 +317,9 @@ The VPC\-code to query, for example, 16 (0x10) is brightness\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT q \fIvcp_current_value\fR:
@@ -369,7 +387,9 @@ the VPC\-code to query\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT a(yqqs) \fIvcp_current_value\fR:
@@ -432,7 +452,75 @@ the numeric value as a 16 bit integer\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The SetVcpWithContext() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+SetVcpWithContext (IN  i display_number,
+                   IN  s edid_txt,
+                   IN  y vcp_code,
+                   IN  q vcp_new_value,
+                   IN  s client_context,
+                   IN  u flags,
+                   OUT i error_status,
+                   OUT s error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Set the value for a VCP\-code for the specified VDU\&.
+.PP
+For simplicity the
+\fIvcp_new_value\fR
+is always passed as a 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
+.PP
+IN i \fIdisplay_number\fR:
+.RS 4
+the libddcutil/ddcutil display number to alter
+.RE
+.PP
+IN s \fIedid_txt\fR:
+.RS 4
+the base\-64 encoded EDID of the display
+.RE
+.PP
+IN y \fIvcp_code\fR:
+.RS 4
+the VPC\-code to query\&.
+.RE
+.PP
+IN q \fIvcp_new_value\fR:
+.RS 4
+the numeric value as a 16 bit integer\&.
+.RE
+.PP
+IN s \fIclient_context\fR:
+.RS 4
+a client\-context string that will be returned with the VcpValueChanged signal\&.
+.RE
+.PP
+IN u \fIflags\fR:
+.RS 4
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
@@ -487,7 +575,9 @@ the VPC\-code to query\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT s \fIfeature_name\fR:
@@ -565,7 +655,9 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT s \fIcapabilities_text\fR:
@@ -621,7 +713,9 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT s \fImodel_name\fR:
@@ -694,7 +788,9 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT i \fIstatus\fR:
@@ -739,7 +835,9 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT d \fIcurrent_multiplier\fR:
@@ -798,7 +896,9 @@ The sleep multiplier\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the edid_txt is matched as a unique prefex of the EDID\&.
+If 1, the
+\fIedid_txt\fR
+is matched as a unique prefex of the EDID\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
@@ -829,7 +929,7 @@ Where hardware and drivers support it, this signal will be raised if a displays 
 .PP
 The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property that can actually be signaled (the possibilities cannot be determined programatically)\&.
 .PP
-Requires the ServiceEmitSignals property to be set to true\&.
+Requires the ServiceEmitConnectivitySignals property to be set to true\&.
 .PP
 s \fIedid_txt\fR:
 .RS 4
@@ -844,6 +944,61 @@ A value macthing one of those from the DisplayEventTypes property\&.
 u \fIflags\fR:
 .RS 4
 For furture use\&.
+.RE
+.SS "The "VcpValueChanged" signal"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+VcpValueChanged (i display_number,
+                 s edid_txt,
+                 y vcp_code,
+                 q vcp_new_value,
+                 s source_client_name,
+                 s source_client_context,
+                 u flags);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+.PP
+This signal will be raised if a SetVcp method call succeeds\&.
+.PP
+i \fIdisplay_number\fR:
+.RS 4
+the display number
+.RE
+.PP
+s \fIedid_txt\fR:
+.RS 4
+The base\-64 encoded EDID of the display\&.
+.RE
+.PP
+y \fIvcp_code\fR:
+.RS 4
+The VCP code whose value changed\&.
+.RE
+.PP
+q \fIvcp_new_value\fR:
+.RS 4
+The new value\&.
+.RE
+.PP
+s \fIsource_client_name\fR:
+.RS 4
+.sp
+.RE
+.PP
+s \fIsource_client_context\fR:
+.RS 4
+.sp
+.RE
+.PP
+u \fIflags\fR:
+.RS 4
+no currently in use\&.
 .RE
 .SS "The "ServiceInitialized" signal"
 .sp
@@ -991,6 +1146,21 @@ ServiceInfoLogging  readwrite  b
 Enables/disables info and debug level logging within the service executable\&. (The service using glib logging\&.)
 .PP
 Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
+.SS "The "ServiceEmitConnectivitySignals" property"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ServiceEmitConnectivitySignals  readwrite  b
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Because VDU connectivity change detection involves some polling, this property can be used to disable it if it is unecessary\&. For example, where the configuration of VDUs is fixed\&.
+.PP
+Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "ServiceEmitSignals" property"
 .sp
 .if n \{\
@@ -1003,9 +1173,7 @@ ServiceEmitSignals  readwrite  b
 .RE
 .\}
 .PP
-Because VDU connectivity change detection involves some polling, this property can be used to disable it if it is unecessary\&. For example, where the configuration of VDUs is fixed\&.
-.PP
-Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
+Deprecated, name was too generic, replaced by ServiceEmitConnectivitySignals
 .SS "The "ServiceFlagOptions" property"
 .sp
 .if n \{\

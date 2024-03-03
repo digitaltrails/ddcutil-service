@@ -40,12 +40,24 @@ class Test(QObject):
                     "/com/ddcutil/DdcutilObject",
                     "com.ddcutil.DdcutilInterface",
                     "ConnectedDisplaysChanged",
-                    self.callback);
+                    self.callback_on_displays_changed);
+
+        bus.connect("com.ddcutil.DdcutilService",
+                    "/com/ddcutil/DdcutilObject",
+                    "com.ddcutil.DdcutilInterface",
+                    "VcpValueChanged",
+                    self.callback_on_vcp_value_changed);
 
     @pyqtSlot(QDBusMessage)
-    def callback(self, message: QDBusMessage):
+    def callback_on_displays_changed(self, message: QDBusMessage):
         edid_encoded, event_type, flags = message.arguments()
         print(f"ConnectedDisplaysChanged Callback called {event_type=} {flags=} {edid_encoded:.30}...")
+
+    @pyqtSlot(QDBusMessage)
+    def callback_on_vcp_value_changed(self, message: QDBusMessage):
+        display_number, edid_encoded, vcp_code, vcp_new_value, client_name, client_context, flags = message.arguments()
+        print(f"VcpValueChanged Callback called {display_number=} {edid_encoded=:.30}... {vcp_code=} {vcp_new_value=} "
+              f" {client_name=} {client_context=} {flags=} ")
 
 if __name__ == '__main__':
     app = QCoreApplication(sys.argv)

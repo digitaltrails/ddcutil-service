@@ -36,13 +36,20 @@ ddcutil_proxy = bus.get_proxy(
     "/com/ddcutil/DdcutilObject",  # The object name
 )
 
-def callback(edid_encoded: str, event_type: int, flags: int):
+def callback_connected_displays_changed(edid_encoded: str, event_type: int, flags: int):
     print(f"ConnectedDisplaysChanged Callback called {event_type=} {flags=} {edid_encoded:.30}...")
+
+def callback_vcp_value_changed(display_num:int, edid_encoded: str, vcp_code: int, new_value: int,
+                               client_name: str, client_context: str, flags: int):
+    print(f"VcpValueChanged Callback called {display_num=} {edid_encoded=:.30}... {vcp_code=} {new_value=} "
+          f"{client_name=} {client_context=}")
 
 print(f"{ddcutil_proxy.ServiceInterfaceVersion=}")
 
 # Wait on signal
-ddcutil_proxy.ConnectedDisplaysChanged.connect(callback)
+ddcutil_proxy.ConnectedDisplaysChanged.connect(callback_connected_displays_changed)
+
+ddcutil_proxy.VcpValueChanged.connect(callback_vcp_value_changed)
 
 loop = EventLoop()
 loop.run()

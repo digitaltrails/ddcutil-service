@@ -59,7 +59,7 @@
 #include <ddcutil_macros.h>
 
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.2"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.1.0"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -77,7 +77,7 @@
 #undef XML_FROM_INTROSPECTED_DATA
 
 static gboolean display_status_detection_enabled = FALSE;
-static gboolean enable_hotplug_signals = FALSE;
+static gboolean enable_connectivity_signals = FALSE;
 static gboolean prefer_polling = TRUE;
 static gboolean lock_configuration = FALSE;
 
@@ -126,7 +126,7 @@ typedef enum {
 typedef struct {
     DDCA_Display_Event_Type event_type;
     DDCA_Display_Ref        dref;
-} Event_Data_Type;;
+} Event_Data_Type;
 
 #endif
 
@@ -353,6 +353,33 @@ static const gchar introspection_xml[] = R"(
     </method>
 
     <!--
+        SetVcpWithContext:
+        @display_number: the libddcutil/ddcutil display number to alter
+        @edid_txt: the base-64 encoded EDID of the display
+        @vcp_code: the VPC-code to query.
+        @vcp_new_value: the numeric value as a 16 bit integer.
+        @client_context: a client-context string that will be returned with the VcpValueChanged signal.
+        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_message: Text message for error_status.
+
+        Set the value for a VCP-code for the specified VDU.
+
+        For simplicity the @vcp_new_value is always passed as a 16 bit integer (most
+        VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+    -->
+    <method name='SetVcpWithContext'>
+        <arg name='display_number' type='i' direction='in'/>
+        <arg name='edid_txt' type='s' direction='in'/>
+        <arg name='vcp_code' type='y' direction='in'/>
+        <arg name='vcp_new_value' type='q' direction='in'/>
+        <arg name='client_context' type='s' direction='in'/>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
+    </method>
+
+    <!--
         GetVcpMetadata:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
@@ -533,7 +560,7 @@ static const gchar introspection_xml[] = R"(
         The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property
         that can actually be signaled (the possibilities cannot be determined programatically).
 
-        Requires the ServiceEmitSignals property to be set to true.
+        Requires the ServiceEmitConnectivitySignals property to be set to true.
     -->
     <signal name='ConnectedDisplaysChanged'>
         <arg type='s' name='edid_txt'/>
@@ -541,6 +568,26 @@ static const gchar introspection_xml[] = R"(
         <arg type='u' name='flags'/>
     </signal>
 
+    <!--
+        VcpValueChanged:
+        @display_number: the display number
+        @edid_txt: The base-64 encoded EDID of the display.
+        @vcp_code: The VCP code whose value changed.
+        @vcp_new_value: The new value.
+        @client_name: The D-Bus client-name that requested the change (eases filtering signals caused by self).
+        @client_context: The client-context passed to SetVcpWithContext (empty string if none).
+        @flags: no currently in use.
+        This signal will be raised if a SetVcp method call succeeds.
+    -->
+    <signal name='VcpValueChanged'>
+        <arg name='display_number' type='i'/>
+        <arg name='edid_txt' type='s'/>
+        <arg name='vcp_code' type='y'/>
+        <arg name='vcp_new_value' type='q'/>
+        <arg name='source_client_name' type='s'/>
+        <arg name='source_client_context' type='s'/>
+        <arg type='u' name='flags'/>
+    </signal>
 
     <!--
         ServiceInitialized:
@@ -644,7 +691,7 @@ static const gchar introspection_xml[] = R"(
     <property type='b' name='ServiceInfoLogging' access='readwrite'/>
 
     <!--
-        ServiceEmitSignals:
+        ServiceEmitConnectivitySignals:
 
         Because VDU connectivity change detection involves some polling, this
         property can be used to disable it if it is unecessary.  For example, where
@@ -653,6 +700,13 @@ static const gchar introspection_xml[] = R"(
         Attempting to set this property when the service is configuration-locked
         will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
         being raised.
+    -->
+    <property type='b' name='ServiceEmitConnectivitySignals' access='readwrite'/>
+
+    <!--
+        ServiceEmitSignals:
+
+        Deprecated, name was too generic, replaced by ServiceEmitConnectivitySignals
     -->
     <property type='b' name='ServiceEmitSignals' access='readwrite'/>
 
@@ -727,6 +781,11 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
+
+/*
+ * Our GDBus service connection - Will be set the the running connection when the bus is aquired.
+ */
+static GDBusConnection* dbus_connection = NULL;
 
 static GQuark service_error_quark;
 
@@ -981,8 +1040,8 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
             -1, -1, 0,
             g_strdup(""), g_strdup(""), g_strdup(""),
             0,
-            g_strdup("123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789"
-            "-123456789-123456789-12345678"),
+            g_strdup("123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789"
+            "-123456789-123456789-123456789-12345678"),
             0);
         vdu_count++;
 #endif
@@ -1142,18 +1201,33 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
  * @brief Implements the DdcutilService SetVCP method
  * @param parameters inbound parameters
  * @param invocation originating D-Bus method call
+ * @param with_client_context whether the invocation includes a client-context string.
  */
-static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, const bool with_client_context) {
     int display_number;
     char* edid_encoded;
     uint8_t vcp_code;
     uint16_t new_value;
     u_int32_t flags;
+    char* client_context;
+    char* call_name = "SetVcp";
 
-    g_variant_get(parameters, "(isyqu)", &display_number, &edid_encoded, &vcp_code, &new_value, &flags);
+    if (with_client_context) {
+        call_name = "SetVcpWithContext";
+        g_variant_get(parameters, "(isyqsu)",
+            &display_number, &edid_encoded, &vcp_code, &new_value, &client_context, &flags);
+        g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s... %s",
+            call_name, vcp_code, new_value, display_number, edid_encoded, client_context);
+    }
+    else {
+        g_variant_get(parameters, "(isyqu)", &display_number, &edid_encoded, &vcp_code, &new_value, &flags);
+        g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s...",
+            call_name, vcp_code, new_value, display_number, edid_encoded);
+        client_context = g_strdup("");
+    }
 
-    g_info("SetVcp vcp_code=%d value=%d display_num=%d edid=%.30s...", vcp_code, new_value, display_number,
-           edid_encoded);
+    g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s...",
+        call_name, vcp_code, new_value, display_number, edid_encoded);
 
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
@@ -1168,16 +1242,36 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
             ddca_close_display(disp_handle);
         }
     }
-    if (status != 0) {
+    if (status == 0) {
+        GError* local_error = NULL;
+        const gchar* client_name = g_dbus_method_invocation_get_sender(invocation);
+        if (!g_dbus_connection_emit_signal(dbus_connection,
+                                           NULL,
+                                           "/com/ddcutil/DdcutilObject",
+                                           "com.ddcutil.DdcutilInterface",
+                                           "VcpValueChanged",
+                                           g_variant_new("(isyqssu)",
+                                                         display_number, edid_encoded, vcp_code, new_value,
+                                                         client_name, client_context, 0),
+                                           &local_error)) {
+            g_warning("Signal VcpValueChanged: failed %s", local_error != NULL ? local_error->message : "");
+            g_free(local_error);}
+        else {
+            g_debug("Signal VcpValueChanged: succeeded display=%d edid=%.30ss... vcp_code=%d value=%d client=%s "
+                "client_context=%s", display_number, edid_encoded, vcp_code, new_value, client_name, client_context);
+        }
+    }
+    else {
         // Probably just asleep or turned off
-        g_info("SetVcp failed for vcp_code=%d value=%d display_num=%d edid=%.30s...",
-               vcp_code, new_value, display_number, edid_encoded);
+        g_info("%s failed for vcp_code=%d value=%d display_num=%d edid=%.30s...",
+               call_name, vcp_code, new_value, display_number, edid_encoded);
     }
     char* message_text = get_status_message(status);
     GVariant* result = g_variant_new("(is)", status, message_text);
     g_dbus_method_invocation_return_value(invocation, result); // Think this frees the result
     ddca_free_display_info_list(info_list);
     g_free(edid_encoded);
+    g_free(client_context);
     free(message_text);
 }
 
@@ -1668,7 +1762,10 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
         get_multiple_vcp(parameters, invocation);
     }
     else if (g_strcmp0(method_name, "SetVcp") == 0) {
-        set_vcp(parameters, invocation);
+        set_vcp(parameters, invocation, FALSE);
+    }
+    else if (g_strcmp0(method_name, "SetVcpWithContext") == 0) {
+        set_vcp(parameters, invocation, TRUE);
     }
     else if (g_strcmp0(method_name, "GetDisplayState") == 0) {
         get_display_state(parameters, invocation);
@@ -1769,8 +1866,9 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     else if (g_strcmp0(property_name, "ServiceInfoLogging") == 0) {
         ret = g_variant_new_boolean(is_service_info_logging());
     }
-    else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
-        ret = g_variant_new_boolean(enable_hotplug_signals);
+    else if (g_strcmp0(property_name, "ServiceEmitConnectivitySignals") == 0
+             || g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
+        ret = g_variant_new_boolean(enable_connectivity_signals);
     }
     else if (g_strcmp0(property_name, "ServiceFlagOptions") == 0) {
         GVariantBuilder* builder = g_variant_builder_new(G_VARIANT_TYPE("a{is}"));
@@ -1843,27 +1941,33 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         const bool enabled = enable_service_info_logging(g_variant_get_boolean(value), TRUE);
         g_message("ServiceInfoLogging %s", enabled ? "enabled" : "disabled");
     }
-    else if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
-        enable_hotplug_signals = g_variant_get_boolean(value);
-        g_message("ServiceEmitSignals set property to %s", enable_hotplug_signals ? "enabled" : "disabled");
+    else if (g_strcmp0(property_name, "ServiceEmitConnectivitySignals") == 0
+             || g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
+        if (g_strcmp0(property_name, "ServiceEmitSignals") == 0) {
+            g_warning("Property ServiceEmitSignals is deprecated, please use ServiceEmitConnectivitySignals");
+        }
+        enable_connectivity_signals = g_variant_get_boolean(value);
+        g_message("ServiceEmitConnectivitySignals set property to %s",
+            enable_connectivity_signals ? "enabled" : "disabled");
         if (prefer_polling) {
-             if (enable_hotplug_signals) {
+             if (enable_connectivity_signals) {
                 if (poll_interval_micros == 0) {  // If not already set
                     poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
                 }
-                g_message("ServiceEmitSignals ddcutil-service polling every %ld seconds", poll_interval_micros/1000000);
+                g_message("ServiceEmitConnectivitySignals ddcutil-service polling every %ld seconds",
+                    poll_interval_micros/1000000);
             }
         }
         else {
             g_message("Detect changes using libddcutil callbacks.");
             poll_interval_micros = 0;
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-            if (enable_hotplug_signals) {
-                g_message("ServiceEmitSignals using libddcutil change detection");
+            if (enable_connectivity_signals) {
+                g_message("ServiceEmitConnectivitySignals using libddcutil change detection");
                 const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status != DDCRC_OK) {
                     char* message_text = get_status_message(status);
-                    g_message("ServiceEmitSignals ddca_start_watch_displays %d %s", status, message_text);
+                    g_message("ServiceEmitConnectivitySignals ddca_start_watch_displays %d %s", status, message_text);
                     free(message_text);
                 }
             }
@@ -1871,7 +1975,7 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
                 const int status = ddca_stop_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status != DDCRC_OK) {
                     char* message_text = get_status_message(status);
-                    g_message("ServiceEmitSignals ddca_stop_watch_displays %d %s", status, message_text);
+                    g_message("ServiceEmitConnectivitySignals ddca_stop_watch_displays %d %s", status, message_text);
                     free(message_text);
                 }
             }
@@ -2051,11 +2155,6 @@ static bool poll_for_changes() {
 }
 
 /*
- * Our GDBus service connection - Will be set the the running connection when the bus is aquired.
- */
-static GDBusConnection* dbus_connection = NULL;
-
-/*
  * GDBUS service handler table - passed on registraction of the service
  */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
@@ -2089,7 +2188,7 @@ typedef struct {
 static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
     // g_debug("prepare");
     *timeout_millis = 5000; // This doesn't appear to be strict, after an event it doesn't seem to apply for a while???
-    if (!enable_hotplug_signals) {
+    if (!enable_connectivity_signals) {
         return FALSE;
     }
 
@@ -2349,8 +2448,12 @@ int main(int argc, char* argv[]) {
             "polling minimum interval between cascading events in seconds, 0.1 minimum", NULL
         },
         {
-            "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_hotplug_signals,
+            "emit-connectivity-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_connectivity_signals,
             "enable the D-Bus ConnectedDisplaysChanged signal and associated change monitoring", NULL
+        },
+        {
+            "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_connectivity_signals,
+            "deprecated, replaced by --emit-connectivity-signals", NULL
         },
         {
             "lock", 'l', 0, G_OPTION_ARG_NONE, &lock_configuration,
@@ -2446,7 +2549,7 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    if (!enable_hotplug_signals) {
+    if (!enable_connectivity_signals) {
         g_message("ConnectedDisplaysChanged signals and connectivity monitoring are disabled.");
         poll_interval_micros = 0;  // Disable internal polling
     }

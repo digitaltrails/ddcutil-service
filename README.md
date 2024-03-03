@@ -96,7 +96,12 @@ Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; Johan 
 for the Ubuntu patches; and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
 
 ### Version History
-
+- 1.1.0
+  - Added VcpValueChanged D-Bus signal which triggers if the SetVcp method succeeds. This is to allow
+    multiple clients to be aware of changes made by each.
+  - Added SetVcpWithContext which accepts a client-context to be returned with the VcpValueChanged signal.
+  - ServiceEmitSignals renamed to ServiceEmitConnectivitySignals to avoid confusion.
+  - Command line option --emit-signals renamed to --emit-connectivity-signals for the same reason.
 - 1.0.2
   - Fix ServiceEmitSignals property assignment so that it correctly toggles hotplug signals.
   - Fix hotplug polling so that it remains an option no matter what version of libddcutil is in use. 

@@ -12,7 +12,7 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 .br
 .B ddcutil-service
 [
-.B --emit-signals
+.B --emit-connectivity-signals
 ]
 |
 [
@@ -88,13 +88,13 @@ version and exits.
 Outputs the XML introspection text for the service and exits.
 
 .TP
-.B "--emit-signals"
+.B "--emit-connectivity-signals"
 
 Enable the
 .B ConnectedDisplaysChanged signal
 sent to clients and also enable any monitoring for changes.
 Once the service is running, this setting can be toggled by altering the
-.B ServiceEmitSignals
+.B ServiceEmitConnectivitySignals
 property.
 See \fBSERVICE SIGNALS\fP.
 
@@ -205,7 +205,14 @@ Query multiple VCP codes for a single display.
 
 .TP
 .B SetVcp
-Set a display's settings by VCP code.
+Set a display setting, specified by VCP code, to a new value.
+If the method succeeds, it will also emit a D-Bus \fBVcpValueChanged\fP signal.
+
+.TP
+.B SetVcpWithContext
+As with \fBSetVcp\fP but also return a client supplied context string in the
+emitted D-Bus \fBVcpValueChanged\fP signal. The client context may be of
+use to signal recipients for interpreting the origin of the change.
 
 .TP
 .B GetCapabiltiesMetadata
@@ -285,13 +292,13 @@ detection may be unnecessary for display configurations that are static;
 detection may not work for some combinations of hardware and drivers.
 
 Change-detection can enabled by passing
-.B --emit-signals
+.B --emit-connectivity-signals
 on the command line, or by setting the
-.B ServiceEmitSignals
+.B ServiceEmitConnectivitySignals
 property.
 
 To permanently enable change-detection, the
-.B --emit-signals
+.B --emit-connectivity-signals
 option can be appended to the
 .B Exec
 line of the
@@ -315,6 +322,15 @@ depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland
 Another issue is that DisplayPort behaves differently to DVI and HDMI when
 a display is turned off but remains connected.  Lastly, some drivers that
 support DMA don't properly support the necessary change detection features.
+
+.TP
+.B VcpValueChanged
+The service will emit a
+.B VcpValueChanged
+D-Bus signal whenever a SetVcp or SetVcpWithContext method call succeeds in
+changing a VCP's value.  Only changes made by service methods are detected,
+changes made externally to the service are not detected and will not trigger
+this signal.
 
 
 .SH SERVICE PROPERTIES
@@ -368,7 +384,7 @@ Query the
 version string.
 
 .TP
-.B ServiceEmitSignals
+.B ServiceEmitConnectivitySignals
 Set this property to \fBtrue\fP or \fBfalse\fP to enable or disable the services's
 .B ConnectedDisplaysChanged
 signal and associated monitoring.
@@ -457,7 +473,7 @@ service is requested.  Typically the contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-Service options, such as \fB--emit-signals\fP or \fB--prefer-dma\fP,
+Service options, such as \fB--emit-connectivity-signals\fP or \fB--prefer-dma\fP,
 should be appended to the end of \fBExec=\fP line.
 
 .TP

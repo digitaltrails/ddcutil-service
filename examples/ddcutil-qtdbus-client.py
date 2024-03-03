@@ -83,12 +83,23 @@ for vdu in vdu_list:
     print(f"GetVcp returned: {val=} {max_val=} {formatted_val=} {status=} {errmsg=}\n")
 
     if DO_SET_VCP_TEST:
-        print(f"Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
+        print(f"SetVcp - Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
         status, errmsg = ddcutil_dbus_iface.call("SetVcp",
                                                  -1,
                                                  vdu.edid_txt,
                                                  QDBusArgument(BRIGHTNESS_VCP, QMetaType.UChar),
                                                  QDBusArgument(val - 1, QMetaType.UShort),
+                                                 QDBusArgument(0, QMetaType.UInt)).arguments()
+        print(f"SetVcp returned: {status=} {errmsg=}\n")
+
+    if DO_SET_VCP_TEST:
+        print(f"SetVcpWithContext - Reducing brightness for {vdu.manufacturer_id=} {vdu.model_name=}")
+        status, errmsg = ddcutil_dbus_iface.call("SetVcpWithContext",
+                                                 -1,
+                                                 vdu.edid_txt,
+                                                 QDBusArgument(BRIGHTNESS_VCP, QMetaType.UChar),
+                                                 QDBusArgument(val - 1, QMetaType.UShort),
+                                                 "my_special_context",
                                                  QDBusArgument(0, QMetaType.UInt)).arguments()
         print(f"SetVcp returned: {status=} {errmsg=}\n")
 
