@@ -931,7 +931,7 @@ static DDCA_Status get_display_info(const int display_number, const char* edid_e
             g_free(dlist_edid_encoded);
         }
         if (*dinfo == NULL) {
-            g_warning("Bad display ID %d %-30s?", display_number, edid_encoded);
+            g_debug("Display info not found: display=%d edid-ecoded=%-30s?", display_number, edid_encoded);
             status = DDCRC_INVALID_DISPLAY;
         }
     }
