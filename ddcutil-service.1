@@ -285,14 +285,13 @@ service restart and reinstate any custom service properties or settings.
 .B ConnectedDisplaysChanged
 The service may optionally emit a
 .B ConnectedDisplaysChanged
-D-Bus signal when a display undergoes a status change
-due to connectivity, hot-plug and DPMS events.
+D-Bus signal when a display undergoes a connectivity status change
+due to hot-plug and DPMS events.
+This feature is optional because the manual
+experimentation required to configure it is unnecessary for display
+configurations that remain static.
 
-Display change-detection is optional:  detection entails some overheads;
-detection may be unnecessary for display configurations that are static;
-detection may not work for some combinations of hardware and drivers.
-
-Change-detection can enabled by passing
+Change-detection can be enabled by passing
 .B --emit-connectivity-signals
 on the command line, or by setting the
 .B ServiceEmitConnectivitySignals
@@ -309,19 +308,22 @@ file (see \fBFILES\fP).
 
 
 Changes are detected in one of two ways.
-The service defaults to polling for changes by
-periodically issuing libddcutil DDCA detects, this is quite
-likely to work for a wide varienty of drivers and hardware.
-Alternatively the service can use libddcutil to provice a more efficient method for change detection,
-but this requires \fBddcutil/libddcutil version 2.1.0+\fP, a GPU configured for DRM, and
+The service defaults to periodic polling by
+issuing \fBlibddcutil DDCA detects\fP.  Polling is
+likely to work for a wide variety of drivers and hardware.
+Polling for changes will be subject to delays because
+the polling interval defaults to 30 seconds (with a minimum of 10 seconds).
+Alternatively the service can use \fBlibddcutil DRM access \fP to provide
+a more efficient method for change detection,
+this requires \fBddcutil/libddcutil version 2.1.0+\fP, a GPU configured for \fBDRM\fP, and
 the \fB--enable-watch-displays\fP to be added to \fI[libddcutil] options\fP
 in \fB$HOME/.config/ddcutil/ddcutilrc\fP.
 
-Not all displays, GPU's, GPU-drivers, or cabling, provide the necessary support
-for detecting connection status changes by either method. Results may also vary
+Not all displays, GPUs, GPU-drivers, or cabling, provide the necessary support
+for detecting connection status changes. Results may vary
 depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland.
-Another issue is that DisplayPort behaves differently to DVI and HDMI when
-a display is turned off but remains connected.  Lastly, some drivers that
+DisplayPort behaves differently to DVI and HDMI when
+a display is turned off but remains connected.  Some drivers that
 support DMA don't properly support the necessary change detection features.
 
 .TP
@@ -329,9 +331,9 @@ support DMA don't properly support the necessary change detection features.
 The service will emit a
 .B VcpValueChanged
 D-Bus signal whenever a SetVcp or SetVcpWithContext method call succeeds in
-changing a VCP's value.  Only changes made by service methods are detected,
+changing a VCP's value.  \fBOnly changes made by service methods are detected,
 changes made externally to the service are not detected and will not trigger
-this signal.
+this signal\fP.
 
 
 .SH SERVICE PROPERTIES
