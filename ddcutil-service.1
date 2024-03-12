@@ -20,7 +20,7 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 ]
 |
 [
-.B --prefer-dma
+.B --prefer-drm
 ]
 |
 [
@@ -105,10 +105,10 @@ Set polling to be the preferred method for detecting display connectivity change
 for the \fBConnectedDisplaysChanged signal\fP.  This is the default.
 
 .TP
-.B "--prefer-dma"
+.B "--prefer-drm"
 
 Use
-.B libddcutil DMA-lookups
+.B libddcutil DRM-lookups
 as the preferred method for detecting display connectivity changes
 for the \fBConnectedDisplaysChanged signal\fP.  This option should detect changes sooner
 with less overheads, but may fail to detect changes for some combinations or drivers and hardware.
@@ -324,7 +324,7 @@ for detecting connection status changes. Results may vary
 depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland.
 DisplayPort behaves differently to DVI and HDMI when
 a display is turned off but remains connected.  Some drivers that
-support DMA don't properly support the necessary change detection features.
+support DRM don't properly support the necessary change detection features.
 
 .TP
 .B VcpValueChanged
@@ -476,7 +476,7 @@ service is requested.  Typically the contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-Service options, such as \fB--emit-connectivity-signals\fP or \fB--prefer-dma\fP,
+Service options, such as \fB--emit-connectivity-signals\fP or \fB--prefer-drm\fP,
 should be appended to the end of \fBExec=\fP line.
 
 .TP

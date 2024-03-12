@@ -99,6 +99,7 @@ for the Ubuntu patches; and Mark Wagie ([yochananmarqos](https://github.com/yoch
  - 1.0.3
   - Reduce unnecessary logging.
   - Improve the description of the service's signals in ddcutil-service.1
+  - Correct the typo in option name --perfer-drm (it was mistakenly called --prefer-dma)
 [- 1.0.2
   - Added VcpValueChanged D-Bus signal which triggers if the SetVcp method succeeds. This is to allow
     multiple clients to be aware of changes made by each.

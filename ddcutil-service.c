@@ -2409,7 +2409,7 @@ int main(int argc, char* argv[]) {
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-    gboolean prefer_dma = FALSE;
+    gboolean prefer_drm = FALSE;
 #endif
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
@@ -2435,8 +2435,8 @@ int main(int argc, char* argv[]) {
             "prefer polling for detecting display connection events", NULL
         },
         {
-            "prefer-dma", 'd', 0, G_OPTION_ARG_NONE, &prefer_dma,
-            "prefer libddcutil DMA-lookups for detecting display connection events", NULL
+            "prefer-drm", 'd', 0, G_OPTION_ARG_NONE, &prefer_drm,
+            "prefer libddcutil DRM-lookups for detecting display connection events", NULL
         },
 #endif
         {
@@ -2556,7 +2556,7 @@ int main(int argc, char* argv[]) {
     else {
 
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-        prefer_polling = !prefer_dma;
+        prefer_polling = !prefer_drm;
         if (prefer_polling) {
             g_message("ConnectedDisplaysChanged signal - prefering polling for change detection");
         }
