@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Mar 11 09:41:06 2024 -->
+<!-- CreationDate: Wed Mar 13 08:10:54 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -64,7 +64,7 @@ Virtual Control Panel</p>
 <i>--help</i> | <i>--version</i> | <i>--introspect</i>
 <b><br>
 ddcutil-service</b> [ <b>--emit-connectivity-signals</b> ] |
-[ <b>--prefer-polling</b> ] | [ <b>--prefer-dma</b> ] | [
+[ <b>--prefer-polling</b> ] | [ <b>--prefer-drm</b> ] | [
 <b>--polling-interval</b> <i>seconds</i> ] | [ <b>--lock</b>
 ] | [ <b>--log-info</b> ] [ <b>--ddca-syslog-level</b>
 <i>N</i> ] | [ <b>--ddca-init-options</b> <i>M</i> ] [
@@ -142,10 +142,10 @@ be the preferred method for detecting display connectivity
 changes for the <b>ConnectedDisplaysChanged signal</b>. This
 is the default.</p>
 
-<p style="margin-left:9%;"><b>--prefer-dma</b></p>
+<p style="margin-left:9%;"><b>--prefer-drm</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Use
-<b>libddcutil DMA-lookups</b> as the preferred method for
+<b>libddcutil DRM-lookups</b> as the preferred method for
 detecting display connectivity changes for the
 <b>ConnectedDisplaysChanged signal</b>. This option should
 detect changes sooner with less overheads, but may fail to
@@ -406,7 +406,7 @@ necessary support for detecting connection status changes.
 Results may vary depending on the mix of desktop components,
 such as KDE, Gnome, X11, and Wayland. DisplayPort behaves
 differently to DVI and HDMI when a display is turned off but
-remains connected. Some drivers that support DMA don&rsquo;t
+remains connected. Some drivers that support DRM don&rsquo;t
 properly support the necessary change detection
 features.</p>
 
@@ -603,7 +603,7 @@ Exec=/usr/bin/ddcutil-service</p>
 
 <p style="margin-left:18%; margin-top: 1em">Service
 options, such as <b>--emit-connectivity-signals</b> or
-<b>--prefer-dma</b>, should be appended to the end of
+<b>--prefer-drm</b>, should be appended to the end of
 <b>Exec=</b> line.</p>
 
 
