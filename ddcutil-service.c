@@ -1547,7 +1547,7 @@ static void get_display_state(GVariant* parameters, GDBusMethodInvocation* invoc
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
         status = ddca_validate_display_ref(vdu_info->dref, TRUE);
 #else
-    status = DDCRC_UNIMPLEMENTED;
+        status = DDCRC_UNIMPLEMENTED;
 #endif
     }
     char* message_text = get_status_message(status);
