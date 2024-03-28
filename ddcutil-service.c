@@ -2550,7 +2550,8 @@ int main(int argc, char* argv[]) {
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
     if (!enable_connectivity_signals) {
-        g_message("ConnectedDisplaysChanged signals and connectivity monitoring are disabled.");
+        g_message("ConnectedDisplaysChanged signals disabled"
+            "(add --emit_connectivity_signals to enable them).");
         poll_interval_micros = 0;  // Disable internal polling
     }
     else {
