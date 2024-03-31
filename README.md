@@ -28,11 +28,13 @@ This would access display `1`, blank-edid `''`, DDC VCP Feature code `0x10`
 (brightness). VDU's are identified either by display-number or base-64-encoded
 EDID.
 
-Several bash and python scripts that demonstrate using the service are included in the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/examples)
+Several bash and python scripts that demonstrate using the service are included in 
+the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/examples)
 folder.  They cover the use of the `dbus-send` command line utiltity
 and the python `dasbus` and `QtDBus` libraries. 
 
-The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
+The service was developed with the assistance of amendments 
+to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
 to eventually package it with ddcutil/libddcutil.
 
 ### Command-line and API Documentation
