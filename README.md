@@ -33,8 +33,7 @@ the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/exam
 folder.  They cover the use of the `dbus-send` command line utiltity
 and the python `dasbus` and `QtDBus` libraries. 
 
-The service was developed with the assistance of amendments 
-to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
+The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
 to eventually package it with ddcutil/libddcutil.
 
 ### Command-line and API Documentation
@@ -105,7 +104,7 @@ and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR pac
   - Improve the description of the service's signals in ddcutil-service.1.
   - Correct the typo in option name --perfer-drm (it was mistakenly called --prefer-dma).
   - For simple-types, only return the VCP's low-byte, for some VDUs the high-byte might contain junk.
-[- 1.0.2
+ - 1.0.2
   - Added VcpValueChanged D-Bus signal which triggers if the SetVcp method succeeds. This is to allow
     multiple clients to be aware of changes made by each.
   - Added SetVcpWithContext which accepts a client-context to be returned with the VcpValueChanged signal.
