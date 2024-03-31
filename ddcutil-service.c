@@ -1112,9 +1112,15 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
             static DDCA_Non_Table_Vcp_Value valrec;
             status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
             if (status == DDCRC_OK) {
-                current_value = valrec.sh << 8 | valrec.sl;
-                max_value = valrec.mh << 8 | valrec.ml;
-                status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+                DDCA_Feature_Metadata* metadata_ptr;
+                status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
+                if (status == DDCRC_OK) {
+                    const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                    current_value = simple ? valrec.sl : (valrec.sh << 8 | valrec.sl);
+                    max_value = simple ? valrec.ml : (valrec.mh << 8 | valrec.ml);
+                    status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+                    free(metadata_ptr);
+                }
             }
             ddca_close_display(disp_handle);
         }
@@ -1171,14 +1177,25 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                 static DDCA_Non_Table_Vcp_Value valrec;
                 status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
                 if (status == DDCRC_OK) {
-                    const uint16_t current_value = valrec.sh << 8 | valrec.sl;
-                    const uint16_t max_value = valrec.mh << 8 | valrec.ml;
-                    char* formatted_value;
-                    status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
-                                                                     &formatted_value);
-                    g_variant_builder_add(value_array_builder, "(yqqs)",
-                                          vcp_code, current_value, max_value, formatted_value);
-                    free(formatted_value);
+                    DDCA_Feature_Metadata* metadata_ptr;
+                    status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true,
+                                                             &metadata_ptr);
+                    if (status == DDCRC_OK) {
+                        const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                        const uint16_t current_value = simple ? valrec.sl : (valrec.sh << 8 | valrec.sl);
+                        const uint16_t max_value = simple ? valrec.ml : (valrec.mh << 8 | valrec.ml);
+                        char* formatted_value;
+                        status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
+                                                                        &formatted_value);
+                        g_variant_builder_add(value_array_builder, "(yqqs)",
+                                            vcp_code, current_value, max_value, formatted_value);
+                        free(formatted_value);
+                        free(metadata_ptr);
+                    }
+                    else {
+                        g_info("GetMultipleVcp metadata lookup failed for vcp_code=%d display_num=%d edid=%.30s...",
+                           vcp_code, display_number, edid_encoded);
+                    }
                 }
                 else {
                     // Probably just asleep or turned off
