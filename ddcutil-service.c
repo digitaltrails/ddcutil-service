@@ -1115,11 +1115,16 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
                 DDCA_Feature_Metadata* metadata_ptr;
                 status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                 if (status == DDCRC_OK) {
+                    // For simple types the high byte may be garbage for some models of VDU.
                     const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
                     current_value = simple ? valrec.sl : (valrec.sh << 8 | valrec.sl);
                     max_value = simple ? valrec.ml : (valrec.mh << 8 | valrec.ml);
                     status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
                     free(metadata_ptr);
+                }
+                else {
+                    g_warning("GetVcp metadata lookup failed for vcp_code=%d display_num=%d edid=%.30s...",
+                              vcp_code, display_number, edid_encoded);
                 }
             }
             ddca_close_display(disp_handle);
@@ -1181,6 +1186,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                     status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true,
                                                              &metadata_ptr);
                     if (status == DDCRC_OK) {
+                        // For simple types, the high byte may be garbage for some models of VDU.
                         const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
                         const uint16_t current_value = simple ? valrec.sl : (valrec.sh << 8 | valrec.sl);
                         const uint16_t max_value = simple ? valrec.ml : (valrec.mh << 8 | valrec.ml);
@@ -1194,7 +1200,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                     }
                     else {
                         g_info("GetMultipleVcp metadata lookup failed for vcp_code=%d display_num=%d edid=%.30s...",
-                           vcp_code, display_number, edid_encoded);
+                               vcp_code, display_number, edid_encoded);
                     }
                 }
                 else {

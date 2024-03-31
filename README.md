@@ -89,17 +89,20 @@ https://github.com/digitaltrails/vdu_controls
 
 ### Acknowledgements
 
-Thanks go out to Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)) for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
+Thanks go out to Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)) 
+for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
 advice provided during the development of this service.
 
-Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; Johan Grande ([nahoj](https://github.com/nahoj))
-for the Ubuntu patches; and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
+Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; 
+Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches; 
+and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
 
 ### Version History
  - 1.0.3
   - Reduce unnecessary logging.
-  - Improve the description of the service's signals in ddcutil-service.1
-  - Correct the typo in option name --perfer-drm (it was mistakenly called --prefer-dma)
+  - Improve the description of the service's signals in ddcutil-service.1.
+  - Correct the typo in option name --perfer-drm (it was mistakenly called --prefer-dma).
+  - For simple-types, only return low-byte value, for some VDUs the high-byte might contain junk.
 [- 1.0.2
   - Added VcpValueChanged D-Bus signal which triggers if the SetVcp method succeeds. This is to allow
     multiple clients to be aware of changes made by each.
