@@ -80,7 +80,7 @@ auto-restarting the service are as follows:
 
 Installing the service file is optional. The service file enables autostart of 
 the service by `dbus-daemon`.  The service executable can be manually started 
-without the service file being installed.  
+without the service file being installed.
 
 ### Use with `vdu_controls`
 
@@ -102,7 +102,7 @@ and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR pac
   - Reduce unnecessary logging.
   - Improve the description of the service's signals in ddcutil-service.1.
   - Correct the typo in option name --perfer-drm (it was mistakenly called --prefer-dma).
-  - For simple-types, only return low-byte value, for some VDUs the high-byte might contain junk.
+  - For simple-types, only return the VCP's low-byte, for some VDUs the high-byte might contain junk.
 [- 1.0.2
   - Added VcpValueChanged D-Bus signal which triggers if the SetVcp method succeeds. This is to allow
     multiple clients to be aware of changes made by each.
