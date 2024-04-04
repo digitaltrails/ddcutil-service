@@ -853,11 +853,11 @@ static gchar* sanitize_utf8(const char* text) {
  * @return the new enabled state
  */
 static bool enable_service_info_logging(bool enable, bool overwrite) {
-    if (enable) {
-        g_setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite); // enable info+debug messages for our domain.
+    if (enable) {  // WARNING g_setenv/g_unsetenv stopped working, using setenv/unsetenv instead.
+        setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite); // enable info+debug messages for our domain.
         return TRUE;
     }
-    g_unsetenv("G_MESSAGES_DEBUG"); // disable info+debug messages for our domain.
+    unsetenv("G_MESSAGES_DEBUG"); // disable info+debug messages for our domain.
     return FALSE;
 }
 
