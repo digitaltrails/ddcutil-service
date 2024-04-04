@@ -59,7 +59,7 @@
 #include <ddcutil_macros.h>
 
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.3"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.4"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -783,7 +783,7 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
 
 /*
- * Our GDBus service connection - Will be set the the running connection when the bus is aquired.
+ * Our GDBus service connection - Will be set the running connection when the bus is aquired.
  */
 static GDBusConnection* dbus_connection = NULL;
 
@@ -1183,8 +1183,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                 status = ddca_get_non_table_vcp_value(disp_handle, vcp_code, &valrec);
                 if (status == DDCRC_OK) {
                     DDCA_Feature_Metadata* metadata_ptr;
-                    status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true,
-                                                             &metadata_ptr);
+                    status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                     if (status == DDCRC_OK) {
                         // For simple types, the high byte may be garbage for some models of VDU.
                         const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
@@ -2183,7 +2182,7 @@ static bool poll_for_changes() {
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
 /*
- * The following code is a implementation of a GMainLoop custom event-source, a GSource.
+ * The following code is an implementation of a GMainLoop custom event-source, a GSource.
  * It defines a polled source that handles ddcutil displays-changed data and sends
  * signals to the D-Bus client.
  */
@@ -2431,16 +2430,18 @@ int main(int argc, char* argv[]) {
     gboolean version_request = FALSE;     // WARNING gboolean is int sized, do not substitute bool or
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
-#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
+
     gboolean prefer_drm = FALSE;
-#endif
+
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
 
-#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
+#if !defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
+#define DDCA_SYSLOG_NOTICE 9
+#endif
     gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
     gint ddca_init_options = 0; // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
-#endif
+
 
     // Use the glib command line parser...
     const GOptionEntry entries[] = {
@@ -2452,7 +2453,6 @@ int main(int argc, char* argv[]) {
             "introspect", 'x', 0, G_OPTION_ARG_NONE, &introspect_request,
             "print introspection xml and exit", NULL
         },
-#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
         {
             "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
             "prefer polling for detecting display connection events", NULL
@@ -2461,7 +2461,6 @@ int main(int argc, char* argv[]) {
             "prefer-drm", 'd', 0, G_OPTION_ARG_NONE, &prefer_drm,
             "prefer libddcutil DRM-lookups for detecting display connection events", NULL
         },
-#endif
         {
             "poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_seconds,
             "polling interval in seconds, 10 minimum, 0 to disable polling", NULL
@@ -2486,7 +2485,6 @@ int main(int argc, char* argv[]) {
             "log-info", 'i', 0, G_OPTION_ARG_NONE, &log_info,
             "log service info and debug messages", NULL
         },
-#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
         {
             "ddca-syslog-level", 's', 0, G_OPTION_ARG_INT, &ddca_syslog_level,
             "0=Never|3=Error|6=Warning|9=Notice|12=Info|18=Debug", NULL
@@ -2495,7 +2493,6 @@ int main(int argc, char* argv[]) {
             "ddca-init-options", 'i', 0, G_OPTION_ARG_INT, &ddca_init_options,
             "1=Disable-Config-File", NULL
         },
-#endif
         {NULL}
     };
 
@@ -2542,7 +2539,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
+
     // Handle ddcutil ddc_init() arguments
     char* argv_null_terminated[argc];
     for (int i = 0; i < argc; i++) {
@@ -2550,9 +2547,15 @@ int main(int argc, char* argv[]) {
     }
     argv_null_terminated[argc - 1] = NULL;
     char* arg_string = g_strjoinv(" ", argv_null_terminated);
+#if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     ddca_init_options |= DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG;
     g_message("Calling ddca_init %d %d '%s'", ddca_syslog_level, ddca_init_options, arg_string);
     ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
+#else
+    if (argc > 0) {
+        g_warning("libddcutil %s does not support calling ddca_init %d %d '%s'",
+                  ddca_ddcutil_extended_version_string(), ddca_syslog_level, ddca_init_options, arg_string);
+    }
 #endif
 
     verify_i2c_dev();
@@ -2607,6 +2610,11 @@ int main(int argc, char* argv[]) {
                     g_warning("libddcutil change detection unavailable for this GPU");
                 }
             }
+        }
+#else
+        if (prefer_drm) {
+            g_warning("ConnectedDisplaysChanged signal - using polling, DRM not supported by libddcutil %s",
+                      ddca_ddcutil_extended_version_string());
         }
 #endif
 
