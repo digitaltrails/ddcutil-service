@@ -58,7 +58,6 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.4"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
@@ -180,6 +179,7 @@ static const char* attributes_returned_from_detect[] = {
  */
 typedef enum {
     EDID_PREFIX = 1,  // Indicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
+    RETURN_ALL_BYTES = 2,
 } Flags_Enum_Type;
 
 /**
@@ -853,7 +853,9 @@ static gchar* sanitize_utf8(const char* text) {
  * @return the new enabled state
  */
 static bool enable_service_info_logging(bool enable, bool overwrite) {
-    if (enable) {  // WARNING g_setenv/g_unsetenv stopped working, using setenv/unsetenv instead.
+    if (enable) {
+        // WARNING g_setenv/g_unsetenv stopped working, using setenv/unsetenv instead.
+        // Possible interaction with other logging options, maybe from libddcutil - weird
         setenv("G_MESSAGES_DEBUG", G_LOG_DOMAIN, overwrite); // enable info+debug messages for our domain.
         return TRUE;
     }
@@ -1116,10 +1118,14 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
                 status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                 if (status == DDCRC_OK) {
                     // For simple types the high byte may be garbage for some models of VDU.
-                    const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
-                    current_value = simple ? valrec.sl : (valrec.sh << 8 | valrec.sl);
-                    max_value = simple ? valrec.ml : (valrec.mh << 8 | valrec.ml);
-                    status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec, &formatted_value);
+                    const bool return_all_bytes = flags & RETURN_ALL_BYTES;
+                    const bool simple_nc = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                    current_value = simple_nc ? valrec.sl : (valrec.sh << 8 | valrec.sl);
+                    g_debug("SNC=%d sh=%d sl=%d current_value=%d flags=%d", simple_nc, valrec.sh, valrec.sl, 
+                            current_value, metadata_ptr->feature_flags);
+                    max_value = simple_nc ? valrec.ml : (valrec.mh << 8 | valrec.ml);
+                    status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
+                                                                     &formatted_value);
                     free(metadata_ptr);
                 }
                 else {
@@ -1186,9 +1192,12 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                     status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                     if (status == DDCRC_OK) {
                         // For simple types, the high byte may be garbage for some models of VDU.
-                        const bool simple = (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
-                        const uint16_t current_value = simple ? valrec.sl : (valrec.sh << 8 | valrec.sl);
-                        const uint16_t max_value = simple ? valrec.ml : (valrec.mh << 8 | valrec.ml);
+                        const bool return_all_bytes = flags & RETURN_ALL_BYTES;
+                        const bool simple_nc = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                        const uint16_t current_value = simple_nc ? valrec.sl : (valrec.sh << 8 | valrec.sl);
+                        const uint16_t max_value = simple_nc ? valrec.ml : (valrec.mh << 8 | valrec.ml);
+                        g_debug("SNC=%d sh=%d sl=%d current_value=%d flags=%d", simple_nc, valrec.sh, valrec.sl, 
+                                current_value, metadata_ptr->feature_flags);
                         char* formatted_value;
                         status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
                                                                         &formatted_value);
