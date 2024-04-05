@@ -283,11 +283,18 @@ static const gchar introspection_xml[] = R"(
 
         Retrieve the value for a VCP-code for the specified VDU.
 
-        For simplicity the @vcp_current_value returned will always be 16 bit integer (most
-        VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+        For simplicity the @vcp_current_value returned will always be 16 bit integer. Most
+        VCP values are single byte 8-bit integers, very few are two-byte 16-bit.
+
+        Pass a flags value of 2 (RETURN_ALL_BYTES) to force the return all 16 bits of a
+        Simple Non Continuous value. An SNC is supposed to be 8 bits and by default
+        its top byte of is masked off (depending on the VDU, a non-zero high byte may
+        or may not have any meaning).
 
         The @vcp_formatted_value contains the current value along with any related info,
         such as the maximum value, its similar to the output of the ddcutil getvcp shell-command.
+
+
     -->
     <method name='GetVcp'>
         <arg name='display_number' type='i' direction='in'/>
@@ -316,6 +323,9 @@ static const gchar introspection_xml[] = R"(
 
         Each entry in @vcp_current_value array is a VCP-code along with its
         current, maximum and formatted values (the same as those returned by GetVcp).
+
+        Pass a flags value of 2 (RETURN_ALL_BYTES) to force the return all 16 bits of a
+        Simple Non Continuous value. See GetVcp for an explanation.
     -->
     <method name='GetMultipleVcp'>
         <arg name='display_number' type='i' direction='in'/>
@@ -1117,13 +1127,11 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
                 DDCA_Feature_Metadata* metadata_ptr;
                 status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                 if (status == DDCRC_OK) {
-                    // For simple types the high byte may be garbage for some models of VDU.
-                    const bool return_all_bytes = flags & RETURN_ALL_BYTES;
-                    const bool simple_nc = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
-                    current_value = simple_nc ? valrec.sl : (valrec.sh << 8 | valrec.sl);
-                    g_debug("SNC=%d sh=%d sl=%d current_value=%d flags=%d", simple_nc, valrec.sh, valrec.sl, 
-                            current_value, metadata_ptr->feature_flags);
-                    max_value = simple_nc ? valrec.ml : (valrec.mh << 8 | valrec.ml);
+                    // For simple non-continuous types the high byte may be garbage for some models of VDU.
+                    const bool return_all_bytes = flags & RETURN_ALL_BYTES;  // Override, return all bytes regardless
+                    const bool low_byte_only = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                    current_value = low_byte_only ? valrec.sl : (valrec.sh << 8 | valrec.sl);
+                    max_value = low_byte_only ? valrec.ml : (valrec.mh << 8 | valrec.ml);
                     status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
                                                                      &formatted_value);
                     free(metadata_ptr);
@@ -1191,13 +1199,11 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                     DDCA_Feature_Metadata* metadata_ptr;
                     status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                     if (status == DDCRC_OK) {
-                        // For simple types, the high byte may be garbage for some models of VDU.
-                        const bool return_all_bytes = flags & RETURN_ALL_BYTES;
-                        const bool simple_nc = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
-                        const uint16_t current_value = simple_nc ? valrec.sl : (valrec.sh << 8 | valrec.sl);
-                        const uint16_t max_value = simple_nc ? valrec.ml : (valrec.mh << 8 | valrec.ml);
-                        g_debug("SNC=%d sh=%d sl=%d current_value=%d flags=%d", simple_nc, valrec.sh, valrec.sl, 
-                                current_value, metadata_ptr->feature_flags);
+                        // For simple non-continuous types the high byte may be garbage for some models of VDU.
+                        const bool return_all_bytes = flags & RETURN_ALL_BYTES; // Override, return all bytes regardless
+                        const bool low_byte_only = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                        const uint16_t current_value = low_byte_only ? valrec.sl : (valrec.sh << 8 | valrec.sl);
+                        const uint16_t max_value = low_byte_only ? valrec.ml : (valrec.mh << 8 | valrec.ml);
                         char* formatted_value;
                         status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
                                                                         &formatted_value);

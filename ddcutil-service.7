@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 03/08/2024
+.\"      Date: 04/05/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "03/08/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "04/05/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -294,7 +294,9 @@ Retrieve the value for a VCP\-code for the specified VDU\&.
 .PP
 For simplicity the
 \fIvcp_current_value\fR
-returned will always be 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
+returned will always be 16 bit integer\&. Most VCP values are single byte 8\-bit integers, very few are two\-byte 16\-bit\&.
+.PP
+Pass a flags value of 2 (RETURN_ALL_BYTES) to force the return all 16 bits of a Simple Non Continuous value\&. An SNC is supposed to be 8 bits and by default its top byte of is masked off (depending on the VDU, a non\-zero high byte may or may not have any meaning)\&.
 .PP
 The
 \fIvcp_formatted_value\fR
@@ -369,6 +371,8 @@ Retrieves several different VCP values for the specified VDU\&. This is a convie
 Each entry in
 \fIvcp_current_value\fR
 array is a VCP\-code along with its current, maximum and formatted values (the same as those returned by GetVcp)\&.
+.PP
+Pass a flags value of 2 (RETURN_ALL_BYTES) to force the return all 16 bits of a Simple Non Continuous value\&. See GetVcp for an explanation\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4

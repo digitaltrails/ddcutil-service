@@ -199,9 +199,18 @@ Return a list of monitors detected along with their properties.
 .B GetVcp
 Query a displays's settings by VCP code, for example, bightness is VCP code 0x10.
 
+The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (RETURN_ALL_BYTES),
+to force the return of a full 16 bit value for a \fBSimple Non Continuous feature\fP.
+SNC features are supposed to be a 8 bit and are masked 0x00ff to clear a the high
+byte, but compliance varies, the high byte might not be zero, and a non-zero high byte
+may or may-not be significant.
+
 .TP
 .B GetMultipleVcp
 Query multiple VCP codes for a single display.
+
+The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (RETURN_ALL_BYTES),
+see \fBGetVcp\fP for an explanation.
 
 .TP
 .B SetVcp

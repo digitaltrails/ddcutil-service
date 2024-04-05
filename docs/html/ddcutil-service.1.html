@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Wed Mar 13 08:10:54 2024 -->
+<!-- CreationDate: Fri Apr  5 20:42:51 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -190,7 +190,7 @@ configuration passed on the command line. The lock is
 provided to assist with avoiding conflicts when more than
 one ddcutil-service client is in use at the same time.</p>
 
-<p style="margin-left:9%;"><b>--log_info</b></p>
+<p style="margin-left:9%;"><b>--log-info</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Enabling
 log-info will produce info and debug level output. The
@@ -267,10 +267,24 @@ properties.</p> </td></tr>
 example, bightness is VCP code 0x10.</p></td></tr>
 </table>
 
+<p style="margin-left:18%; margin-top: 1em">The
+method&rsquo;s <b>flags</b> bit-string parameter can be set
+to <b>2</b> (RETURN_ALL_BYTES), to force the return of a
+full 16 bit value for a <b>Simple Non Continuous
+feature</b>. SNC features are supposed to be a 8 bit and are
+masked 0x00ff to clear a the high byte, but compliance
+varies, the high byte might not be zero, and a non-zero high
+byte may or may-not be significant.</p>
+
 <p style="margin-left:9%;"><b>GetMultipleVcp</b></p>
 
 <p style="margin-left:18%;">Query multiple VCP codes for a
 single display.</p>
+
+<p style="margin-left:18%; margin-top: 1em">The
+method&rsquo;s <b>flags</b> bit-string parameter can be set
+to <b>2</b> (RETURN_ALL_BYTES), see <b>GetVcp</b> for an
+explanation.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
