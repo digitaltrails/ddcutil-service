@@ -99,6 +99,8 @@ Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches;
 and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
 
 ### Version History
+- 1.0.4
+  - For GetVcp of Simple Non-Continuous features, provide an API flag to control masking by 0x00ff.
 - 1.0.3
   - Reduce unnecessary logging.
   - Improve the description of the service's signals in ddcutil-service.1.
