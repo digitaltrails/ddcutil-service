@@ -179,7 +179,7 @@ static const char* attributes_returned_from_detect[] = {
  */
 typedef enum {
     EDID_PREFIX = 1,  // Indicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
-    RETURN_ALL_BYTES = 2,
+    RETURN_RAW_VALUES = 2,
 } Flags_Enum_Type;
 
 /**
@@ -286,10 +286,12 @@ static const gchar introspection_xml[] = R"(
         For simplicity the @vcp_current_value returned will always be 16 bit integer. Most
         VCP values are single byte 8-bit integers, very few are two-byte 16-bit.
 
-        Pass a flags value of 2 (RETURN_ALL_BYTES) to force the return all 16 bits of a
-        Simple Non Continuous value. An SNC is supposed to be 8 bits and by default
-        its top byte of is masked off (depending on the VDU, a non-zero high byte may
-        or may not have any meaning).
+        Pass a flags value of 2 (RETURN_RAW_VALUES) to force the return all 16 bits of all
+        values.  This currently affects Simple Non Continuous values. An SNC value
+        is supposed to be 8 bits, but there are VDUs where the high-byte is non-zero 
+        and the byte has meaning, and there are other VDUs where it it is non-zero 
+        and has no meaning.  It is up to the client to figure out what is 
+        appropriate for each VDU.
 
         The @vcp_formatted_value contains the current value along with any related info,
         such as the maximum value, its similar to the output of the ddcutil getvcp shell-command.
@@ -324,7 +326,7 @@ static const gchar introspection_xml[] = R"(
         Each entry in @vcp_current_value array is a VCP-code along with its
         current, maximum and formatted values (the same as those returned by GetVcp).
 
-        Pass a flags value of 2 (RETURN_ALL_BYTES) to force the return all 16 bits of a
+        Pass a flags value of 2 (RETURN_RAW_VALUES) to force the return all 16 bits of a
         Simple Non Continuous value. See GetVcp for an explanation.
     -->
     <method name='GetMultipleVcp'>
@@ -1128,7 +1130,7 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
                 status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                 if (status == DDCRC_OK) {
                     // For simple non-continuous types the high byte may be garbage for some models of VDU.
-                    const bool return_all_bytes = flags & RETURN_ALL_BYTES;  // Override, return all bytes regardless
+                    const bool return_all_bytes = flags & RETURN_RAW_VALUES;  // Override, return all bytes regardless
                     const bool low_byte_only = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
                     current_value = low_byte_only ? valrec.sl : (valrec.sh << 8 | valrec.sl);
                     max_value = low_byte_only ? valrec.ml : (valrec.mh << 8 | valrec.ml);
@@ -1200,7 +1202,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                     status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                     if (status == DDCRC_OK) {
                         // For simple non-continuous types the high byte may be garbage for some models of VDU.
-                        const bool return_all_bytes = flags & RETURN_ALL_BYTES; // Override, return all bytes regardless
+                        const bool return_all_bytes = flags & RETURN_RAW_VALUES; // Override, return all bytes regardless
                         const bool low_byte_only = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
                         const uint16_t current_value = low_byte_only ? valrec.sl : (valrec.sh << 8 | valrec.sl);
                         const uint16_t max_value = low_byte_only ? valrec.ml : (valrec.mh << 8 | valrec.ml);
