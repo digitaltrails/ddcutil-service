@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Apr  5 20:42:51 2024 -->
+<!-- CreationDate: Sat Apr  6 20:41:49 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -269,12 +269,13 @@ example, bightness is VCP code 0x10.</p></td></tr>
 
 <p style="margin-left:18%; margin-top: 1em">The
 method&rsquo;s <b>flags</b> bit-string parameter can be set
-to <b>2</b> (RETURN_ALL_BYTES), to force the return of a
-full 16 bit value for a <b>Simple Non Continuous
-feature</b>. SNC features are supposed to be a 8 bit and are
-masked 0x00ff to clear a the high byte, but compliance
-varies, the high byte might not be zero, and a non-zero high
-byte may or may-not be significant.</p>
+to <b>2</b> (RETURN_RAW_VALUES), to force the return all 16
+bits of all values. This currently affects <b>Simple Non
+Continuous</b> values. An SNC value is supposed to be 8
+bits, but there are VDUs where the high-byte is non-zero and
+the byte has meaning, and there are other VDUs where it it
+is non-zero and has no meaning. It is up to the client to
+figure out what is appropriate for each VDU.</p>
 
 <p style="margin-left:9%;"><b>GetMultipleVcp</b></p>
 
@@ -283,7 +284,7 @@ single display.</p>
 
 <p style="margin-left:18%; margin-top: 1em">The
 method&rsquo;s <b>flags</b> bit-string parameter can be set
-to <b>2</b> (RETURN_ALL_BYTES), see <b>GetVcp</b> for an
+to <b>2</b> (SNC_STRICT), see <b>GetVcp</b> for an
 explanation.</p>
 
 <table width="100%" border="0" rules="none" frame="void"

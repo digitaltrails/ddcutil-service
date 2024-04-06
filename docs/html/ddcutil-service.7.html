@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Fri Apr  5 20:42:51 2024 -->
+<!-- CreationDate: Sat Apr  6 20:41:49 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -371,11 +371,14 @@ integer. Most VCP values are single byte 8&minus;bit
 integers, very few are two&minus;byte 16&minus;bit.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Pass a flags
-value of 2 (RETURN_ALL_BYTES) to force the return all 16
-bits of a Simple Non Continuous value. An SNC is supposed to
-be 8 bits and by default its top byte of is masked off
-(depending on the VDU, a non&minus;zero high byte may or may
-not have any meaning).</p>
+value of 2 (RETURN_RAW_VALUES) to force the return all 16
+bits of all values. This currently affects Simple Non
+Continuous values. An SNC value is supposed to be 8 bits,
+but there are VDUs where the high&minus;byte is
+non&minus;zero and the byte has meaning, and there are other
+VDUs where it it is non&minus;zero and has no meaning. It is
+up to the client to figure out what is appropriate for each
+VDU.</p>
 
 <p style="margin-left:9%; margin-top: 1em">The
 <i>vcp_formatted_value</i> contains the current value along
@@ -463,7 +466,7 @@ with its current, maximum and formatted values (the same as
 those returned by GetVcp).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Pass a flags
-value of 2 (RETURN_ALL_BYTES) to force the return all 16
+value of 2 (RETURN_RAW_VALUES) to force the return all 16
 bits of a Simple Non Continuous value. See GetVcp for an
 explanation.</p>
 
