@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sat Apr  6 20:41:49 2024 -->
+<!-- CreationDate: Mon Apr  8 09:04:15 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -269,13 +269,8 @@ example, bightness is VCP code 0x10.</p></td></tr>
 
 <p style="margin-left:18%; margin-top: 1em">The
 method&rsquo;s <b>flags</b> bit-string parameter can be set
-to <b>2</b> (RETURN_RAW_VALUES), to force the return all 16
-bits of all values. This currently affects <b>Simple Non
-Continuous</b> values. An SNC value is supposed to be 8
-bits, but there are VDUs where the high-byte is non-zero and
-the byte has meaning, and there are other VDUs where it it
-is non-zero and has no meaning. It is up to the client to
-figure out what is appropriate for each VDU.</p>
+to <b>2</b> (<b>RETURN_RAW_VALUES</b>), see
+<b>LIMITATIONS</b> for an explanation.</p>
 
 <p style="margin-left:9%;"><b>GetMultipleVcp</b></p>
 
@@ -284,8 +279,8 @@ single display.</p>
 
 <p style="margin-left:18%; margin-top: 1em">The
 method&rsquo;s <b>flags</b> bit-string parameter can be set
-to <b>2</b> (SNC_STRICT), see <b>GetVcp</b> for an
-explanation.</p>
+to <b>2</b> (<b>RETURN_RAW_VALUES</b>), see
+<b>LIMITATIONS</b> for an explanation.</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -783,6 +778,33 @@ string:ServiceInfoLogging variant:boolean:true</p>
 </h2>
 
 
+<p style="margin-left:9%; margin-top: 1em">Some VDUs are
+not standards compliant. In some cases, non-compliance can
+vary to the extent that only a service client can deal with
+it, and often only by by requiring additional user supplied
+metadata For example, the <b>vdu_controls</b> client allows
+the user to edit/override the service supplied
+capabilities-metadata.</p>
+
+<p style="margin-left:9%; margin-top: 1em"><b>Simple Non
+Continuous</b> values, such as the VDU input-source, are
+supposed to be 8 bits only and are masked to remove the
+high-byte. SNC masking is performed because some VDUs
+don&rsquo;t clear the SNC high-byte. In such cases, the full
+16 bit SNC value will fail to match that declared in the
+capabilities-metadata. However, there are other VDUs that
+disregard the 8 bit restriction and set the SNC high-byte to
+a significant value. The service defaults to
+standard-compliance and clears the high-byte. The
+<b>GetVcp</b> and <b>GetMultipleVcp</b> methods support the
+<b>RETURN_RAW_VALUES</b> flag which forces the return of the
+original 16 bit values. The client may then be able
+disambiguate each case by seeing if the 16 bit value matches
+that declared in the capabilities-metadata, or by consulting
+additional user supplied metadata. Noted that the
+<b>SetVcp</b> counterpart always accepts full 16 bit values
+and passes them unaltered to the VDU.</p>
+
 <p style="margin-left:9%; margin-top: 1em">The service may
 fail to determine working options for the
 <b>ConnectedDisplaysChanged</b> signal for some mixes of
@@ -804,6 +826,21 @@ their DDC support.</p>
 can only be changed at process startup. The service can be
 restarted either by killing it with a UNIX signal, or by
 invoking the service&rsquo;s <b>Restart</b> method.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The service is a
+relatively thin wrapper around <b>libddcutil</b>, in order
+to resolve VDU compatibility/compliance issues, the user may
+need to become familiar with the <b>libddcutil</b>
+configuration options normally stored in
+$HOME/.config/ddcutil/ddcutilrc and documented at
+<i>https://www.ddcutil.com/config_file/</i>.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The service
+wraps <b>libddcutil</b> that in some cases has been found to
+perform differently from the <b>ddcutil</b> command. If the
+service has problems with a VDU, it&rsquo;s worth trying the
+ddcutil command to see if it differs in result and to
+include those details in any issue raised.</p>
 
 <h2>SEE ALSO
 <a name="SEE ALSO"></a>

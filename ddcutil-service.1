@@ -199,14 +199,14 @@ Return a list of monitors detected along with their properties.
 Query a displays's settings by VCP code, for example, bightness is VCP code 0x10.
 
 The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (\fBRETURN_RAW_VALUES\fP),
-see \fLIMITATIONS\fP for an explanation.
+see \fBLIMITATIONS\fP for an explanation.
 
 .TP
 .B GetMultipleVcp
 Query multiple VCP codes for a single display.
 
 The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (\fBRETURN_RAW_VALUES\fP),
-see \fLIMITATIONS\fP for an explanation.
+see \fBLIMITATIONS\fP for an explanation.
 
 .TP
 .B SetVcp
@@ -617,18 +617,18 @@ and often only by by requiring additional user supplied metadata
 For example, the \fBvdu_controls\fP client allows the user to
 edit/override the service supplied capabilities-metadata.
 
-\fBSimple Non Continuous\fP values, such as the current VDU input, are supposed
+\fBSimple Non Continuous\fP values, such as the VDU input-source, are supposed
 to be 8 bits only and are masked to remove the high-byte.  SNC masking is performed
-because some VDUs don't clear the SNC high-byte. In such cases so the full 16 bit
+because some VDUs don't clear the SNC high-byte. In such cases, the full 16 bit
 SNC value will fail to match that declared in the capabilities-metadata.  However,
 there are other VDUs that disregard the 8 bit restriction and set the SNC high-byte
-to a significant value.  What to do depends on the specifics of each VDU, often
-clearing the high-byte is the safest path.  The \fBGetVcp\fP and \fBGetMultipleVcp\fP
-methods support the \fBRETURN_RAW_VALUES\fp flag that allows the client to
-receive the unmasked full 16 bit value as part of determining the meaning of
-the value. The client may be able disambiguate each case by seeing if the value
-matches that declared in the capabilities-metadata, or by consulting
-additional user supplied metadata.
+to a significant value.  The service defaults to standard-compliance and clears
+the high-byte.  The \fBGetVcp\fP and \fBGetMultipleVcp\fP methods support the
+\fBRETURN_RAW_VALUES\fP flag which forces the return of the original 16 bit values.
+The client may then be able disambiguate each case by seeing if the 16 bit value
+matches that declared in the capabilities-metadata, or by consulting additional
+user supplied metadata. Noted that the \fBSetVcp\fP counterpart always accepts
+full 16 bit values and passes them unaltered to the VDU.
 
 The service may fail to determine working options for the
 .B ConnectedDisplaysChanged
