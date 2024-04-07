@@ -286,17 +286,11 @@ static const gchar introspection_xml[] = R"(
         For simplicity the @vcp_current_value returned will always be 16 bit integer. Most
         VCP values are single byte 8-bit integers, very few are two-byte 16-bit.
 
-        Pass a flags value of 2 (RETURN_RAW_VALUES) to force the return all 16 bits of all
-        values.  This currently affects Simple Non Continuous values. An SNC value
-        is supposed to be 8 bits, but there are VDUs where the high-byte is non-zero 
-        and the byte has meaning, and there are other VDUs where it it is non-zero 
-        and has no meaning.  It is up to the client to figure out what is 
-        appropriate for each VDU.
+        The method's @flags parameter can be set to 2 (RETURN_RAW_VALUE),
+        see ddcutil-service.1 LIMITATIONS for an explanation.
 
         The @vcp_formatted_value contains the current value along with any related info,
         such as the maximum value, its similar to the output of the ddcutil getvcp shell-command.
-
-
     -->
     <method name='GetVcp'>
         <arg name='display_number' type='i' direction='in'/>
@@ -326,8 +320,8 @@ static const gchar introspection_xml[] = R"(
         Each entry in @vcp_current_value array is a VCP-code along with its
         current, maximum and formatted values (the same as those returned by GetVcp).
 
-        Pass a flags value of 2 (RETURN_RAW_VALUES) to force the return all 16 bits of a
-        Simple Non Continuous value. See GetVcp for an explanation.
+        The method's @flags parameter can be set to 2 (RETURN_RAW_VALUE),
+        see ddcutil-service.1 LIMITATIONS for an explanation.
     -->
     <method name='GetMultipleVcp'>
         <arg name='display_number' type='i' direction='in'/>

@@ -113,7 +113,6 @@ as the preferred method for detecting display connectivity changes
 for the \fBConnectedDisplaysChanged signal\fP.  This option should detect changes sooner
 with less overheads, but may fail to detect changes for some combinations or drivers and hardware.
 
-
 .TP
 .B "--poll-interval" \fIseconds\fP
 
@@ -199,20 +198,15 @@ Return a list of monitors detected along with their properties.
 .B GetVcp
 Query a displays's settings by VCP code, for example, bightness is VCP code 0x10.
 
-The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (RETURN_RAW_VALUES),
-to force the return all 16 bits of all values.  This currently affects
-\fBSimple Non Continuous\fP values. An SNC value
-is supposed to be 8 bits, but there are VDUs where the high-byte is non-zero
-and the byte has meaning, and there are other VDUs where it it is non-zero
-and has no meaning.  It is up to the client to figure out what is
-appropriate for each VDU.
+The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (\fBRETURN_RAW_VALUES\fP),
+see \fLIMITATIONS\fP for an explanation.
 
 .TP
 .B GetMultipleVcp
 Query multiple VCP codes for a single display.
 
-The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (SNC_STRICT),
-see \fBGetVcp\fP for an explanation.
+The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (\fBRETURN_RAW_VALUES\fP),
+see \fLIMITATIONS\fP for an explanation.
 
 .TP
 .B SetVcp
@@ -316,7 +310,6 @@ line of the
 system or user D-Bus
 .B com.ddcutil.DdcutilService.service
 file (see \fBFILES\fP).
-
 
 Changes are detected in one of two ways.
 The service defaults to periodic polling by
@@ -618,6 +611,25 @@ can be used to interact with the service.
 
 .SH LIMITATIONS
 
+Some VDUs are not standards compliant.  In some cases, non-compliance
+can vary to the extent that only a service client can deal with it,
+and often only by by requiring additional user supplied metadata
+For example, the \fBvdu_controls\fP client allows the user to
+edit/override the service supplied capabilities-metadata.
+
+\fBSimple Non Continuous\fP values, such as the current VDU input, are supposed
+to be 8 bits only and are masked to remove the high-byte.  SNC masking is performed
+because some VDUs don't clear the SNC high-byte. In such cases so the full 16 bit
+SNC value will fail to match that declared in the capabilities-metadata.  However,
+there are other VDUs that disregard the 8 bit restriction and set the SNC high-byte
+to a significant value.  What to do depends on the specifics of each VDU, often
+clearing the high-byte is the safest path.  The \fBGetVcp\fP and \fBGetMultipleVcp\fP
+methods support the \fBRETURN_RAW_VALUES\fp flag that allows the client to
+receive the unmasked full 16 bit value as part of determining the meaning of
+the value. The client may be able disambiguate each case by seeing if the value
+matches that declared in the capabilities-metadata, or by consulting
+additional user supplied metadata.
+
 The service may fail to determine working options for the
 .B ConnectedDisplaysChanged
 signal for some mixes of VPUs and GPUs (some hardware/drivers
@@ -644,6 +656,17 @@ restarted either by killing it with a UNIX signal, or by invoking the
 service's
 .B Restart
 method.
+
+The service is a relatively thin wrapper around \fBlibddcutil\fP,
+in order to resolve VDU compatibility/compliance issues, the user may need to
+become familiar with the \fBlibddcutil\fP configuration options normally
+stored in $HOME/.config/ddcutil/ddcutilrc and documented at
+\fIhttps://www.ddcutil.com/config_file/\fP.
+
+The service wraps \fBlibddcutil\fP that in some cases has been found to
+perform differently from the \fBddcutil\fP command. If the service has
+problems with a VDU, it's worth trying the ddcutil command to see if
+it differs in result and to include those details in any issue raised.
 
 .SH SEE ALSO
 
