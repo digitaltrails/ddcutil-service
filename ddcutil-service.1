@@ -28,6 +28,10 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 ]
 |
 [
+.B --return-raw-values
+]
+|
+[
 .B --lock
 ]
 |
@@ -126,6 +130,14 @@ If polling is enabled, this option defines the minimum interval between
 events within a cascade of events. For example, a cascade of events will
 occur when a session is locked and all displays are put into DPMS sleep.
 Default 0.5 seconds,  minimum 0.1 seconds.
+
+.TP
+.B "--return-raw-values"
+
+Return high-byte and low-byte for all values, including for
+fBSimple Non-Continuous\fP values.  Normally SMC values are
+masked to remove the high-byte value (see \fBLIMITATIONS\fP
+for an explanation).
 
 .TP
 .B "--lock"

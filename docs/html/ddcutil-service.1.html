@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Apr  8 17:08:29 2024 -->
+<!-- CreationDate: Tue Apr  9 16:30:23 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -65,10 +65,11 @@ Virtual Control Panel</p>
 <b><br>
 ddcutil-service</b> [ <b>--emit-connectivity-signals</b> ] |
 [ <b>--prefer-polling</b> ] | [ <b>--prefer-drm</b> ] | [
-<b>--polling-interval</b> <i>seconds</i> ] | [ <b>--lock</b>
-] | [ <b>--log-info</b> ] [ <b>--ddca-syslog-level</b>
-<i>N</i> ] | [ <b>--ddca-init-options</b> <i>M</i> ] [
-<b>--</b> <i>libddcutil ddc_init options...</i> ]</p>
+<b>--polling-interval</b> <i>seconds</i> ] | [
+<b>--return-raw-values</b> ] | [ <b>--lock</b> ] | [
+<b>--log-info</b> ] [ <b>--ddca-syslog-level</b> <i>N</i> ]
+| [ <b>--ddca-init-options</b> <i>M</i> ] [ <b>--</b>
+<i>libddcutil ddc_init options...</i> ]</p>
 
 <h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
@@ -169,6 +170,14 @@ events within a cascade of events. For example, a cascade of
 events will occur when a session is locked and all displays
 are put into DPMS sleep. Default 0.5 seconds, minimum 0.1
 seconds.</p>
+
+<p style="margin-left:9%;"><b>--return-raw-values</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Return
+high-byte and low-byte for all values, including for
+fBSimple Non-Continuous <b>values. Normally SMC values are
+masked to remove the high-byte value (see LIMITATIONS for an
+explanation).</b></p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">

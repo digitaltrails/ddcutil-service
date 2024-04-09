@@ -78,6 +78,7 @@
 static gboolean display_status_detection_enabled = FALSE;
 static gboolean enable_connectivity_signals = FALSE;
 static gboolean prefer_polling = TRUE;
+static gboolean return_raw_values = FALSE;
 static gboolean lock_configuration = FALSE;
 
 #define VERIFY_I2C
@@ -1123,9 +1124,10 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
                 DDCA_Feature_Metadata* metadata_ptr;
                 status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                 if (status == DDCRC_OK) {
-                    // For simple non-continuous types the high byte may be garbage for some models of VDU.
-                    const bool return_all_bytes = flags & RETURN_RAW_VALUES;  // Override, return all bytes regardless
+                    // Override, return all bytes regardless
+                    const bool return_all_bytes = return_raw_values || flags & RETURN_RAW_VALUES;
                     const bool low_byte_only = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                    // For simple non-continuous types the high byte may be garbage for some models of VDU.
                     current_value = low_byte_only ? valrec.sl : (valrec.sh << 8 | valrec.sl);
                     max_value = low_byte_only ? valrec.ml : (valrec.mh << 8 | valrec.ml);
                     status = ddca_format_non_table_vcp_value_by_dref(vcp_code, vdu_info->dref, &valrec,
@@ -1195,9 +1197,10 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                     DDCA_Feature_Metadata* metadata_ptr;
                     status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
                     if (status == DDCRC_OK) {
-                        // For simple non-continuous types the high byte may be garbage for some models of VDU.
-                        const bool return_all_bytes = flags & RETURN_RAW_VALUES; // Override, return all bytes regardless
+                        // Override, return all bytes regardless
+                        const bool return_all_bytes = return_raw_values || flags & RETURN_RAW_VALUES;
                         const bool low_byte_only = !return_all_bytes && (DDCA_SIMPLE_NC & metadata_ptr->feature_flags);
+                        // For simple non-continuous types the high byte may be garbage for some models of VDU.
                         const uint16_t current_value = low_byte_only ? valrec.sl : (valrec.sh << 8 | valrec.sl);
                         const uint16_t max_value = low_byte_only ? valrec.ml : (valrec.mh << 8 | valrec.ml);
                         char* formatted_value;
@@ -2487,6 +2490,10 @@ int main(int argc, char* argv[]) {
         {
             "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_connectivity_signals,
             "deprecated, replaced by --emit-connectivity-signals", NULL
+        },
+        {
+            "return-raw-values", 'r', 0, G_OPTION_ARG_NONE, &return_raw_values,
+            "return high-byte and low-byte for all values, including Simple Non-Continuous values", NULL
         },
         {
             "lock", 'l', 0, G_OPTION_ARG_NONE, &lock_configuration,
