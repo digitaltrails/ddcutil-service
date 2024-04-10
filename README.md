@@ -100,7 +100,8 @@ and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR pac
 
 ### Version History
 - 1.0.4
-  - For GetVcp of Simple Non-Continuous features, provide an API flag to control masking by 0x00ff.
+  - Provide an API flag RETURN_RAW_VALUES which disables GetVcp high-byte masking of Simple Non-Continuous features.
+  - Provide the --return-raw-values command line option for the same purpose.
 - 1.0.3
   - Reduce unnecessary logging.
   - Improve the description of the service's signals in ddcutil-service.1.
