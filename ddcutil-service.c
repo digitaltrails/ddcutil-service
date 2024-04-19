@@ -58,7 +58,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.4"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.5"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -1928,6 +1928,43 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
 }
 
 /**
+ * @brief helper function, does-nothing, starts or restarts to match the required parameter as is necessary
+ * @param required event classes that need to be watched
+ * @return DDCRC_OK if the ddca is watching the required parameters, otherwise the start error status
+ */
+static bool restart_ddca_watch_displays(DDCA_Display_Event_Class required) {
+    DDCA_Display_Event_Class classes_loc;
+    const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
+    if (running) {
+        if ((classes_loc & required)) {
+            g_message("start libddcutil watch_displays - already running events-monitored=%u events-required=%u",
+                      classes_loc, required);
+            return DDCRC_OK;
+        }
+        else {
+            g_message("start libddcutil watch_displays - need to change required events - stopping first.");
+            ddca_stop_watch_displays(true);
+        }
+    }
+    g_message("start libddcutil watch_displays - starting.");
+    return ddca_start_watch_displays(required);
+}
+
+/**
+ * @brief stop ddc watch displays if not already stopped
+ * @return DDCRC_OK if already stopped or stop succeeds, otherwise returns the stop error status
+ */
+static DDCA_Status disable_ddca_watch_displays() {
+    DDCA_Display_Event_Class classes_loc;
+    const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
+    if (!running) {
+        g_message("stop libddcutil watch_displays - already stopped, nothing to do.");
+        return DDCRC_OK;
+    }
+    return ddca_stop_watch_displays(true);
+}
+
+/**
  * @brief Handles calls to DdcutilService D-Bus org.freedesktop.DBus.Properties.Set.
  *
  * This handler is registered with glib's D-Bus main-loop to handle DdcutilService
@@ -2000,18 +2037,20 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
             if (enable_connectivity_signals) {
                 g_message("ServiceEmitConnectivitySignals using libddcutil change detection");
-                const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+                const int status = restart_ddca_watch_displays(DDCA_EVENT_CLASS_ALL);
                 if (status != DDCRC_OK) {
-                    char* message_text = get_status_message(status);
-                    g_message("ServiceEmitConnectivitySignals ddca_start_watch_displays %d %s", status, message_text);
+                    char *message_text = get_status_message(status);
+                    g_message("ServiceEmitConnectivitySignals ddca_start_watch_displays %d %s", status,
+                              message_text);
                     free(message_text);
                 }
             }
             else {
-                const int status = ddca_stop_watch_displays(DDCA_EVENT_CLASS_ALL);
+                const int status = disable_ddca_watch_displays();
                 if (status != DDCRC_OK) {
-                    char* message_text = get_status_message(status);
-                    g_message("ServiceEmitConnectivitySignals ddca_stop_watch_displays %d %s", status, message_text);
+                    char *message_text = get_status_message(status);
+                    g_message("ServiceEmitConnectivitySignals ddca_stop_watch_displays %d %s", status,
+                              message_text);
                     free(message_text);
                 }
             }
@@ -2191,7 +2230,7 @@ static bool poll_for_changes() {
 }
 
 /*
- * GDBUS service handler table - passed on registraction of the service
+ * GDBUS service handler table - passed on registration of the service
  */
 static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle_get_property, handle_set_property};
 
@@ -2606,28 +2645,30 @@ int main(int argc, char* argv[]) {
             g_message("ConnectedDisplaysChanged signal - prefering polling for change detection");
         }
         else {
-            const int rstatus = ddca_register_display_status_callback(display_status_event_callback);
-            if (rstatus != DDCRC_OK) {
-                char* message_text = get_status_message(rstatus);
-                g_message("libddcutil ddca_register_display_status_callback failed (status=%d - %s)", rstatus,
-                          message_text);
-                free(message_text);
-                g_warning("libddcutil change detection unavailable for this GPU");
-            }
-            else {
-                const int status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
-                if (status == DDCRC_OK) {
-                    g_message("Enabled ConnectedDisplaysChanged signal - using libddcutil change detection");
-                    poll_interval_micros = 0;  // Disable internal polling
+            const int status = restart_ddca_watch_displays(DDCA_EVENT_CLASS_ALL);
+            if (status == DDCRC_OK) {
+                g_message("Enabled ConnectedDisplaysChanged signal - using libddcutil change detection");
+                poll_interval_micros = 0;  // Disable internal polling
+                const int rstatus = ddca_register_display_status_callback(display_status_event_callback);
+                if (rstatus == DDCRC_OK) {
+                    g_message("libddcutil ddca_register_display_status_callback succeed");
                 }
                 else {
-                    char* message_text = get_status_message(status);
-                    g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status,
+                    char* message_text = get_status_message(rstatus);
+                    g_message("libddcutil ddca_register_display_status_callback failed (status=%d - %s)", rstatus,
                               message_text);
                     free(message_text);
                     g_warning("libddcutil change detection unavailable for this GPU");
                 }
             }
+            else {
+                char* message_text = get_status_message(status);
+                g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status,
+                          message_text);
+                free(message_text);
+                g_warning("libddcutil change detection unavailable for this GPU");
+            }
+
         }
 #else
         if (prefer_drm) {

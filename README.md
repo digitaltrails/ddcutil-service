@@ -99,6 +99,8 @@ Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches;
 and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
 
 ### Version History
+- 1.0.5
+  -  
 - 1.0.4
   - Provide an API flag RETURN_RAW_VALUES which disables GetVcp high-byte masking of Simple Non-Continuous features.
   - Provide the --return-raw-values command line option for the same purpose.
