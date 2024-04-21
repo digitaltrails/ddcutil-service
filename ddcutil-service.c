@@ -1278,7 +1278,7 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
             ddca_close_display(disp_handle);
         }
     }
-    if (status == 0) {
+    if (status == DDCRC_OK) {
         GError* local_error = NULL;
         const gchar* client_name = g_dbus_method_invocation_get_sender(invocation);
         if (!g_dbus_connection_emit_signal(dbus_connection,
