@@ -98,6 +98,9 @@ Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec;
 Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches; 
 and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
 
+The development IDE is **JetBrains CLion-Nova/CLion**. Thanks go out to JetBrains for
+granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
+
 ### Version History
 - 1.0.5
   -  
