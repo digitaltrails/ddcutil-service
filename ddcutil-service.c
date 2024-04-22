@@ -73,13 +73,25 @@
     #define LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
 
+#define STRINGIZE_MACRO(x) #x
+#define MACRO_EXISTS(name) (#name [0] != STRINGIZE_MACRO(name) [0])
+
 #undef XML_FROM_INTROSPECTED_DATA
+
+/**
+ * Define the service's  connectivity monitoring options
+ */
+typedef enum {
+    MONITOR_BY_INTERNAL_POLLING,
+    MONITOR_BY_LIBDDCUTIL_EVENTS,
+} Monitoring_Preference_Type;
 
 static gboolean display_status_detection_enabled = FALSE;
 static gboolean enable_connectivity_signals = FALSE;
-static gboolean prefer_polling = TRUE;
 static gboolean return_raw_values = FALSE;
 static gboolean lock_configuration = FALSE;
+
+static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
 
 #define VERIFY_I2C
 
@@ -1745,6 +1757,107 @@ static bool verify_i2c_dev() {
 }
 
 /**
+ * @brief validate and update the poll_interval_millis
+ * @param secs
+ * @return TRUE if valid and succeeded
+ */
+static bool update_poll_interval(const uint secs) {
+    if (secs > 0 && secs < MIN_POLL_SECONDS) {
+        g_warning ("Invalid polling interval %u, interval must be at least %d seconds", secs, MIN_POLL_SECONDS);
+        return FALSE;
+    }
+    else if (secs == 0) {
+        g_message("ServicePollInterval changed to zero, polling is now disabled.");
+        poll_interval_micros = 0;
+    }
+    else {
+        g_message("ServicePollInterval changed to %u seconds", secs);
+        poll_interval_micros = secs * 1000000;
+    }
+    return TRUE;
+}
+
+/**
+ * @brief validate and update the poll_cascade_interval_millis
+ * @param secs
+ * @return TRUE if valid and succeeded
+ */
+static bool update_poll_cascade_interval(const double secs) {
+    if (secs < MIN_POLL_CASCADE_INTERVAL_SECONDS || secs > poll_interval_micros / 1000000) {
+        g_warning("Invalid poll cascade interval %5.3f, valid range is %5.3f to %5.3f",
+                  secs, MIN_POLL_CASCADE_INTERVAL_SECONDS, poll_interval_micros / 1000000.0);
+        return FALSE;
+    }
+    g_message("ServicePollCascadeInterval changed to %f seconds", secs);
+    poll_cascade_interval_micros = (long) (secs * 1000000);
+    return TRUE;
+}
+
+/**
+ * @brief stop ddc watch displays if not already stopped
+ * @return DDCRC_OK if already stopped or stop succeeds, otherwise returns the stop error status
+ */
+static DDCA_Status disable_ddca_watch_displays() {
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
+    DDCA_Display_Event_Class classes_loc;
+    const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
+    if (!running) {
+        g_message("stop libddcutil watch_displays - already stopped, nothing to do.");
+        return DDCRC_OK;
+    }
+    const int status = ddca_stop_watch_displays(true);
+    if (status != DDCRC_OK) {
+        char *message_text = get_status_message(status);
+        g_warning("stop libddcutil watch_displays failed %d %s", status, message_text);
+        free(message_text);
+    }
+    return status;
+#else
+    g_warning("ServiceEmitConnectivitySignals using libddcutil not supported by libddcutil %s",
+              ddca_ddcutil_extended_version_string());
+    return DDCRC_UNIMPLEMENTED;
+#endif
+}
+
+/**
+ * @brief start ddc watch displays
+ * @return DDCRC_OK if start/restart succeeds, otherwise returns the error status
+ */
+static DDCA_Status enable_ddca_watch_displays(void) {
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
+    g_message("ServiceEmitConnectivitySignals using libddcutil change detection");
+    int status = DDCRC_OK;
+    DDCA_Display_Event_Class classes_loc;
+    const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
+    if (running) {
+        g_message("start libddcutil watch_displays - already running - stopping first.");
+        status = ddca_stop_watch_displays(true);
+    }
+    if (status == DDCRC_OK) {
+        g_message("start libddcutil watch_displays - starting.");
+        status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
+        if (status == DDCRC_OK) {
+            g_message("registering libddcutil display status callback");
+            poll_interval_micros = 0;  // Disable internal polling
+            const int status = ddca_register_display_status_callback(display_status_event_callback);
+            if (status == DDCRC_OK) {
+                return status;
+            }
+        }
+    }
+    char *message_text = get_status_message(status);
+    g_warning("enabling libddcutil watch displays failed (status=%d - %s)", status, message_text);
+    free(message_text);
+    g_warning("libddcutil change detection unavailable for this GPU");
+    return status;
+#else
+    g_warning("ServiceEmitConnectivitySignals using libddcutil not supported by libddcutil %s",
+              ddca_ddcutil_extended_version_string());
+    return DDCRC_UNIMPLEMENTED;
+#endif
+}
+
+/**
  * @brief Handles DdcutilService D-Bus method-calls by passing them to implementating functions.
  *
  * This handler is registered with glib's D-Bus main loop to handle DdcutilService
@@ -1928,43 +2041,6 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
 }
 
 /**
- * @brief helper function, does-nothing, starts or restarts to match the required parameter as is necessary
- * @param required event classes that need to be watched
- * @return DDCRC_OK if the ddca is watching the required parameters, otherwise the start error status
- */
-static bool restart_ddca_watch_displays(DDCA_Display_Event_Class required) {
-    DDCA_Display_Event_Class classes_loc;
-    const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
-    if (running) {
-        if ((classes_loc & required)) {
-            g_message("start libddcutil watch_displays - already running events-monitored=%u events-required=%u",
-                      classes_loc, required);
-            return DDCRC_OK;
-        }
-        else {
-            g_message("start libddcutil watch_displays - need to change required events - stopping first.");
-            ddca_stop_watch_displays(true);
-        }
-    }
-    g_message("start libddcutil watch_displays - starting.");
-    return ddca_start_watch_displays(required);
-}
-
-/**
- * @brief stop ddc watch displays if not already stopped
- * @return DDCRC_OK if already stopped or stop succeeds, otherwise returns the stop error status
- */
-static DDCA_Status disable_ddca_watch_displays() {
-    DDCA_Display_Event_Class classes_loc;
-    const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
-    if (!running) {
-        g_message("stop libddcutil watch_displays - already stopped, nothing to do.");
-        return DDCRC_OK;
-    }
-    return ddca_stop_watch_displays(true);
-}
-
-/**
  * @brief Handles calls to DdcutilService D-Bus org.freedesktop.DBus.Properties.Set.
  *
  * This handler is registered with glib's D-Bus main-loop to handle DdcutilService
@@ -2003,7 +2079,8 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
 #if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
         ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
 #else
-        g_warning("Dynamic sleep boolean not supported by this version of libddcutil");
+        g_warning("Dynamic sleep boolean not supported by this version of libddcutil %s",
+                  ddca_ddcutil_extended_version_string());
 #endif
     }
     else if (g_strcmp0(property_name, "DdcutilOutputLevel") == 0) {
@@ -2021,75 +2098,53 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         }
         enable_connectivity_signals = g_variant_get_boolean(value);
         g_message("ServiceEmitConnectivitySignals set property to %s",
-            enable_connectivity_signals ? "enabled" : "disabled");
-        if (prefer_polling) {
-             if (enable_connectivity_signals) {
-                if (poll_interval_micros == 0) {  // If not already set
-                    poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
+                  enable_connectivity_signals ? "enabled" : "disabled");
+        switch (monitoring_preference) {
+            case MONITOR_BY_LIBDDCUTIL_EVENTS:
+                g_message("Detect changes using libddcutil callbacks.");
+                poll_interval_micros = 0;
+                if (enable_connectivity_signals) {
+                    if (enable_ddca_watch_displays() == DDCRC_OK) {
+                        break;  // Success, exit the switch
+                    }
+                    // Failed, fall through to polling
+                } else {
+                    disable_ddca_watch_displays();
+                    break;
                 }
-                g_message("ServiceEmitConnectivitySignals ddcutil-service polling every %ld seconds",
-                    poll_interval_micros/1000000);
-            }
-        }
-        else {
-            g_message("Detect changes using libddcutil callbacks.");
-            poll_interval_micros = 0;
-#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-            if (enable_connectivity_signals) {
-                g_message("ServiceEmitConnectivitySignals using libddcutil change detection");
-                const int status = restart_ddca_watch_displays(DDCA_EVENT_CLASS_ALL);
-                if (status != DDCRC_OK) {
-                    char *message_text = get_status_message(status);
-                    g_message("ServiceEmitConnectivitySignals ddca_start_watch_displays %d %s", status,
-                              message_text);
-                    free(message_text);
+            case MONITOR_BY_INTERNAL_POLLING:
+            default:
+                if (enable_connectivity_signals) {
+                    if (poll_interval_micros == 0) {  // If not already set
+                        poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
+                    }
+                    g_message("ServiceEmitConnectivitySignals ddcutil-service polling every %ld seconds",
+                              poll_interval_micros / 1000000);
+                } else {
+                    poll_interval_micros = 0;
                 }
-            }
-            else {
-                const int status = disable_ddca_watch_displays();
-                if (status != DDCRC_OK) {
-                    char *message_text = get_status_message(status);
-                    g_message("ServiceEmitConnectivitySignals ddca_stop_watch_displays %d %s", status,
-                              message_text);
-                    free(message_text);
-                }
-            }
-#endif
+                break;
         }
     }
     else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
         const uint secs = g_variant_get_uint32(value);
-        if (secs == 0) {
-            poll_interval_micros = 0;
-            g_message("ServicePollInterval changed to zero, polling is now disabled.");
-        }
-        else if (secs < MIN_POLL_SECONDS) {
+        if (!update_poll_interval(secs)) {
             g_set_error (error,
-             service_error_quark,
-             DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
-             "Invalid polling interval %u, interval must be at least %d seconds", secs, MIN_POLL_SECONDS);
-            g_warning("%s", (*error)->message);
+                 service_error_quark,
+                 DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
+                 "Invalid polling interval %u, interval must be at least %d seconds", secs, MIN_POLL_SECONDS);
             return FALSE;
-        }
-        else {
-            g_message("ServicePollInterval changed to %u seconds", secs);
-            poll_interval_micros = secs * 1000000;
         }
     }
     else if (g_strcmp0(property_name, "ServicePollCascadeInterval") == 0) {
         const double secs = g_variant_get_double(value);
-        if (secs < MIN_POLL_CASCADE_INTERVAL_SECONDS || secs < poll_interval_micros / 1000000) {
+        if (!update_poll_cascade_interval(secs)) {
             g_set_error (error,
              service_error_quark,
              DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
              "Invalid poll cascade interval %5.3f, valid range is %5.3f to %5.3f",
              secs, MIN_POLL_CASCADE_INTERVAL_SECONDS, poll_interval_micros / 1000000.0);
-            g_warning("%s", (*error)->message);
             return FALSE;
-        }
-        else {
-            g_message("ServicePollCascadeInterval changed to %f seconds", secs);
-            poll_cascade_interval_micros = (long) (secs * 1000000);
         }
     }
     return *error == NULL;
@@ -2484,6 +2539,7 @@ int main(int argc, char* argv[]) {
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
 
+    gboolean prefer_polling = TRUE;
     gboolean prefer_drm = FALSE;
 
     int poll_seconds = -1;  // -1 flags no argument supplied
@@ -2580,6 +2636,11 @@ int main(int argc, char* argv[]) {
         g_message("All properties and sleep-multipliers are read only (--lock passed)");
     }
 
+    g_info("LIBDDCUTIL_HAS_CHANGES_CALLBACK %d", MACRO_EXISTS(LIBDDCUTIL_HAS_CHANGES_CALLBACK));
+    g_info("LIBDDCUTIL_HAS_OPTION_ARGUMENTS %d", MACRO_EXISTS(LIBDDCUTIL_HAS_OPTION_ARGUMENTS));
+    g_info("LIBDDCUTIL_HAS_INDIVIDUAL_SLEEP_MULTIPLIER %d", MACRO_EXISTS(LIBDDCUTIL_HAS_INDIVIDUAL_SLEEP_MULTIPLIER));
+    g_info("LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN %d", MACRO_EXISTS(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN));
+
     /* Build introspection data structures from XML.
      */
     introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
@@ -2632,84 +2693,41 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    if (!enable_connectivity_signals) {
-        g_message("ConnectedDisplaysChanged signals disabled"
-            "(add --emit_connectivity_signals to enable them).");
-        poll_interval_micros = 0;  // Disable internal polling
+    prefer_polling = !prefer_drm;
+    monitoring_preference = prefer_polling ? MONITOR_BY_INTERNAL_POLLING : MONITOR_BY_LIBDDCUTIL_EVENTS;
+
+    if (enable_connectivity_signals) {
+        switch (monitoring_preference) {
+            case MONITOR_BY_LIBDDCUTIL_EVENTS:
+                const int status = enable_ddca_watch_displays();
+                if (status == DDCRC_OK) {
+                    poll_interval_micros = 0;
+                    break;
+                }
+                g_warning("Falling back to service internal polling for change detection");
+            case MONITOR_BY_INTERNAL_POLLING:
+            default:
+                g_message("ConnectedDisplaysChanged signal - using service internal polling for change detection");
+                if (poll_seconds >= 0 && !update_poll_interval(poll_seconds)) {
+                      g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
+                      exit(1);
+                }
+                if (poll_cascade_interval_seconds > 0.0 && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
+                      g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
+                              MIN_POLL_CASCADE_INTERVAL_SECONDS);
+                      exit(1);
+                }
+                g_message("ConnectedDisplaysChanged signal - poll-interval=%ld poll-cascade-interval=%5.3f",
+                          poll_interval_micros / 1000000, poll_cascade_interval_micros / 100000.0);
+                break;
+        }
     }
     else {
-
-#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-        prefer_polling = !prefer_drm;
-        if (prefer_polling) {
-            g_message("ConnectedDisplaysChanged signal - prefering polling for change detection");
-        }
-        else {
-            const int status = restart_ddca_watch_displays(DDCA_EVENT_CLASS_ALL);
-            if (status == DDCRC_OK) {
-                g_message("Enabled ConnectedDisplaysChanged signal - using libddcutil change detection");
-                poll_interval_micros = 0;  // Disable internal polling
-                const int rstatus = ddca_register_display_status_callback(display_status_event_callback);
-                if (rstatus == DDCRC_OK) {
-                    g_message("libddcutil ddca_register_display_status_callback succeed");
-                }
-                else {
-                    char* message_text = get_status_message(rstatus);
-                    g_message("libddcutil ddca_register_display_status_callback failed (status=%d - %s)", rstatus,
-                              message_text);
-                    free(message_text);
-                    g_warning("libddcutil change detection unavailable for this GPU");
-                }
-            }
-            else {
-                char* message_text = get_status_message(status);
-                g_message("libddcutil ddca_start_watch_displays failed - non-DRM GPU? (status=%d - %s)", status,
-                          message_text);
-                free(message_text);
-                g_warning("libddcutil change detection unavailable for this GPU");
-            }
-
-        }
-#else
-        if (prefer_drm) {
-            g_warning("ConnectedDisplaysChanged signal - using polling, DRM not supported by libddcutil %s",
-                      ddca_ddcutil_extended_version_string());
-        }
-#endif
-
-        if (poll_interval_micros > 0) {  // Means polling hasn't been disabled by other options
-            if (poll_seconds != -1) {
-                // Command line override of polling interval
-                if (poll_seconds == 0) {
-                    poll_interval_micros = 0;  // Disable
-                    g_message("ConnectedDisplaysChanged - polling disabled by --poll-interval 0");
-                }
-                else if (poll_seconds < MIN_POLL_SECONDS) {
-                    g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
-                    exit(1);
-                }
-                else {
-                    poll_interval_micros = poll_seconds * 1000000;
-                }
-            }
-            g_message("Enabled ConnectedDisplaysChanged signal - using internal polling every %ld seconds",
-                poll_interval_micros / 1000000);
-
-            if (poll_cascade_interval_seconds > 0) {
-                // Command line override of polling interval
-                if (poll_cascade_interval_seconds < MIN_POLL_CASCADE_INTERVAL_SECONDS) {
-                    g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
-                        MIN_POLL_CASCADE_INTERVAL_SECONDS);
-                    exit(1);
-                }
-                else {
-                    poll_cascade_interval_micros = (long) (poll_cascade_interval_seconds * 1000000);
-                }
-            }
-            g_message("Set ConnectedDisplaysChanged event cascade interval to %5.3f seconds",
-                poll_cascade_interval_micros / 1000000.0);
-        }
+        g_message("ConnectedDisplaysChanged signals disabled"
+                  "(add --emit_connectivity_signals to enable them).");
+        poll_interval_micros = 0;  // Disable internal polling
     }
+
     enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
 
     g_main_loop_run(main_loop);
