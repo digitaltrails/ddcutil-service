@@ -1194,6 +1194,8 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
     GVariantBuilder* value_array_builder = &value_array_builder_instance;
     g_variant_builder_init(value_array_builder, G_VARIANT_TYPE("a(yqqs)"));
 
+    ddca_enable_verify(TRUE);
+
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
     DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
@@ -1276,6 +1278,8 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
 
     g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s...",
         call_name, vcp_code, new_value, display_number, edid_encoded);
+
+    ddca_enable_verify(TRUE);
 
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
