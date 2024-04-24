@@ -224,6 +224,8 @@ see \fBLIMITATIONS\fP for an explanation.
 .B SetVcp
 Set a display setting, specified by VCP code, to a new value.
 If the method succeeds, it will also emit a D-Bus \fBVcpValueChanged\fP signal.
+Set the method's \fBflags\fP to \fB4\fP (\fBNO_VERIFY\fP) to disable libddcutil
+verification and retry.
 
 .TP
 .B SetVcpWithContext
@@ -392,9 +394,8 @@ output level.
 
 .TP
 .B DdcutilVerifySetVcp
-Enable/disable
-.B libddcutil
-extra DDC calls to check whether VCP settings were actually applied by the monitor.
+Obsolete as of version 1.0.5+,
+replaced by the \fBSetVcp\fP method's \fBNO_VERIFY\fP flag.
 
 .TP
 .B DdcutilVersion

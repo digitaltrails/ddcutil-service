@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Tue Apr  9 16:30:23 2024 -->
+<!-- CreationDate: Thu Apr 25 08:20:05 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -46,7 +46,6 @@
 <a href="#The AttributesReturnedByDetect&quot; property&quot;">The AttributesReturnedByDetect&quot; property&quot;</a><br>
 <a href="#The StatusValues&quot; property&quot;">The StatusValues&quot; property&quot;</a><br>
 <a href="#The DdcutilVersion&quot; property&quot;">The DdcutilVersion&quot; property&quot;</a><br>
-<a href="#The DdcutilVerifySetVcp&quot; property&quot;">The DdcutilVerifySetVcp&quot; property&quot;</a><br>
 <a href="#The DdcutilDynamicSleep&quot; property&quot;">The DdcutilDynamicSleep&quot; property&quot;</a><br>
 <a href="#The DdcutilOutputLevel&quot; property&quot;">The DdcutilOutputLevel&quot; property&quot;</a><br>
 <a href="#The DisplayEventTypes&quot; property&quot;">The DisplayEventTypes&quot; property&quot;</a><br>
@@ -197,7 +196,6 @@ ServiceInitialized (u flags);</p>
 readable as <br>
 StatusValues readable a{is} <br>
 DdcutilVersion readable s <br>
-DdcutilVerifySetVcp readwrite b <br>
 DdcutilDynamicSleep readwrite b <br>
 DdcutilOutputLevel readwrite u <br>
 DisplayEventTypes readable a{is} <br>
@@ -529,6 +527,11 @@ the <i>vcp_new_value</i> is always passed as a 16 bit
 integer (most VCP values are single byte 8&minus;bit
 intergers, very few are two&minus;byte 16&minus;bit).</p>
 
+<p style="margin-left:9%; margin-top: 1em">The method's
+<i>flags</i> parameter can be set to 4 (NO_VERIFY) to
+disable libddcutil verify and retry. Verification and retry
+is the default.</p>
+
 <p style="margin-left:9%; margin-top: 1em">IN i
 <i>display_number</i>:</p>
 
@@ -594,6 +597,11 @@ for a VCP&minus;code for the specified VDU.</p>
 the <i>vcp_new_value</i> is always passed as a 16 bit
 integer (most VCP values are single byte 8&minus;bit
 intergers, very few are two&minus;byte 16&minus;bit).</p>
+
+<p style="margin-left:9%; margin-top: 1em">The method's
+<i>flags</i> parameter can be set to 4 (NO_VERIFY) to
+disable libddcutil verify and retry. Verification and retry
+is the default.</p>
 
 <p style="margin-left:9%; margin-top: 1em">IN i
 <i>display_number</i>:</p>
@@ -1230,26 +1238,6 @@ readable s</p>
 
 <p style="margin-left:9%; margin-top: 1em">The ddcutil
 version number for the linked libddcutil.</p>
-
-<h3>The DdcutilVerifySetVcp&quot; property&quot;
-<a name="The DdcutilVerifySetVcp&quot; property&quot;"></a>
-</h3>
-
-
-
-<p style="margin-left:14%; margin-top: 1em">DdcutilVerifySetVcp
-readwrite b</p>
-
-<p style="margin-left:9%; margin-top: 1em">Within
-libddcutil each setvcp is verified by internal check using a
-getvcp. This verfication step can be enabled or disabled by
-altering this property.</p>
-
-<p style="margin-left:9%; margin-top: 1em">Attempting to
-set this property when the service is
-configuration&minus;locked will result in an
-com.ddcutil.DdcutilService.Error.ConfigurationLocked error
-being raised.</p>
 
 <h3>The DdcutilDynamicSleep&quot; property&quot;
 <a name="The DdcutilDynamicSleep&quot; property&quot;"></a>

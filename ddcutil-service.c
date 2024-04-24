@@ -73,8 +73,7 @@
     #define LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
 
-#define STRINGIZE_MACRO(x) #x
-#define MACRO_EXISTS(name) (#name [0] != STRINGIZE_MACRO(name) [0])
+#define MACRO_EXISTS(name) (#name [0] != G_STRINGIFY(name) [0])
 
 #undef XML_FROM_INTROSPECTED_DATA
 
@@ -191,15 +190,18 @@ static const char* attributes_returned_from_detect[] = {
  * Boolean flags that can be passed in the service method flags argument.
  */
 typedef enum {
-    EDID_PREFIX = 1,  // Indicates the EDID passed to the service is a unique prefix (substring) of the actual EDID.
-    RETURN_RAW_VALUES = 2,
+    EDID_PREFIX = 1,        // Indicates the EDID passed to the service is a unique prefix (substr) of the actual EDID.
+    RETURN_RAW_VALUES = 2,  // GetVcp GetMultipleVcp
+    NO_VERIFY = 4,          // SetVcp
 } Flags_Enum_Type;
 
 /**
  * Iterable definitions of Flags_Enum_Type values/names (for return from a service property).
  */
-const int flag_options[] = {EDID_PREFIX,};
-const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),};
+const int flag_options[] = {EDID_PREFIX,RETURN_RAW_VALUES, NO_VERIFY,};
+const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),
+                                    G_STRINGIFY(RETURN_RAW_VALUES),
+                                    G_STRINGIFY(NO_VERIFY),};
 
 /* ----------------------------------------------------------------------------------------------------
  * D-Bus interface definition in XML
@@ -360,6 +362,9 @@ static const gchar introspection_xml[] = R"(
 
         For simplicity the @vcp_new_value is always passed as a 16 bit integer (most
         VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+
+        The method's @flags parameter can be set to 4 (NO_VERIFY) to disable
+        libddcutil verify and retry.  Verification and retry is the default.
     -->
     <method name='SetVcp'>
         <arg name='display_number' type='i' direction='in'/>
@@ -386,6 +391,9 @@ static const gchar introspection_xml[] = R"(
 
         For simplicity the @vcp_new_value is always passed as a 16 bit integer (most
         VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+
+        The method's @flags parameter can be set to 4 (NO_VERIFY) to disable
+        libddcutil verify and retry.  Verification and retry is the default.
     -->
     <method name='SetVcpWithContext'>
         <arg name='display_number' type='i' direction='in'/>
@@ -641,18 +649,6 @@ static const gchar introspection_xml[] = R"(
         The ddcutil version number for the linked libddcutil.
     -->
     <property type='s' name='DdcutilVersion' access='read'/>
-
-    <!--
-        DdcutilVerifySetVcp:
-
-        Within libddcutil each setvcp is verified by internal check using a getvcp.
-        This verfication step can be enabled or disabled by altering this property.
-
-        Attempting to set this property when the service is configuration-locked
-        will result in an com.ddcutil.DdcutilService.Error.ConfigurationLocked error
-        being raised.
-    -->
-    <property type='b' name='DdcutilVerifySetVcp' access='readwrite'/>
 
     <!--
         DdcutilDynamicSleep:
@@ -1279,7 +1275,8 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
     g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s...",
         call_name, vcp_code, new_value, display_number, edid_encoded);
 
-    ddca_enable_verify(TRUE);
+    // Always explicitly default to verify - ensures all libddcutil versions behave the same way
+    ddca_enable_verify(flags & NO_VERIFY ? FALSE : TRUE);
 
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
@@ -1972,9 +1969,6 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     else if (g_strcmp0(property_name, "ServiceInterfaceVersion") == 0) {
         ret = g_variant_new_string(DDCUTIL_DBUS_INTERFACE_VERSION_STRING);
     }
-    else if (g_strcmp0(property_name, "DdcutilVerifySetVcp") == 0) {
-        ret = g_variant_new_boolean(ddca_is_verify_enabled());
-    }
     else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
 #if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
         ret = g_variant_new_boolean(ddca_is_dynamic_sleep_enabled());
@@ -2076,10 +2070,8 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         g_warning("%s", (*error)->message);
         return FALSE;
     }
-    if (g_strcmp0(property_name, "DdcutilVerifySetVcp") == 0) {
-        ddca_enable_verify(g_variant_get_boolean(value));
-    }
-    else if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
+
+    if (g_strcmp0(property_name, "DdcutilDynamicSleep") == 0) {
 #if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
         ddca_enable_dynamic_sleep(g_variant_get_boolean(value));
 #else

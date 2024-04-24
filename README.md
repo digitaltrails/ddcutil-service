@@ -105,6 +105,10 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 - 1.0.5
   - Ensure setvcp verfication is always enabled (to match the default behaviour of the ddcutil command).
   - Cleanup the --prefer-polling and --prefer-drm options and coding.
+  - Fix the ServiceFlagOptions property - it was not listing all flag options.
+  - Add SetVcp NO_VERIFY flag option.
+  - Default to verify and retry for all SetVcp method calls - match the behaviour of the ddcutil command.
+  - Removed the stateful DdcutilVerifySetVcp property that has been replaced by the stateless SetVcp verification flag.
 - 1.0.4
   - Provide an API flag RETURN_RAW_VALUES which disables GetVcp high-byte masking of Simple Non-Continuous features.
   - Provide the --return-raw-values command line option for the same purpose.

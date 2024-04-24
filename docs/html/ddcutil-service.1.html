@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Tue Apr  9 16:30:23 2024 -->
+<!-- CreationDate: Thu Apr 25 08:20:05 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -305,7 +305,9 @@ to <b>2</b> (<b>RETURN_RAW_VALUES</b>), see
 
 <p>Set a display setting, specified by VCP code, to a new
 value. If the method succeeds, it will also emit a D-Bus
-<b>VcpValueChanged</b> signal.</p></td></tr>
+<b>VcpValueChanged</b> signal. Set the method&rsquo;s
+<b>flags</b> to <b>4</b> (<b>NO_VERIFY</b>) to disable
+libddcutil verification and retry.</p></td></tr>
 </table>
 
 <p style="margin-left:9%;"><b>SetVcpWithContext</b></p>
@@ -480,9 +482,9 @@ timings.</p>
 
 <p style="margin-left:9%;"><b>DdcutilVerifySetVcp</b></p>
 
-<p style="margin-left:18%;">Enable/disable
-<b>libddcutil</b> extra DDC calls to check whether VCP
-settings were actually applied by the monitor.</p>
+<p style="margin-left:18%;">Obsolete as of version 1.0.5+,
+replaced by the <b>SetVcp</b> method&rsquo;s
+<b>NO_VERIFY</b> flag.</p>
 
 <p style="margin-left:9%;"><b>DdcutilVersion</b></p>
 

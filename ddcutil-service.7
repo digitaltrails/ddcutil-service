@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 04/09/2024
+.\"      Date: 04/25/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "04/09/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "04/25/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -150,7 +150,6 @@ ServiceInitialized       (u flags);
 AttributesReturnedByDetect      readable   as
 StatusValues                    readable   a{is}
 DdcutilVersion                  readable   s
-DdcutilVerifySetVcp             readwrite  b
 DdcutilDynamicSleep             readwrite  b
 DdcutilOutputLevel              readwrite  u
 DisplayEventTypes               readable   a{is}
@@ -438,6 +437,10 @@ For simplicity the
 \fIvcp_new_value\fR
 is always passed as a 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
 .PP
+The method\*(Aqs
+\fIflags\fR
+parameter can be set to 4 (NO_VERIFY) to disable libddcutil verify and retry\&. Verification and retry is the default\&.
+.PP
 IN i \fIdisplay_number\fR:
 .RS 4
 the libddcutil/ddcutil display number to alter
@@ -498,6 +501,10 @@ Set the value for a VCP\-code for the specified VDU\&.
 For simplicity the
 \fIvcp_new_value\fR
 is always passed as a 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
+.PP
+The method\*(Aqs
+\fIflags\fR
+parameter can be set to 4 (NO_VERIFY) to disable libddcutil verify and retry\&. Verification and retry is the default\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -1068,21 +1075,6 @@ DdcutilVersion  readable   s
 .\}
 .PP
 The ddcutil version number for the linked libddcutil\&.
-.SS "The "DdcutilVerifySetVcp" property"
-.sp
-.if n \{\
-.RS 4
-.\}
-.nf
-DdcutilVerifySetVcp  readwrite  b
-.fi
-.if n \{\
-.RE
-.\}
-.PP
-Within libddcutil each setvcp is verified by internal check using a getvcp\&. This verfication step can be enabled or disabled by altering this property\&.
-.PP
-Attempting to set this property when the service is configuration\-locked will result in an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error being raised\&.
 .SS "The "DdcutilDynamicSleep" property"
 .sp
 .if n \{\
