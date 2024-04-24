@@ -244,7 +244,7 @@ static const gchar introspection_xml[] = R"(
         @text_options: Text options to be passed to libddcutil ddca_init().
         @syslog_level: The libddcutil syslog level.
         @flags: For furture use.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Restarts the service with the supplied parameters.
@@ -265,7 +265,7 @@ static const gchar introspection_xml[] = R"(
         @flags: If set to 1, any invalid VDUs will be included in the results.
         @number_of_displays: The number of VDUs detected (the length of @detected_displays).
         @detected_displays: An array of structures describing the VDUs.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Issues a detect and returns the VDUs detected.
@@ -293,7 +293,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_current_value: The current numeric value as a unified 16 bit integer.
         @vcp_max_value: The maximum possible value, to allow for easy calculation of current/max.
         @vcp_formatted_value: A formatted version of the value including related info such as the max-value.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieve the value for a VCP-code for the specified VDU.
@@ -326,7 +326,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_code: the VPC-code to query.
         @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @vcp_current_value: An array of VCP-codes and values.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieves several different VCP values for the specified VDU. This is a convienience
@@ -355,7 +355,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_code: the VPC-code to query.
         @vcp_new_value: the numeric value as a 16 bit integer.
         @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Set the value for a VCP-code for the specified VDU.
@@ -384,7 +384,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_new_value: the numeric value as a 16 bit integer.
         @client_context: a client-context string that will be returned with the VcpValueChanged signal.
         @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Set the value for a VCP-code for the specified VDU.
@@ -419,7 +419,7 @@ static const gchar introspection_xml[] = R"(
         @is_rw: True if the feature is readable and writable.
         @is_complex: True if the feature is complex (multi-byte).
         @is_continuous: True in the feature is a continuous value (it is not an enumeration).
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieve the metadata for a VCP-code for the specified VDU.
@@ -446,7 +446,7 @@ static const gchar introspection_xml[] = R"(
         @edid_txt: the base-64 encoded EDID of the display
         @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @capabilities_text: the capability string for the VDU.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieve the capabilities metadata for a VDU in a format similar to that output by
@@ -471,7 +471,7 @@ static const gchar introspection_xml[] = R"(
         @mccs_minor: MCCS minor version number byte.
         @commands: supported commands as a dictionary indexed by command number.
         @capabilities: supported VCP features as a dictionary indexed by VCP-code.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Retrieve the capabilities metadata for a VDU in a parsed dictionary structure
@@ -529,7 +529,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
         @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @current_multiplier: the sleep multiplier.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Get the current libddcutil sleep multiplier for the specified VDU.
@@ -552,7 +552,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
         @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
         @new_multiplier: The sleep multiplier.
-        @error_status: A libddcutil DDCRC error status.  DDCA_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
         @error_message: Text message for error_status.
 
         Set the libddcutil sleep multiplier for the specified VDU.
@@ -2664,7 +2664,12 @@ int main(int argc, char* argv[]) {
 #if defined(LIBDDCUTIL_HAS_OPTION_ARGUMENTS)
     ddca_init_options |= DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG;
     g_message("Calling ddca_init %d %d '%s'", ddca_syslog_level, ddca_init_options, arg_string);
-    ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
+    const int status = ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
+    if (status != DDCRC_OK) {
+        char* message_text = get_status_message(status);
+        g_critical("Fail to initialised libddcutil cannot continue: %s", message_text);
+        exit(1);
+    }
 #else
     if (argc > 0) {
         g_warning("libddcutil %s does not support calling ddca_init %d %d '%s'",
