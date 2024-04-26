@@ -1272,9 +1272,6 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
         client_context = g_strdup("");
     }
 
-    g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s...",
-        call_name, vcp_code, new_value, display_number, edid_encoded);
-
     // Always explicitly default to verify - ensures all libddcutil versions behave the same way
     ddca_enable_verify(flags & NO_VERIFY ? FALSE : TRUE);
 
