@@ -58,7 +58,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.6"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.7"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -73,6 +73,7 @@
     #define LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER
 #endif
 
+#define BOOL_STR(value) ((value) ? "true" : "false")
 #define MACRO_EXISTS(name) (#name [0] != G_STRINGIFY(name) [0])
 
 #undef XML_FROM_INTROSPECTED_DATA
@@ -1256,24 +1257,24 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
     uint16_t new_value;
     u_int32_t flags;
     char* client_context;
-    char* call_name = "SetVcp";
+    char* call_name;
 
     if (with_client_context) {
         call_name = "SetVcpWithContext";
-        g_variant_get(parameters, "(isyqsu)",
-            &display_number, &edid_encoded, &vcp_code, &new_value, &client_context, &flags);
-        g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s... %s",
-            call_name, vcp_code, new_value, display_number, edid_encoded, client_context);
+        g_variant_get(parameters, "(isyqsu)", &display_number, &edid_encoded, &vcp_code, &new_value, &client_context, &flags);
     }
     else {
+        call_name = "SetVcp";
         g_variant_get(parameters, "(isyqu)", &display_number, &edid_encoded, &vcp_code, &new_value, &flags);
-        g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s...",
-            call_name, vcp_code, new_value, display_number, edid_encoded);
         client_context = g_strdup("");
     }
 
+    const bool verify = !(flags & NO_VERIFY);
     // Always explicitly default to verify - ensures all libddcutil versions behave the same way
-    ddca_enable_verify(flags & NO_VERIFY ? FALSE : TRUE);
+    ddca_enable_verify(verify);
+
+    g_info("%s vcp_code=%d value=%d display_num=%d edid=%.30s... verify=%s client_context='%s'",
+           call_name, vcp_code, new_value, display_number, edid_encoded, BOOL_STR(verify), client_context);
 
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
@@ -1304,7 +1305,7 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
             g_free(local_error);}
         else {
             g_debug("Signal VcpValueChanged: succeeded display=%d edid=%.30ss... vcp_code=%d value=%d client=%s "
-                "client_context=%s", display_number, edid_encoded, vcp_code, new_value, client_name, client_context);
+                "client_context='%s'", display_number, edid_encoded, vcp_code, new_value, client_name, client_context);
         }
     }
     else {

@@ -102,6 +102,9 @@ The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
+- 1.0.7
+  - Slightly improved setvcp diagnosics.
+  - 
 - 1.0.6
   - Add SetVcp/SetVcpWithContext NO_VERIFY (no retry) flag option.
   - Match the behaviour of the ddcutil command, default to verify-and-retry for all set-vcp method calls.
