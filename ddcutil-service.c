@@ -58,7 +58,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.5"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.6"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -2696,13 +2696,14 @@ int main(int argc, char* argv[]) {
 
     if (enable_connectivity_signals) {
         switch (monitoring_preference) {
-            case MONITOR_BY_LIBDDCUTIL_EVENTS:
+            case MONITOR_BY_LIBDDCUTIL_EVENTS: {
                 const int status = enable_ddca_watch_displays();
                 if (status == DDCRC_OK) {
                     poll_interval_micros = 0;
                     break;
                 }
                 g_warning("Falling back to service internal polling for change detection");
+            }
             case MONITOR_BY_INTERNAL_POLLING:
             default:
                 g_message("ConnectedDisplaysChanged signal - using service internal polling for change detection");
