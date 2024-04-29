@@ -103,13 +103,13 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 
 ### Version History
 - 1.0.5
-  - Add SetVcp NO_VERIFY flag option.
-  - Default to verify-and-retry for all SetVcp method calls - match the behaviour of the ddcutil command.
-  - Ensure the service defaults to verify-and-retry for all libddcutil versions.
-  - Remove the stateful DdcutilVerifySetVcp property and replace it with the stateless SetVcp verification flag.
-  - Fix the ServiceFlagOptions property - it was not listing all flag options.
-  - Check the status returned by libddcutil ddca_init() and exit on error - prevent any inconsistent behaviour.
-  - Cleanup the --prefer-polling and --prefer-drm options.
+  - Add SetVcp/SetVcpWithContext NO_VERIFY (no retry) flag option.
+  - Match the behaviour of the ddcutil command, default to verify-and-retry for all set-vcp method calls.
+  - Default to verify-and-retry for all libddcutil versions.
+  - Replace the stateful DdcutilVerifySetVcp property with the stateless NO_VERIFY flag.
+  - Fix the ServiceFlagOptions property so that it lists all flag options.
+  - Check the status returned by libddcutil ddca_init() and exit on error to prevent any inconsistent behaviour.
+  - Cleanup the --prefer-polling and --prefer-drm options to make them consistent with each other.
 - 1.0.4
   - Provide an API flag RETURN_RAW_VALUES which disables GetVcp high-byte masking of Simple Non-Continuous features.
   - Provide the --return-raw-values command line option for the same purpose.
