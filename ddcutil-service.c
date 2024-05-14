@@ -1029,72 +1029,78 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     u_int32_t flags;
     g_variant_get(parameters, "(u)", &flags);
 
-    g_info("Detect flags=%x", flags);
-
-    const DDCA_Status detect_status = ddca_redetect_displays();
-    char* detect_message_text = get_status_message(detect_status);
-
-    DDCA_Display_Info_List* dlist = NULL;
-    const DDCA_Status list_status = ddca_get_display_info_list2(flags != 0, &dlist);
-    char* list_message_text = get_status_message(list_status);
     int vdu_count = 0;
 
-    // see https://docs.gtk.org/glib/struct.VariantBuilder.html
-
+    // GVariantBuilder: see https://docs.gtk.org/glib/struct.VariantBuilder.html
     GVariantBuilder detected_displays_builder_instance; // Allocate on the stack for easier memory management.
     GVariantBuilder* detected_displays_builder = &detected_displays_builder_instance;
-
     g_variant_builder_init(detected_displays_builder, G_VARIANT_TYPE("a(iiisssqsu)"));
 
-    if (list_status != DDCRC_OK) {
-        g_warning("Detect failed to obtain VDU list - list-status=%d message=%s", list_status, list_message_text);
+    g_info("Detect flags=%x", flags);
+
+    DDCA_Status detect_status = ddca_redetect_displays();
+    char* detect_message_text = get_status_message(detect_status);
+
+    if (detect_status != DDCRC_OK) {
+        g_warning("Detect: ddca_redetect_displays failed status=%d message=%s", detect_status, detect_message_text);
     }
     else {
-        vdu_count = dlist->ct;
+        DDCA_Display_Info_List *dlist = NULL;
+        detect_status = ddca_get_display_info_list2(flags != 0, &dlist);
+        detect_message_text = get_status_message(detect_status);
+        if (detect_status == DDCRC_OTHER) {  // A non-error? Documented as "other error (for use during development)"
+            g_warning("Detect: treating as OK ddca_get_display_info_list2 status=%d message=%s",
+                      detect_status, detect_message_text);
+            detect_status = DDCRC_OK;
+            detect_message_text = get_status_message(detect_status);
+        }
+
+        if (detect_status != DDCRC_OK) {
+            g_warning("Detect: ddca_get_display_info_list2 failed status=%d message=%s",
+                      detect_status, detect_message_text);
+        } else {
+            vdu_count = dlist->ct;
 #if defined(TEST_LAPTOP_BOGUS_VDU)
-        g_variant_builder_add(
-            detected_displays_builder,
-            "(iiisssqsu)",
-            -1, -1, 0,
-            g_strdup(""), g_strdup(""), g_strdup(""),
-            0,
-            g_strdup("123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789"
-            "-123456789-123456789-123456789-12345678"),
-            0);
-        vdu_count++;
-#endif
-        for (int ndx = 0; ndx < vdu_count; ndx++) {
-            const DDCA_Display_Info* vdu_info = &dlist->info[ndx];
-            gchar* safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
-            gchar* safe_model = sanitize_utf8(vdu_info->model_name); //"xxxxwww\xF0\xA4\xADiii" );
-            gchar* safe_sn = sanitize_utf8(vdu_info->sn);
-            gchar* edid_encoded = edid_encode(vdu_info->edid_bytes);
-            g_info("Detected %s %s %s display_num=%d edid=%.30s...",
-                   safe_mfg_id, safe_model, safe_sn, vdu_info->dispno, edid_encoded);
             g_variant_builder_add(
                 detected_displays_builder,
                 "(iiisssqsu)",
-                vdu_info->dispno, vdu_info->usb_bus, vdu_info->usb_device,
-                safe_mfg_id, safe_model, safe_sn,
-                vdu_info->product_code,
-                edid_encoded,
-                edid_to_binary_serial_number(vdu_info->edid_bytes));
-            g_free(safe_mfg_id);
-            g_free(safe_model);
-            g_free(safe_sn);
-            g_free(edid_encoded);
+                -1, -1, 0,
+                g_strdup(""), g_strdup(""), g_strdup(""),
+                0,
+                g_strdup("123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789-123456789"
+                "-123456789-123456789-123456789-12345678"),
+                0);
+            vdu_count++;
+#endif
+            for (int ndx = 0; ndx < vdu_count; ndx++) {
+                const DDCA_Display_Info *vdu_info = &dlist->info[ndx];
+                gchar *safe_mfg_id = sanitize_utf8(vdu_info->mfg_id);
+                gchar *safe_model = sanitize_utf8(vdu_info->model_name); //"xxxxwww\xF0\xA4\xADiii" );
+                gchar *safe_sn = sanitize_utf8(vdu_info->sn);
+                gchar *edid_encoded = edid_encode(vdu_info->edid_bytes);
+                g_info("Detect: detected %s %s %s display_num=%d edid=%.30s...",
+                       safe_mfg_id, safe_model, safe_sn, vdu_info->dispno, edid_encoded);
+                g_variant_builder_add(
+                        detected_displays_builder,
+                        "(iiisssqsu)",
+                        vdu_info->dispno, vdu_info->usb_bus, vdu_info->usb_device,
+                        safe_mfg_id, safe_model, safe_sn,
+                        vdu_info->product_code,
+                        edid_encoded,
+                        edid_to_binary_serial_number(vdu_info->edid_bytes));
+                g_free(safe_mfg_id);
+                g_free(safe_model);
+                g_free(safe_sn);
+                g_free(edid_encoded);
+            }
+            ddca_free_display_info_list(dlist);
         }
-        ddca_free_display_info_list(dlist);
     }
 
-    const int final_status = (detect_status != 0) ? detect_status : list_status;
-    const char* final_message_text = (detect_status != 0) ? detect_message_text : list_message_text;
-
     GVariant* result = g_variant_new("(ia(iiisssqsu)is)",
-                                     vdu_count, detected_displays_builder, final_status, final_message_text);
+                                     vdu_count, detected_displays_builder, detect_status, detect_message_text);
 
     g_dbus_method_invocation_return_value(invocation, result); // Think this frees the result.
-    free(list_message_text);
     free(detect_message_text);
 }
 
