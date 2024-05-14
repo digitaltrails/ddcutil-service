@@ -910,6 +910,28 @@ static char* get_status_message(const DDCA_Status status) {
 }
 
 /**
+ * Wrap ddca_get_display_info_list2 filter return status for success. Some versions of libddcutil return
+ * both DDCRC_OK and DDCRC_OTHER for success.
+ * @param include_invalid include invalid displays in the list (probably powered off)
+ * @param dlist_loc output dlist
+ * @param msg_prefix if not NULL warn with prefix if successful but status was not originally DDCRC_OK
+ * @return DDCRC_OK if successful
+ */
+static DDCA_Status get_display_info_list(bool include_invalid, DDCA_Display_Info_List**  dlist_loc, char *msg_prefix) {
+    DDCA_Status detect_status = ddca_get_display_info_list2(include_invalid, dlist_loc);
+    if (detect_status == DDCRC_OTHER) {  // A non-error? Documented as "other error (for use during development)"
+        if (msg_prefix != NULL) {
+            char *detect_message_text = get_status_message(detect_status);
+            g_warning("%s: treating as OK ddca_get_display_info_list2 status=%d message=%s",
+                      msg_prefix, detect_status, detect_message_text);
+            free(detect_message_text);
+        }
+        detect_status = DDCRC_OK;
+    }
+    return detect_status;
+}
+
+/**
  * @brief Lookup DDCA_Display_Info for either a display_number or an encoded EDID.
  *
  * This is a supporting-function, it's used by functions that implement the
@@ -926,7 +948,7 @@ static char* get_status_message(const DDCA_Status status) {
 static DDCA_Status get_display_info(const int display_number, const char* edid_encoded,
                                     DDCA_Display_Info_List** dlist, DDCA_Display_Info** dinfo, bool edid_is_prefix) {
     *dinfo = NULL;
-    DDCA_Status status = ddca_get_display_info_list2(0, dlist);
+    DDCA_Status status = get_display_info_list(0, dlist, "get_display_info");
 
     if (status == DDCRC_OK) {
         for (int ndx = 0; ndx < (*dlist)->ct; ndx++) {
@@ -1016,7 +1038,6 @@ static void restart(GVariant* parameters, GDBusMethodInvocation* invocation) {
 static void display_status_event_callback(DDCA_Display_Status_Event event);
 #endif
 
-
 /**
  * @brief Implements the DdcutilService Detect method
  *
@@ -1046,15 +1067,8 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     }
     else {
         DDCA_Display_Info_List *dlist = NULL;
-        detect_status = ddca_get_display_info_list2(flags != 0, &dlist);
+        detect_status = get_display_info_list(flags != 0, &dlist, "Detect");
         detect_message_text = get_status_message(detect_status);
-        if (detect_status == DDCRC_OTHER) {  // A non-error? Documented as "other error (for use during development)"
-            g_warning("Detect: treating as OK ddca_get_display_info_list2 status=%d message=%s",
-                      detect_status, detect_message_text);
-            detect_status = DDCRC_OK;
-            detect_message_text = get_status_message(detect_status);
-        }
-
         if (detect_status != DDCRC_OK) {
             g_warning("Detect: ddca_get_display_info_list2 failed status=%d message=%s",
                       detect_status, detect_message_text);
@@ -1714,7 +1728,7 @@ static bool verify_i2c_dev() {
     const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
     if (detect_status == DDCRC_OK) {
         DDCA_Display_Info_List* dlist = NULL;
-        const DDCA_Status list_status = ddca_get_display_info_list2(1, &dlist);
+        const DDCA_Status list_status = get_display_info_list(1, &dlist, "Verify-I2C");
         if (list_status == DDCRC_OK) {
             const int vdu_count = dlist->ct;
             ddca_free_display_info_list(dlist);
@@ -2203,8 +2217,8 @@ static bool poll_for_changes() {
         const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
         if (detect_status == DDCRC_OK) {
             DDCA_Display_Info_List* dlist;
-            const DDCA_Status info_status = ddca_get_display_info_list2(1, &dlist);
-            if (info_status == DDCRC_OK) {
+            const DDCA_Status info_status = get_display_info_list(1, &dlist, NULL);
+            if (info_status == DDCRC_OK || info_status == DDCRC_OTHER) {
 
                 // Mark all past displays as disconnected.
                 for (const GList* ptr = poll_list; ptr != NULL; ptr = ptr->next) {
