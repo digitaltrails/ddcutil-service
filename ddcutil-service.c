@@ -2218,7 +2218,7 @@ static bool poll_for_changes() {
         if (detect_status == DDCRC_OK) {
             DDCA_Display_Info_List* dlist;
             const DDCA_Status info_status = get_display_info_list(1, &dlist, NULL);
-            if (info_status == DDCRC_OK || info_status == DDCRC_OTHER) {
+            if (info_status == DDCRC_OK) {
 
                 // Mark all past displays as disconnected.
                 for (const GList* ptr = poll_list; ptr != NULL; ptr = ptr->next) {
