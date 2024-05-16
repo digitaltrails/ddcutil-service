@@ -103,7 +103,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 
 ### Version History
 - 1.0.7
-  - Slightly improved setvcp diagnosics.
+  - Slightly improved setvcp diagnostics.
   - Fix method failures when only some i2c devices are accessible (treat libddcutil DDCRC_OTHER as DDCRC_OK).
 - 1.0.6
   - Add SetVcp/SetVcpWithContext NO_VERIFY (no retry) flag option.
