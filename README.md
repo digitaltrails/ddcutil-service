@@ -104,7 +104,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 ### Version History
 - 1.0.7
   - Slightly improved setvcp diagnostics.
-  - Fix method failures when only some i2c devices are accessible (treat libddcutil DDCRC_OTHER as DDCRC_OK).
+  - Fix methods failing with return code DDCRC_OTHER (-3022) when only some i2c devices are accessible.
 - 1.0.6
   - Add SetVcp/SetVcpWithContext NO_VERIFY (no retry) flag option.
   - Match the behaviour of the ddcutil command, default to verify-and-retry for all set-vcp method calls.
