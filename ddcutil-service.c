@@ -95,8 +95,6 @@ static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_PO
 
 #define VERIFY_I2C
 
-static int service_broken_error = -1;
-
 #define MIN_POLL_SECONDS 10
 #define DEFAULT_POLL_SECONDS 30
 
@@ -784,8 +782,11 @@ typedef enum
     DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
     DDCUTIL_SERVICE_I2C_DEV_NO_MODULE,
     DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS,
+    DDCUTIL_SERVICE_OK, // Non error
     DDCUTIL_SERVICE_N_ERRORS  // Dummy placeholder for counting the number of entries
-} DdcutilServiceError;
+} DdcutilServiceStatus;
+
+static DdcutilServiceStatus ddcutil_service_status = DDCUTIL_SERVICE_OK;
 
 static const GDBusErrorEntry ddcutil_service_error_entries[] =
 {
@@ -794,6 +795,7 @@ static const GDBusErrorEntry ddcutil_service_error_entries[] =
     { DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds" },
     { DDCUTIL_SERVICE_I2C_DEV_NO_MODULE, "com.ddcutil.DdcutilService.Error.I2cDevNoModule" },
     { DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS, "com.ddcutil.DdcutilService.Error.I2cDevNoPermissions" },
+    { DDCUTIL_SERVICE_OK, "com.ddcutil.DdcutilService.Error.OK" },
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
@@ -1712,18 +1714,15 @@ static void set_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 }
 
 /**
- * \brief Verify that the kernel module appears to be loaded and devices are accessable.
+ * \brief Verify that the kernel module appears to be loaded and devices are accessible.
  *
- * Sets the global service_broken_error to the g_dbus error code, or -1 if no errors.
- *
- * \return true if everything is OK
+ * \return DdcutilServiceStatus
  */
-static bool verify_i2c_dev() {
+static DdcutilServiceStatus verify_i2c_dev() {
+    DdcutilServiceStatus service_status = DDCUTIL_SERVICE_OK;  // Assume OK
+
 #if defined(VERIFY_I2C)
     g_message("Verifying libddcutil and i2c-dev dependencies (i2c-dev kernel module and device permissions)...");
-
-    service_broken_error = -1;  // Assume OK
-
     // First just check if detect is finding anything - if it is, i2c-dev must be OK
     const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
     if (detect_status == DDCRC_OK) {
@@ -1734,13 +1733,12 @@ static bool verify_i2c_dev() {
             ddca_free_display_info_list(dlist);
             if (vdu_count > 0) {
                 g_message("Detected VDU-count=%d - skipping i2c-dev verification", vdu_count);
-                return TRUE;
+                return DDCUTIL_SERVICE_OK;
             }
-            // May or may not be a problem with i2c-dev - might be normal
+            // No VDUs, may or may not be a problem with i2c-dev - might be normal
             g_message("Failed to detect any VDUs - will check i2c-dev");
         }
     }
-
     // Check if i2c-dev devices exist and are r/w accessible
     int rw_count = 0;
     glob_t matches;
@@ -1758,21 +1756,19 @@ static bool verify_i2c_dev() {
         if (rw_count > 0) {
             g_message("Found %d i2c-dev devices that are R/W accessible - good!", rw_count);
         }
-        else {
+        else {  // No i2c devices are accessible, probably not good.
             g_warning("Found %lu i2c-dev devices, but none are accessible: missing permissions (udev-rule/group)?",
                 dev_count);
-            service_broken_error = DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS;
+            service_status = DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS;
         }
     }
-    if (matches.gl_pathc == 0) {
+    if (matches.gl_pathc == 0) {  // No i2c devices exist, also not good.
         g_warning("No devices matching /dev/i2c-* in /dev: is the i2c-dev kernel module loaded?");
-        service_broken_error = DDCUTIL_SERVICE_I2C_DEV_NO_MODULE;
+        service_status = DDCUTIL_SERVICE_I2C_DEV_NO_MODULE;
     }
     globfree(&matches);
-    return rw_count > 0;
-#else
-    return TRUE;
 #endif
+    return service_status;
 }
 
 /**
@@ -1898,12 +1894,12 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
                                const gchar* interface_name, const gchar* method_name, GVariant* parameters,
                                GDBusMethodInvocation* invocation, gpointer user_data) {
 
-    if (service_broken_error != -1) {
+    if (ddcutil_service_status != DDCUTIL_SERVICE_OK) {
         g_message("Service currently broken, checking again...");
-        verify_i2c_dev();  // See if things are now fixed
-        if (service_broken_error != -1) { // Still broken
+        ddcutil_service_status = verify_i2c_dev();  // See if things are now fixed
+        if (ddcutil_service_status != DDCUTIL_SERVICE_OK) { // Still broken
             const char *message;
-            switch (service_broken_error) {
+            switch (ddcutil_service_status) {
                 case DDCUTIL_SERVICE_I2C_DEV_NO_MODULE:
                     message = "The i2c-dev kernel module does not appear to be loaded.";
                 break;
@@ -1912,10 +1908,10 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
                               "(possible missing udev-rule or group membership).";
                 break;
                 default:
-                    message = ddcutil_service_error_entries[service_broken_error].dbus_error_name;
+                    message = ddcutil_service_error_entries[ddcutil_service_status].dbus_error_name;
                 break;
             }
-            g_dbus_method_invocation_return_error(invocation, service_error_quark, service_broken_error, "%s", message);
+            g_dbus_method_invocation_return_error(invocation, service_error_quark, ddcutil_service_status, "%s", message);
             return;
         }
     }
@@ -2710,7 +2706,7 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    verify_i2c_dev();
+    ddcutil_service_status = verify_i2c_dev();
 
 #if defined(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN)
     g_message("ddca_is_dynamic_sleep_enabled()=%s", ddca_is_dynamic_sleep_enabled() ? "enabled" : "disabled");
