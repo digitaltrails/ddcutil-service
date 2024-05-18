@@ -58,7 +58,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.7"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.8"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -2192,6 +2192,27 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
     return strcmp(target_str, item->edid_encoded);
 }
 
+static bool is_dpms_capable(const DDCA_Display_Info *vdu_info) {
+    DDCA_Status status;
+    DDCA_Feature_Metadata *meta_0xd6;
+#if defined(USE_DREF_CHECK_FOR_DPMS)
+    // May cause Assertion `dref->flags & DREF_DDC_COMMUNICATION_WORKING failed in libddcutil
+    status = ddca_get_feature_metadata_by_dref(0xd6, vdu_info->dref, FALSE, &meta_0xd6);
+#else
+    // Might be safer - I think it doesn't take the assertion trip-wired path.
+    DDCA_Display_Handle disp_handle;
+    status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
+    if (status == DDCRC_OK) {
+        status = ddca_get_feature_metadata_by_dh(0xd6, disp_handle, FALSE, &meta_0xd6);
+    }
+    ddca_close_display(disp_handle);
+#endif
+    if (status == DDCRC_OK) {
+        ddca_free_feature_metadata(meta_0xd6);
+    }
+    return status == DDCRC_OK;
+}
+
 static bool poll_dpms_awake(const DDCA_Display_Info* vdu_info) {
     DDCA_Display_Handle disp_handle;
     DDCA_Status status = ddca_open_display2(vdu_info->dref, 1, &disp_handle);
@@ -2256,10 +2277,8 @@ static bool poll_for_changes() {
                         vdu_poll_data->connected = TRUE;
                         vdu_poll_data->has_dpms = FALSE;
                         vdu_poll_data->dpms_awake = TRUE;
-                        DDCA_Feature_Metadata *meta_0xd6;
-                        if (ddca_get_feature_metadata_by_dref(0xd6, vdu_info->dref, FALSE, &meta_0xd6) == DDCRC_OK) {
-                            ddca_free_feature_metadata(meta_0xd6);
-                            vdu_poll_data->has_dpms = TRUE;
+                        vdu_poll_data->has_dpms = is_dpms_capable(vdu_info);
+                        if (vdu_poll_data->has_dpms) {
                             vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
                         }
                         poll_list = g_list_append(poll_list, vdu_poll_data);
