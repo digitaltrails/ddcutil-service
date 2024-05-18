@@ -2275,12 +2275,8 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = g_malloc(sizeof(Poll_List_Item));
                         vdu_poll_data->edid_encoded = edid_encoded;
                         vdu_poll_data->connected = TRUE;
-                        vdu_poll_data->has_dpms = FALSE;
-                        vdu_poll_data->dpms_awake = TRUE;
                         vdu_poll_data->has_dpms = is_dpms_capable(vdu_info);
-                        if (vdu_poll_data->has_dpms) {
-                            vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
-                        }
+                        vdu_poll_data->dpms_awake = vdu_poll_data->has_dpms ? poll_dpms_awake(vdu_info) : TRUE;
                         poll_list = g_list_append(poll_list, vdu_poll_data);
                         g_debug("Poll check: new-connection disp=%d %.30s... has_dpms=%d awake=%d ",
                             ndx + 1, edid_encoded, vdu_poll_data->has_dpms, vdu_poll_data->dpms_awake);
