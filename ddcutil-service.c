@@ -680,7 +680,7 @@ static const gchar introspection_xml[] = R"(
         A list of the event types sent by the ConnectedDisplaysChanged signal along with
         their text names.  Events  are  included  for  display  connection/disconnection
         (hotplug),  DPMS-sleep,  and DPMS-wake.  If the list is empty, the GPU, GPU-driver,
-        or libddcutil version doesn’t support display event detection.
+        or libddcutil version does not  support display event detection.
     -->
     <property type='a{is}' name='DisplayEventTypes' access='read'/>
 
@@ -769,14 +769,14 @@ static const gchar introspection_xml[] = R"(
 
   </interface>
 </node>
-)";
+)"
+; // The newline+semicolon stops any linter warnings due to the above R-string from propagating to the code below.
 
 /* ----------------------------------------------------------------------------------------------------
  * GLib error message definitions.
  */
 
-typedef enum
-{
+typedef enum {
     DDCUTIL_SERVICE_CONFIGURATION_LOCKED,
     DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
     DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS,
