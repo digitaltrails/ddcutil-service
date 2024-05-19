@@ -32,11 +32,11 @@
 
 /**
  * Logging:
- * Using glib logging which defaults to syslog if running unde dbus-daemon, or the stderr otherwise
+ * Using glib logging which defaults to syslog if running under the dbus-daemon, or the stderr otherwise:
  * g_info() and g_debug are classed the same, and don't show by default
  * g_message() is higher and always shows.
  * g_warning() is for non fatal errors.
- * g_critical() is for serious errors (which, as a class, can optionally be set to terminate the progam).
+ * g_critical() is for serious errors (which, as a class, can optionally be set to terminate the program).
  * g_error() is for programming errors and will automatically core dump - so don't use g_error().
  * There is also a special domain "all" - not sure if we want to use that.
  */
@@ -99,7 +99,7 @@ static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_PO
 #define DEFAULT_POLL_SECONDS 30
 
 /**
- * If severice is doing it's own polling for events, how often to poll:
+ * If service is doing it's own polling for events, how often to poll:
  */
 static long poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
 
@@ -832,7 +832,7 @@ static char* edid_encode(const uint8_t* edid) {
 static char* server_executable = PROGRAM_NAME;
 
 /**
- * \brief Duplicates the binary serial number extraction done by ddcutil
+ * \brief Binary serial number extraction (coded copied from ddcutil)
  * \param edid_bytes binary edid bytes
  * \return binary serial number
  */
@@ -1449,7 +1449,6 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                         const DDCA_Cap_Vcp* feature_def = vcp_feature_array + feature_idx;
                         DDCA_Feature_Metadata* metadata_ptr;
 
-                        // TODO valgrind complains
                         status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true,
                                                                  &metadata_ptr);
                         if (status == DDCRC_OK) {
