@@ -1062,9 +1062,10 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     g_info("Detect flags=%x", flags);
 
     DDCA_Status detect_status = ddca_redetect_displays();
-    char* detect_message_text = get_status_message(detect_status);
+    char* detect_message_text = NULL;
 
     if (detect_status != DDCRC_OK) {
+        detect_message_text = get_status_message(detect_status);
         g_warning("Detect: ddca_redetect_displays failed status=%d message=%s", detect_status, detect_message_text);
     }
     else {
@@ -1242,7 +1243,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
                         g_variant_builder_add(value_array_builder, "(yqqs)",
                                             vcp_code, current_value, max_value, formatted_value);
                         free(formatted_value);
-                        free(metadata_ptr);
+                        ddca_free_feature_metadata(metadata_ptr);
                     }
                     else {
                         g_info("GetMultipleVcp metadata lookup failed for vcp_code=%d display_num=%d edid=%.30s...",
@@ -2189,7 +2190,7 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
 
 static bool is_dpms_capable(const DDCA_Display_Info *vdu_info) {
     DDCA_Status status;
-    DDCA_Feature_Metadata *meta_0xd6;
+    DDCA_Feature_Metadata *meta_0xd6 = NULL;
 #if defined(USE_DREF_CHECK_FOR_DPMS)
     // May cause Assertion `dref->flags & DREF_DDC_COMMUNICATION_WORKING failed in libddcutil
     status = ddca_get_feature_metadata_by_dref(0xd6, vdu_info->dref, FALSE, &meta_0xd6);
@@ -2202,7 +2203,7 @@ static bool is_dpms_capable(const DDCA_Display_Info *vdu_info) {
     }
     ddca_close_display(disp_handle);
 #endif
-    if (status == DDCRC_OK) {
+    if (meta_0xd6 != NULL) {
         ddca_free_feature_metadata(meta_0xd6);
     }
     return status == DDCRC_OK;
