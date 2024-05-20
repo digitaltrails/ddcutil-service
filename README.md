@@ -103,7 +103,9 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 
 ### Version History
 - 1.0.8
-  - Try to avoid an occasional libddcutil assertion failure when polling. 
+  - Fixed a couple of hot-plug and DPMS polling memory leaks.
+  - Try to avoid an occasional libddcutil assertion failure during hot-plug and DPMS polling.
+  - Internal code cleanups for readability, and structure.
 - 1.0.7
   - Slightly improved setvcp diagnostics.
   - Fix methods failing with return code DDCRC_OTHER (-3022) when only some i2c devices are accessible.
