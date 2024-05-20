@@ -212,7 +212,7 @@ static GDBusNodeInfo* introspection_data = NULL;
  * Introspection data for the service we are exporting
  * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
  * Uses GTK-Doc comment blocks, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
- * The @my_parameter anotation formats properly.  The #my_property:property and #my_sig::signal annotations
+ * The @my_parameter annotation formats properly.  The #my_property:property and #my_sig::signal annotations
  * don't format at all, so I'm not using them.
  */
 static const gchar introspection_xml[] = R"(
@@ -229,7 +229,7 @@ static const gchar introspection_xml[] = R"(
 
         For many of the methods a VDU can be specified by either passing the DDC display_number
         or DDC EDID. The EDID is the more stable identifier, it remains unchanged if the number
-        of connected or poweredup VDUs changes, whereas the DDCA display numbers may be reallocated.
+        of connected or powered-up VDUs changes, whereas the DDCA display numbers may be reallocated.
 
         As a convienience for passing EDIDs using the command line, methods that accept an EDID
         identifier also accept a flag value which will cause the EDID passed to be matched as
@@ -242,8 +242,8 @@ static const gchar introspection_xml[] = R"(
         Restart:
         @text_options: Text options to be passed to libddcutil ddca_init().
         @syslog_level: The libddcutil syslog level.
-        @flags: For furture use.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @flags: For future use.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Restarts the service with the supplied parameters.
@@ -264,7 +264,7 @@ static const gchar introspection_xml[] = R"(
         @flags: If set to 1, any invalid VDUs will be included in the results.
         @number_of_displays: The number of VDUs detected (the length of @detected_displays).
         @detected_displays: An array of structures describing the VDUs.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Issues a detect and returns the VDUs detected.
@@ -288,11 +288,11 @@ static const gchar introspection_xml[] = R"(
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @vcp_current_value: The current numeric value as a unified 16 bit integer.
         @vcp_max_value: The maximum possible value, to allow for easy calculation of current/max.
         @vcp_formatted_value: A formatted version of the value including related info such as the max-value.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Retrieve the value for a VCP-code for the specified VDU.
@@ -323,12 +323,12 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @vcp_current_value: An array of VCP-codes and values.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
-        Retrieves several different VCP values for the specified VDU. This is a convienience
+        Retrieves several different VCP values for the specified VDU. This is a convenience
         method provided to more efficiently utilise D-Bus.
 
         Each entry in @vcp_current_value array is a VCP-code along with its
@@ -353,14 +353,14 @@ static const gchar introspection_xml[] = R"(
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
         @vcp_new_value: the numeric value as a 16 bit integer.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Set the value for a VCP-code for the specified VDU.
 
         For simplicity the @vcp_new_value is always passed as a 16 bit integer (most
-        VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+        VCP values are single byte 8-bit integers, very few are two-byte 16-bit).
 
         The method's @flags parameter can be set to 4 (NO_VERIFY) to disable
         libddcutil verify and retry.  Verification and retry is the default.
@@ -382,14 +382,14 @@ static const gchar introspection_xml[] = R"(
         @vcp_code: the VPC-code to query.
         @vcp_new_value: the numeric value as a 16 bit integer.
         @client_context: a client-context string that will be returned with the VcpValueChanged signal.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Set the value for a VCP-code for the specified VDU.
 
         For simplicity the @vcp_new_value is always passed as a 16 bit integer (most
-        VCP values are single byte 8-bit intergers, very few are two-byte 16-bit).
+        VCP values are single byte 8-bit interers, very few are two-byte 16-bit).
 
         The method's @flags parameter can be set to 4 (NO_VERIFY) to disable
         libddcutil verify and retry.  Verification and retry is the default.
@@ -410,7 +410,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @feature_name: the feature name for the VCP-code
         @feature_description: the feature description, if any, of the VCP-code.
         @is_read_only: True if the feature is read-only.
@@ -418,7 +418,7 @@ static const gchar introspection_xml[] = R"(
         @is_rw: True if the feature is readable and writable.
         @is_complex: True if the feature is complex (multi-byte).
         @is_continuous: True in the feature is a continuous value (it is not an enumeration).
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Retrieve the metadata for a VCP-code for the specified VDU.
@@ -443,9 +443,9 @@ static const gchar introspection_xml[] = R"(
         GetCapabilitiesString:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @capabilities_text: the capability string for the VDU.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Retrieve the capabilities metadata for a VDU in a format similar to that output by
@@ -464,13 +464,13 @@ static const gchar introspection_xml[] = R"(
         GetCapabilitiesMetadata:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @model_name: parsed model name string
         @mccs_major: MCCS major version number byte.
         @mccs_minor: MCCS minor version number byte.
         @commands: supported commands as a dictionary indexed by command number.
         @capabilities: supported VCP features as a dictionary indexed by VCP-code.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Retrieve the capabilities metadata for a VDU in a parsed dictionary structure
@@ -481,7 +481,7 @@ static const gchar introspection_xml[] = R"(
         and an array of permitted-values. For features that have continuous values, the associated
         permitted-value array will be empty.  For non-continuous features, the permitted-value
         array will contain a dictionary entry for each permitted value, each entry containing
-        a permiited-value and value-name.
+        a permitted-value and value-name.
     -->
     <method name='GetCapabilitiesMetadata'>
         <arg name='display_number' type='i' direction='in'/>
@@ -500,7 +500,7 @@ static const gchar introspection_xml[] = R"(
         GetDisplayState:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @status: A libddcutil display status.
         @message: Text message for display status.
 
@@ -526,9 +526,9 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @current_multiplier: the sleep multiplier.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Get the current libddcutil sleep multiplier for the specified VDU.
@@ -549,18 +549,18 @@ static const gchar introspection_xml[] = R"(
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the @edid_txt is matched as a unique prefex of the EDID.
+        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
         @new_multiplier: The sleep multiplier.
-        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occured.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
         Set the libddcutil sleep multiplier for the specified VDU.
 
         In more recent versions of libddcutil this is generally managed automatically,
-        but this method is provided should manual control be ncessary (due to problem hardware).
+        but this method is provided should manual control be necessary (due to problem hardware).
 
         Prior to taking manual control of the sleep-multiplier, the DdcutilDynamicSleep property
-        should be set to false to prevent the multiplier from being automatically retuned.
+        should be set to false to prevent the multiplier from being automatically returned.
 
         If the service is configuration-locked, an com.ddcutil.DdcutilService.Error.ConfigurationLocked
         error is raised.
@@ -577,14 +577,14 @@ static const gchar introspection_xml[] = R"(
     <!--
         ConnectedDisplaysChanged:
         @edid_txt: The base-64 encoded EDID of the display.
-        @event_type: A value macthing one of those from the DisplayEventTypes property.
-        @flags: For furture use.
+        @event_type: A value matching one of those from the DisplayEventTypes property.
+        @flags: For future use.
 
         Where hardware and drivers support it, this signal will be raised if a displays
         connection status changes due to cabling, power, or DPMS.
 
         The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property
-        that can actually be signaled (the possibilities cannot be determined programatically).
+        that can actually be signaled (the possibilities cannot be determined programmatically).
 
         Requires the ServiceEmitConnectivitySignals property to be set to true.
     -->
@@ -617,7 +617,7 @@ static const gchar introspection_xml[] = R"(
 
     <!--
         ServiceInitialized:
-        @flags: For furture use.
+        @flags: For future use.
 
         This signal is raised when the service is initialized.  It provides
         clients with a way to detect restarts and reinstate properties or
@@ -937,7 +937,7 @@ static DDCA_Status get_display_info_list(bool include_invalid, DDCA_Display_Info
  * @brief Lookup DDCA_Display_Info for either a display_number or an encoded EDID.
  *
  * This is a supporting-function, it's used by functions that implement the
- * service's methods.  It does the donky work of looking up a display by
+ * service's methods.  It does the donkey work of looking up a display by
  * number or EDID.
  *
  * @param display_number display number
@@ -973,7 +973,7 @@ static DDCA_Status get_display_info(const int display_number, const char* edid_e
             g_free(dlist_edid_encoded);
         }
         if (*dinfo == NULL) {
-            g_debug("Display info not found: display=%d edid-ecoded=%-30s?", display_number, edid_encoded);
+            g_debug("Display info not found: display=%d edid-encoded=%-30s?", display_number, edid_encoded);
             status = DDCRC_INVALID_DISPLAY;
         }
     }
@@ -1284,7 +1284,8 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
 
     if (with_client_context) {
         call_name = "SetVcpWithContext";
-        g_variant_get(parameters, "(isyqsu)", &display_number, &edid_encoded, &vcp_code, &new_value, &client_context, &flags);
+        g_variant_get(parameters, "(isyqsu)",
+                      &display_number, &edid_encoded, &vcp_code, &new_value, &client_context, &flags);
     }
     else {
         call_name = "SetVcp";
@@ -1346,9 +1347,9 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
 }
 
 /**
- * @brief Implements the DdcutilService GetCapabilitesString method
+ * @brief Implements the DdcutilService GetCapabilitiesString method
  *
- * Returns the raw capabilties string to the invocation.
+ * Returns the raw capabilities string to the invocation.
  *
  * @param parameters inbound parameters
  * @param invocation originating D-Bus method call
@@ -1646,7 +1647,7 @@ static void get_sleep_multiplier(GVariant* parameters, GDBusMethodInvocation* in
 
     g_info("GetSleepMultiplier display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
-    double multiplier;
+    double multiplier = 0.0;
 #if defined(LIBDDCUTIL_HAS_DDCA_GET_SLEEP_MULTIPLIER)
     multiplier = ddca_get_sleep_multiplier();
 #elif defined(LIBDDCUTIL_HAS_DDCA_GET_DEFAULT_SLEEP_MULTIPLIER)
@@ -1798,7 +1799,7 @@ static bool update_poll_interval(const uint secs) {
  * @return TRUE if valid and succeeded
  */
 static bool update_poll_cascade_interval(const double secs) {
-    if (secs < MIN_POLL_CASCADE_INTERVAL_SECONDS || secs > poll_interval_micros / 1000000) {
+    if (secs < MIN_POLL_CASCADE_INTERVAL_SECONDS || secs > poll_interval_micros / 1000000.0) {
         g_warning("Invalid poll cascade interval %5.3f, valid range is %5.3f to %5.3f",
                   secs, MIN_POLL_CASCADE_INTERVAL_SECONDS, poll_interval_micros / 1000000.0);
         return FALSE;
@@ -1854,9 +1855,9 @@ static DDCA_Status enable_ddca_watch_displays(void) {
         if (status == DDCRC_OK) {
             g_message("registering libddcutil display status callback");
             poll_interval_micros = 0;  // Disable internal polling
-            const int status = ddca_register_display_status_callback(display_status_event_callback);
-            if (status == DDCRC_OK) {
-                return status;
+            const int reg_status = ddca_register_display_status_callback(display_status_event_callback);
+            if (reg_status == DDCRC_OK) {
+                return reg_status;
             }
         }
     }
@@ -1873,7 +1874,7 @@ static DDCA_Status enable_ddca_watch_displays(void) {
 }
 
 /**
- * @brief Handles DdcutilService D-Bus method-calls by passing them to implementating functions.
+ * @brief Handles DdcutilService D-Bus method-calls by passing them to implementing functions.
  *
  * This handler is registered with glib's D-Bus main loop to handle DdcutilService
  * method calls.
@@ -1911,7 +1912,8 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
                     message = ddcutil_service_error_entries[ddcutil_service_status].dbus_error_name;
                 break;
             }
-            g_dbus_method_invocation_return_error(invocation, service_error_quark, ddcutil_service_status, "%s", message);
+            g_dbus_method_invocation_return_error(
+                    invocation, service_error_quark, ddcutil_service_status, "%s", message);
             return;
         }
     }
@@ -2326,7 +2328,7 @@ static const GDBusInterfaceVTable interface_vtable = {handle_method_call, handle
  */
 typedef struct {
     GSource source;
-    gchar chg_data[129]; // do we actually have any data - no, maybe later.
+    gchar chg_data[129]; // We don't actually have any data - maybe later.
 } Chg_SignalSource_t;
 
 /**
@@ -2356,7 +2358,7 @@ static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
     }
     g_debug("chg signal_event ready type=%d name=%s", signal_event_data->event_type,
             get_event_type_name(signal_event_data->event_type));
-    *timeout_millis = 0; // Not sure we want to do this
+    *timeout_millis = 0; // Not sure if we want to do this
     return TRUE;
 }
 
@@ -2729,8 +2731,8 @@ int main(int argc, char* argv[]) {
     if (enable_connectivity_signals) {
         switch (monitoring_preference) {
             case MONITOR_BY_LIBDDCUTIL_EVENTS: {
-                const int status = enable_ddca_watch_displays();
-                if (status == DDCRC_OK) {
+                const int enable_watch_status = enable_ddca_watch_displays();
+                if (enable_watch_status == DDCRC_OK) {
                     poll_interval_micros = 0;
                     break;
                 }
@@ -2743,7 +2745,8 @@ int main(int argc, char* argv[]) {
                       g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
                       exit(1);
                 }
-                if (poll_cascade_interval_seconds > 0.0 && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
+                if (poll_cascade_interval_seconds > 0.0
+                    && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
                       g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
                               MIN_POLL_CASCADE_INTERVAL_SECONDS);
                       exit(1);
