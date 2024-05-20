@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Apr 25 08:20:05 2024 -->
+<!-- CreationDate: Mon May 20 16:53:01 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -225,8 +225,8 @@ service.</p>
 methods a VDU can be specified by either passing the DDC
 display_number or DDC EDID. The EDID is the more stable
 identifier, it remains unchanged if the number of connected
-or poweredup VDUs changes, whereas the DDCA display numbers
-may be reallocated.</p>
+or powered&minus;up VDUs changes, whereas the DDCA display
+numbers may be reallocated.</p>
 
 <p style="margin-left:9%; margin-top: 1em">As a
 convienience for passing EDIDs using the command line,
@@ -275,13 +275,13 @@ level.</p>
 <p style="margin-left:9%; margin-top: 1em">IN u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">For furture use.</p>
+<p style="margin-left:14%;">For future use.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -336,7 +336,7 @@ describing the VDUs.</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -401,7 +401,7 @@ for example, 16 (0x10) is brightness.</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT q
 <i>vcp_current_value</i>:</p>
@@ -426,7 +426,7 @@ max&minus;value.</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -450,7 +450,7 @@ OUT s error_message);</p>
 
 <p style="margin-left:9%; margin-top: 1em">Retrieves
 several different VCP values for the specified VDU. This is
-a convienience method provided to more efficiently utilise
+a convenience method provided to more efficiently utilise
 D&minus;Bus.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Each entry in
@@ -485,7 +485,7 @@ query.</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT a(yqqs)
 <i>vcp_current_value</i>:</p>
@@ -497,7 +497,7 @@ values.</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -525,7 +525,7 @@ for a VCP&minus;code for the specified VDU.</p>
 <p style="margin-left:9%; margin-top: 1em">For simplicity
 the <i>vcp_new_value</i> is always passed as a 16 bit
 integer (most VCP values are single byte 8&minus;bit
-intergers, very few are two&minus;byte 16&minus;bit).</p>
+integers, very few are two&minus;byte 16&minus;bit).</p>
 
 <p style="margin-left:9%; margin-top: 1em">The method's
 <i>flags</i> parameter can be set to 4 (NO_VERIFY) to
@@ -560,13 +560,13 @@ integer.</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -596,7 +596,7 @@ for a VCP&minus;code for the specified VDU.</p>
 <p style="margin-left:9%; margin-top: 1em">For simplicity
 the <i>vcp_new_value</i> is always passed as a 16 bit
 integer (most VCP values are single byte 8&minus;bit
-intergers, very few are two&minus;byte 16&minus;bit).</p>
+interers, very few are two&minus;byte 16&minus;bit).</p>
 
 <p style="margin-left:9%; margin-top: 1em">The method's
 <i>flags</i> parameter can be set to 4 (NO_VERIFY) to
@@ -637,13 +637,13 @@ that will be returned with the VcpValueChanged signal.</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -696,7 +696,7 @@ query.</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>feature_name</i>:</p>
@@ -745,7 +745,7 @@ continuous value (it is not an enumeration).</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -788,7 +788,7 @@ of the display</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>capabilities_text</i>:</p>
@@ -800,7 +800,7 @@ VDU.</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -840,7 +840,7 @@ values, the associated permitted&minus;value array will be
 empty. For non&minus;continuous features, the
 permitted&minus;value array will contain a dictionary entry
 for each permitted value, each entry containing a
-permiited&minus;value and value&minus;name.</p>
+permitted&minus;value and value&minus;name.</p>
 
 <p style="margin-left:9%; margin-top: 1em">IN i
 <i>display_number</i>:</p>
@@ -858,7 +858,7 @@ of the display</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>model_name</i>:</p>
@@ -893,7 +893,7 @@ dictionary indexed by VCP&minus;code.</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -941,7 +941,7 @@ of the display</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>status</i>:</p>
@@ -992,7 +992,7 @@ of the display</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT d
 <i>current_multiplier</i>:</p>
@@ -1003,7 +1003,7 @@ matched as a unique prefex of the EDID.</p>
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -1031,12 +1031,13 @@ libddcutil sleep multiplier for the specified VDU.</p>
 <p style="margin-left:9%; margin-top: 1em">In more recent
 versions of libddcutil this is generally managed
 automatically, but this method is provided should manual
-control be ncessary (due to problem hardware).</p>
+control be necessary (due to problem hardware).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Prior to taking
 manual control of the sleep&minus;multiplier, the
 DdcutilDynamicSleep property should be set to false to
-prevent the multiplier from being automatically retuned.</p>
+prevent the multiplier from being automatically
+returned.</p>
 
 <p style="margin-left:9%; margin-top: 1em">If the service
 is configuration&minus;locked, an
@@ -1064,13 +1065,13 @@ of the display</p>
 <i>flags</i>:</p>
 
 <p style="margin-left:14%;">If 1, the <i>edid_txt</i> is
-matched as a unique prefex of the EDID.</p>
+matched as a unique prefix of the EDID.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT i
 <i>error_status</i>:</p>
 
 <p style="margin-left:14%;">A libddcutil DDCRC error
-status. DDCA_OK (zero) if no errors have occured.</p>
+status. DDCRC_OK (zero) if no errors have occurred.</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT s
 <i>error_message</i>:</p>
@@ -1103,7 +1104,7 @@ DPMS.</p>
 cabling and drivers determines which of states listed by
 DisplayEventTypes property that can actually be signaled
 (the possibilities cannot be determined
-programatically).</p>
+programmatically).</p>
 
 <p style="margin-left:9%; margin-top: 1em">Requires the
 ServiceEmitConnectivitySignals property to be set to
@@ -1118,13 +1119,13 @@ of the display.</p>
 <p style="margin-left:9%; margin-top: 1em">i
 <i>event_type</i>:</p>
 
-<p style="margin-left:14%;">A value macthing one of those
+<p style="margin-left:14%;">A value matching one of those
 from the DisplayEventTypes property.</p>
 
 <p style="margin-left:9%; margin-top: 1em">u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">For furture use.</p>
+<p style="margin-left:14%;">For future use.</p>
 
 <h3>The VcpValueChanged&quot; signal&quot;
 <a name="The VcpValueChanged&quot; signal&quot;"></a>
@@ -1195,7 +1196,7 @@ other settings.</p>
 <p style="margin-left:9%; margin-top: 1em">u
 <i>flags</i>:</p>
 
-<p style="margin-left:14%;">For furture use.</p>
+<p style="margin-left:14%;">For future use.</p>
 
 <h2>PROPERTY DETAILS
 <a name="PROPERTY DETAILS"></a>
@@ -1294,7 +1295,7 @@ event types sent by the ConnectedDisplaysChanged signal
 along with their text names. Events are included for display
 connection/disconnection (hotplug), DPMS&minus;sleep, and
 DPMS&minus;wake. If the list is empty, the GPU,
-GPU&minus;driver, or libddcutil version doesn?t support
+GPU&minus;driver, or libddcutil version does not support
 display event detection.</p>
 
 <h3>The ServiceInterfaceVersion&quot; property&quot;

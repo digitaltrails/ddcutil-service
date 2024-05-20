@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 04/25/2024
+.\"      Date: 05/20/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "04/25/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "05/20/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -169,7 +169,7 @@ ServicePollCascadeInterval      readwrite  d
 .PP
 ddcutil\-service is D\-Bus service wrapper for libddcutil which implements the VESA DDC Monitor Control Command Set\&. Most things that can be controlled using a monitor\*(Aqs on\-screen display can be controlled by this service\&.
 .PP
-For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or poweredup VDUs changes, whereas the DDCA display numbers may be reallocated\&.
+For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or powered\-up VDUs changes, whereas the DDCA display numbers may be reallocated\&.
 .PP
 As a convienience for passing EDIDs using the command line, methods that accept an EDID identifier also accept a flag value which will cause the EDID passed to be matched as a prefix of a possible EDID (so all 128 bytes need not be entered)\&.
 .SH "METHOD DETAILS"
@@ -205,12 +205,12 @@ The libddcutil syslog level\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-For furture use\&.
+For future use\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -262,7 +262,7 @@ An array of structures describing the VDUs\&.
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -322,7 +322,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT q \fIvcp_current_value\fR:
@@ -342,7 +342,7 @@ A formatted version of the value including related info such as the max\-value\&
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -367,7 +367,7 @@ GetMultipleVcp (IN  i       display_number,
 .RE
 .\}
 .PP
-Retrieves several different VCP values for the specified VDU\&. This is a convienience method provided to more efficiently utilise D\-Bus\&.
+Retrieves several different VCP values for the specified VDU\&. This is a convenience method provided to more efficiently utilise D\-Bus\&.
 .PP
 Each entry in
 \fIvcp_current_value\fR
@@ -396,7 +396,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT a(yqqs) \fIvcp_current_value\fR:
@@ -406,7 +406,7 @@ An array of VCP\-codes and values\&.
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -435,7 +435,7 @@ Set the value for a VCP\-code for the specified VDU\&.
 .PP
 For simplicity the
 \fIvcp_new_value\fR
-is always passed as a 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
+is always passed as a 16 bit integer (most VCP values are single byte 8\-bit integers, very few are two\-byte 16\-bit)\&.
 .PP
 The method\*(Aqs
 \fIflags\fR
@@ -465,12 +465,12 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -500,7 +500,7 @@ Set the value for a VCP\-code for the specified VDU\&.
 .PP
 For simplicity the
 \fIvcp_new_value\fR
-is always passed as a 16 bit integer (most VCP values are single byte 8\-bit intergers, very few are two\-byte 16\-bit)\&.
+is always passed as a 16 bit integer (most VCP values are single byte 8\-bit interers, very few are two\-byte 16\-bit)\&.
 .PP
 The method\*(Aqs
 \fIflags\fR
@@ -535,12 +535,12 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -592,7 +592,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT s \fIfeature_name\fR:
@@ -632,7 +632,7 @@ True in the feature is a continuous value (it is not an enumeration)\&.
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -672,7 +672,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT s \fIcapabilities_text\fR:
@@ -682,7 +682,7 @@ the capability string for the VDU\&.
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -714,7 +714,7 @@ Retrieve the capabilities metadata for a VDU in a parsed dictionary structure in
 .PP
 The
 \fIcapabilities\fR
-out parameter is an array of dictionary entries\&. Each entry consists of a VCP\-code along with a struct containing the feature\-name, feature\-description, and an array of permitted\-values\&. For features that have continuous values, the associated permitted\-value array will be empty\&. For non\-continuous features, the permitted\-value array will contain a dictionary entry for each permitted value, each entry containing a permiited\-value and value\-name\&.
+out parameter is an array of dictionary entries\&. Each entry consists of a VCP\-code along with a struct containing the feature\-name, feature\-description, and an array of permitted\-values\&. For features that have continuous values, the associated permitted\-value array will be empty\&. For non\-continuous features, the permitted\-value array will contain a dictionary entry for each permitted value, each entry containing a permitted\-value and value\-name\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -730,7 +730,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT s \fImodel_name\fR:
@@ -760,7 +760,7 @@ supported VCP features as a dictionary indexed by VCP\-code\&.
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -805,7 +805,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT i \fIstatus\fR:
@@ -852,7 +852,7 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT d \fIcurrent_multiplier\fR:
@@ -862,7 +862,7 @@ the sleep multiplier\&.
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -888,9 +888,9 @@ SetSleepMultiplier (IN  i display_number,
 .PP
 Set the libddcutil sleep multiplier for the specified VDU\&.
 .PP
-In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be ncessary (due to problem hardware)\&.
+In more recent versions of libddcutil this is generally managed automatically, but this method is provided should manual control be necessary (due to problem hardware)\&.
 .PP
-Prior to taking manual control of the sleep\-multiplier, the DdcutilDynamicSleep property should be set to false to prevent the multiplier from being automatically retuned\&.
+Prior to taking manual control of the sleep\-multiplier, the DdcutilDynamicSleep property should be set to false to prevent the multiplier from being automatically returned\&.
 .PP
 If the service is configuration\-locked, an com\&.ddcutil\&.DdcutilService\&.Error\&.ConfigurationLocked error is raised\&.
 .PP
@@ -913,12 +913,12 @@ IN u \fIflags\fR:
 .RS 4
 If 1, the
 \fIedid_txt\fR
-is matched as a unique prefex of the EDID\&.
+is matched as a unique prefix of the EDID\&.
 .RE
 .PP
 OUT i \fIerror_status\fR:
 .RS 4
-A libddcutil DDCRC error status\&. DDCA_OK (zero) if no errors have occured\&.
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
 .RE
 .PP
 OUT s \fIerror_message\fR:
@@ -942,7 +942,7 @@ ConnectedDisplaysChanged (s edid_txt,
 .PP
 Where hardware and drivers support it, this signal will be raised if a displays connection status changes due to cabling, power, or DPMS\&.
 .PP
-The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property that can actually be signaled (the possibilities cannot be determined programatically)\&.
+The hardware, cabling and drivers determines which of states listed by DisplayEventTypes property that can actually be signaled (the possibilities cannot be determined programmatically)\&.
 .PP
 Requires the ServiceEmitConnectivitySignals property to be set to true\&.
 .PP
@@ -953,12 +953,12 @@ The base\-64 encoded EDID of the display\&.
 .PP
 i \fIevent_type\fR:
 .RS 4
-A value macthing one of those from the DisplayEventTypes property\&.
+A value matching one of those from the DisplayEventTypes property\&.
 .RE
 .PP
 u \fIflags\fR:
 .RS 4
-For furture use\&.
+For future use\&.
 .RE
 .SS "The "VcpValueChanged" signal"
 .sp
@@ -1031,7 +1031,7 @@ This signal is raised when the service is initialized\&. It provides clients wit
 .PP
 u \fIflags\fR:
 .RS 4
-For furture use\&.
+For future use\&.
 .RE
 .SH "PROPERTY DETAILS"
 .SS "The "AttributesReturnedByDetect" property"
@@ -1117,7 +1117,7 @@ DisplayEventTypes  readable   a{is}
 .RE
 .\}
 .PP
-A list of the event types sent by the ConnectedDisplaysChanged signal along with their text names\&. Events are included for display connection/disconnection (hotplug), DPMS\-sleep, and DPMS\-wake\&. If the list is empty, the GPU, GPU\-driver, or libddcutil version doesn?t support display event detection\&.
+A list of the event types sent by the ConnectedDisplaysChanged signal along with their text names\&. Events are included for display connection/disconnection (hotplug), DPMS\-sleep, and DPMS\-wake\&. If the list is empty, the GPU, GPU\-driver, or libddcutil version does not support display event detection\&.
 .SS "The "ServiceInterfaceVersion" property"
 .sp
 .if n \{\
