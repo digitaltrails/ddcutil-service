@@ -76,131 +76,12 @@
 #define BOOL_STR(value) ((value) ? "true" : "false")
 #define MACRO_EXISTS(name) (#name [0] != G_STRINGIFY(name) [0])
 
-#undef XML_FROM_INTROSPECTED_DATA
-
 /**
- * Define the service's  connectivity monitoring options
+ * Perform startup checks to ensure i2c is accessible - don't just fail or silently do nothing.
  */
-typedef enum {
-    MONITOR_BY_INTERNAL_POLLING,
-    MONITOR_BY_LIBDDCUTIL_EVENTS,
-} Monitoring_Preference_Type;
-
-static gboolean display_status_detection_enabled = FALSE;
-static gboolean enable_connectivity_signals = FALSE;
-static gboolean return_raw_values = FALSE;
-static gboolean lock_configuration = FALSE;
-
-static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
-
 #define VERIFY_I2C
 
-#define MIN_POLL_SECONDS 10
-#define DEFAULT_POLL_SECONDS 30
-
-/**
- * If service is doing it's own polling for events, how often to poll:
- */
-static long poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
-
-#define MIN_POLL_CASCADE_INTERVAL_SECONDS 0.1
-#define DEFAULT_POLL_CASCADE_INTERVAL_SECONDS 0.5
-/**
-* Each event in an event-cascade will be at least this far appart:
-*/
-static long poll_cascade_interval_micros = (long) (DEFAULT_POLL_CASCADE_INTERVAL_SECONDS * 1000000);
-
-#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-/**
- * Custom signal event data - used by the service's custom signal source
- */
-typedef DDCA_Display_Status_Event Event_Data_Type;
-
-#else
-
-/**
- * Define our own event type enum which mirrors the future one in libddcutil 2.1
- */
-typedef enum {
-    DDCA_EVENT_DPMS_AWAKE,
-    DDCA_EVENT_DPMS_ASLEEP,
-    DDCA_EVENT_DISPLAY_CONNECTED,
-    DDCA_EVENT_DISPLAY_DISCONNECTED,
-    DDCA_EVENT_UNUSED1,
-    DDCA_EVENT_UNUSED2,
-} DDCA_Display_Event_Type;
-
-/**
- * Define our own event data which mirrors the future one in libddcutil 2.1
- */
-typedef struct {
-    DDCA_Display_Event_Type event_type;
-    DDCA_Display_Ref        dref;
-} Event_Data_Type;
-
-#endif
-
-/**
- * List of DDCA events numbers and names that can be iterated over (for return from a service property).
- */
-static const int event_types[] = {
-    DDCA_EVENT_DISPLAY_CONNECTED, DDCA_EVENT_DISPLAY_DISCONNECTED,
-    DDCA_EVENT_DPMS_AWAKE, DDCA_EVENT_DPMS_ASLEEP,
-};
-
-/**
- * List of DDCA events names in the same order as the event_types array.
- */
-static const char* event_type_names[] = {
-    G_STRINGIFY(DDCA_EVENT_DISPLAY_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISPLAY_DISCONNECTED),
-    G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),
-};
-
-/**
- * \brief for a given event_type_num return its name
- * \param event_type_num
- * \return name or "unknown_event_type"
- */
-static const char* get_event_type_name(int event_type_num) {
-    for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
-        if (event_types[i] == event_type_num) {
-            return event_type_names[i];
-        }
-    }
-    return "unknown_event_type";
-}
-
-/**
- * Global data value - held for dispatch - accessed/updated atomically.
- */
-static Event_Data_Type* signal_event_data = NULL;
-
-/**
- * List of fields returned in by the Detect service method (for return from a service property).
- */
-static const char* attributes_returned_from_detect[] = {
-    "display_number", "usb_bus", "usb_device",
-    "manufacturer_id", "model_name", "serial_number", "product_code",
-    "edid_txt", "binary_serial_number",
-    NULL
-};
-
-/**
- * Boolean flags that can be passed in the service method flags argument.
- */
-typedef enum {
-    EDID_PREFIX = 1,        // Indicates the EDID passed to the service is a unique prefix (substr) of the actual EDID.
-    RETURN_RAW_VALUES = 2,  // GetVcp GetMultipleVcp
-    NO_VERIFY = 4,          // SetVcp
-} Flags_Enum_Type;
-
-/**
- * Iterable definitions of Flags_Enum_Type values/names (for return from a service property).
- */
-const int flag_options[] = {EDID_PREFIX,RETURN_RAW_VALUES, NO_VERIFY,};
-const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),
-                                    G_STRINGIFY(RETURN_RAW_VALUES),
-                                    G_STRINGIFY(NO_VERIFY),};
+#undef XML_FROM_INTROSPECTED_DATA
 
 /* ----------------------------------------------------------------------------------------------------
  * D-Bus interface definition in XML
@@ -210,10 +91,13 @@ static GDBusNodeInfo* introspection_data = NULL;
 
 /**
  * Introspection data for the service we are exporting
- * TODO At some point this could possibly be moved to a file, but maybe is handy to embed it here.
+ * At some point this could possibly be moved to a file, but maybe is handy to embed it here.
+ *
  * Uses GTK-Doc comment blocks, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
  * The @my_parameter annotation formats properly.  The #my_property:property and #my_sig::signal annotations
  * don't format at all, so I'm not using them.
+ *
+ * Using the gcc C raw-string extension R"(my_string)" to embed the XML.
  */
 static const gchar introspection_xml[] = R"(
 
@@ -770,12 +654,157 @@ static const gchar introspection_xml[] = R"(
   </interface>
 </node>
 )"
-; // The newline+semicolon stops any linter warnings due to the above R-string from propagating to the code below.
+; // The newline+semicolon stops any linter warnings due to the above raw-string from propagating to the code below.
+
 
 /* ----------------------------------------------------------------------------------------------------
- * GLib error message definitions.
+ * Our GDBus service connection - this will be set to the running connection when the bus is acquired.
  */
+static GDBusConnection* dbus_connection = NULL;
 
+/**
+ * If TRUE, clients cannot change any configuration data (set by a command line parameter).
+ */
+static gboolean lock_configuration = FALSE;
+
+/**
+ * Global option (set by command line parameter) to always return full 16 bit raw VCP values.
+ */
+static gboolean return_raw_values = FALSE;
+
+/* ----------------------------------------------------------------------------------------------------
+ * Bit flags that can be passed in the service method flags argument.
+ */
+typedef enum {
+    EDID_PREFIX = 1,        // Indicates the EDID passed to the service is a unique prefix (substr) of the actual EDID.
+    RETURN_RAW_VALUES = 2,  // GetVcp GetMultipleVcp
+    NO_VERIFY = 4,          // SetVcp
+
+} Flags_Enum_Type;
+
+/**
+ * Iterable definitions of Flags_Enum_Type values/names (for return from a service property).
+ */
+static const int flag_options[] = {EDID_PREFIX,RETURN_RAW_VALUES, NO_VERIFY,};
+static const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),
+                                    G_STRINGIFY(RETURN_RAW_VALUES),
+                                    G_STRINGIFY(NO_VERIFY),};
+
+G_STATIC_ASSERT(G_N_ELEMENTS(flag_options) == G_N_ELEMENTS(flag_options_names));  // Boilerplate
+
+/* ----------------------------------------------------------------------------------------------------
+ * Define the service's connectivity monitoring options for VDU hot-plug/DPMS events
+ *
+ * Detecting events is optional. Events can be detected byinternal event polling or by setting
+ * up libddcutil callbacks. However, libddcutil needs fully functioning DRM to trap events, which
+ * is often not the case, therefore default to internal polling.
+ */
+typedef enum {
+    MONITOR_BY_INTERNAL_POLLING,
+    MONITOR_BY_LIBDDCUTIL_EVENTS,
+} Monitoring_Preference_Type;
+
+static gboolean display_status_detection_enabled = FALSE;
+static gboolean enable_connectivity_signals = FALSE;
+
+static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
+
+#define MIN_POLL_SECONDS 10
+#define DEFAULT_POLL_SECONDS 30
+
+/**
+ * If service is doing it's own polling for events, how often to poll:
+ */
+static long poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
+
+#define MIN_POLL_CASCADE_INTERVAL_SECONDS 0.1
+#define DEFAULT_POLL_CASCADE_INTERVAL_SECONDS 0.5
+
+/**
+ * Each event in an event-cascade will be at least this far apart:
+ */
+static long poll_cascade_interval_micros = (long) (DEFAULT_POLL_CASCADE_INTERVAL_SECONDS * 1000000);
+
+#if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
+/**
+ * Custom signal event data - used by the service's custom signal source
+ */
+typedef DDCA_Display_Status_Event Event_Data_Type;
+
+#else
+
+/**
+ * Define our own event type enum which mirrors the future one in libddcutil 2.1
+ */
+typedef enum {
+    DDCA_EVENT_DPMS_AWAKE,
+    DDCA_EVENT_DPMS_ASLEEP,
+    DDCA_EVENT_DISPLAY_CONNECTED,
+    DDCA_EVENT_DISPLAY_DISCONNECTED,
+    DDCA_EVENT_UNUSED1,
+    DDCA_EVENT_UNUSED2,
+} DDCA_Display_Event_Type;
+
+/**
+ * Define our own event data which mirrors the future one in libddcutil 2.1
+ */
+typedef struct {
+    DDCA_Display_Event_Type event_type;
+    DDCA_Display_Ref        dref;
+} Event_Data_Type;
+
+#endif
+
+/**
+ * List of DDCA events numbers and names that can be iterated over (for return from a service property).
+ */
+static const int event_types[] = {
+    DDCA_EVENT_DISPLAY_CONNECTED, DDCA_EVENT_DISPLAY_DISCONNECTED,
+    DDCA_EVENT_DPMS_AWAKE, DDCA_EVENT_DPMS_ASLEEP,
+};
+
+/**
+ * List of DDCA events names in the same order as the event_types array.
+ */
+static const char* event_type_names[] = {
+    G_STRINGIFY(DDCA_EVENT_DISPLAY_CONNECTED), G_STRINGIFY(DDCA_EVENT_DISPLAY_DISCONNECTED),
+    G_STRINGIFY(DDCA_EVENT_DPMS_AWAKE), G_STRINGIFY(DDCA_EVENT_DPMS_ASLEEP),
+};
+
+G_STATIC_ASSERT(G_N_ELEMENTS(event_types) == G_N_ELEMENTS(event_type_names));  // Boilerplate
+
+/**
+ * \brief for a given event_type_num return its name
+ * \param event_type_num
+ * \return name or "unknown_event_type"
+ */
+static const char* get_event_type_name(int event_type_num) {
+    for (int i = 0; i < sizeof(event_types) / sizeof(int); i++) {
+        if (event_types[i] == event_type_num) {
+            return event_type_names[i];
+        }
+    }
+    return "unknown_event_type";
+}
+
+/**
+ * Global data value - held for dispatch - accessed/updated atomically.
+ */
+static Event_Data_Type* signal_event_data = NULL;
+
+/**
+ * List of fields returned in by the Detect service method (for return from a service property).
+ */
+static const char* attributes_returned_from_detect[] = {
+    "display_number", "usb_bus", "usb_device",
+    "manufacturer_id", "model_name", "serial_number", "product_code",
+    "edid_txt", "binary_serial_number",
+    NULL
+};
+
+/* ----------------------------------------------------------------------------------------------------
+ * GLib error message definitions for use with the GQuark service_error_quark
+ */
 typedef enum {
     DDCUTIL_SERVICE_CONFIGURATION_LOCKED,
     DDCUTIL_SERVICE_INVALID_POLL_SECONDS,
@@ -788,22 +817,16 @@ typedef enum {
 
 static DdcutilServiceStatus ddcutil_service_status = DDCUTIL_SERVICE_OK;
 
-static const GDBusErrorEntry ddcutil_service_error_entries[] =
-{
-    { DDCUTIL_SERVICE_CONFIGURATION_LOCKED, "com.ddcutil.DdcutilService.Error.ConfigurationLocked" },
-    { DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
-    { DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds" },
-    { DDCUTIL_SERVICE_I2C_DEV_NO_MODULE, "com.ddcutil.DdcutilService.Error.I2cDevNoModule" },
-    { DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS, "com.ddcutil.DdcutilService.Error.I2cDevNoPermissions" },
-    { DDCUTIL_SERVICE_OK, "com.ddcutil.DdcutilService.Error.OK" },
+static const GDBusErrorEntry ddcutil_service_error_entries[] = {
+        { DDCUTIL_SERVICE_CONFIGURATION_LOCKED, "com.ddcutil.DdcutilService.Error.ConfigurationLocked" },
+        { DDCUTIL_SERVICE_INVALID_POLL_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollSeconds" },
+        { DDCUTIL_SERVICE_INVALID_POLL_CASCADE_SECONDS, "com.ddcutil.DdcutilService.Error.InvalidPollCascadeSeconds" },
+        { DDCUTIL_SERVICE_I2C_DEV_NO_MODULE, "com.ddcutil.DdcutilService.Error.I2cDevNoModule" },
+        { DDCUTIL_SERVICE_I2C_DEV_NO_PERMISSIONS, "com.ddcutil.DdcutilService.Error.I2cDevNoPermissions" },
+        { DDCUTIL_SERVICE_OK, "com.ddcutil.DdcutilService.Error.OK" },
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(ddcutil_service_error_entries) == DDCUTIL_SERVICE_N_ERRORS);  // Boilerplate
-
-/*
- * Our GDBus service connection - Will be set the running connection when the bus is aquired.
- */
-static GDBusConnection* dbus_connection = NULL;
 
 static GQuark service_error_quark;
 
