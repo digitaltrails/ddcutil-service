@@ -4,12 +4,12 @@
  * This code is content entirely created by AI (Chat GPT-4o). Such content is provided for informational purposes only
  * and should not be relied upon for any specific purpose without verification of its accuracy or completeness.
  *
- * Compilation:  cc $(pkg-config --cflags --libs gio-2.0) -o fddcutil  fddcutil.c
- * Usage: ./fddcutil  <method> <display_number or edid> <vcp_code> [vcp_new_value]
+ * Compilation:  cc $(pkg-config --cflags --libs gio-2.0) -o ddcutil-client  ddcutil-client.c
+ * Usage: ./ddcutil-client  <method> <display_number or edid> <vcp_code> [vcp_new_value]
  * Examples:
- *    ./fddcutil GetVcp 1 16       # Get display 1 VCP code decimal 16 (=0x brightness)
- *    ./fddcutil SetVcp 1 16 100   # Set display 1 VCP code decimal 16 (=0x brightness) to brightness 100.
- *    ./fddcutil GetVcp edid:blahblahblah 1 16     # Using an edid instead of display number.
+ *    ./ddcutil-client GetVcp 1 16       # Get display 1 VCP code decimal 16 (=0x brightness)
+ *    ./ddcutil-client SetVcp 1 16 100   # Set display 1 VCP code decimal 16 (=0x brightness) to brightness 100.
+ *    ./ddcutil-client GetVcp edid:blahblahblah 1 16     # Using an edid instead of display number.
  */
 #include <gio/gio.h>
 #include <stdio.h>
