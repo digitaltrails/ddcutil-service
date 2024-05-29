@@ -1227,7 +1227,7 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
 
     g_info("GetMultipleVcp display_num=%d, edid=%.30s...", display_number, edid_encoded);
 
-    const int number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
+    const gsize number_of_vcp_codes = g_variant_iter_n_children(vcp_code_iter);
     const u_int8_t vcp_codes[number_of_vcp_codes];
     for (int i = 0; g_variant_iter_loop(vcp_code_iter, "y", &vcp_codes[i]); i++) {
     }
@@ -2376,11 +2376,12 @@ static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
         poll_for_changes();
     }
 
-    if (dbus_connection == NULL || g_atomic_pointer_get(&signal_event_data) == NULL) {
+    Event_Data_Type *event_ptr = g_atomic_pointer_get(&signal_event_data);
+    if (dbus_connection == NULL || event_ptr == NULL) {
         return FALSE;
     }
-    g_debug("chg signal_event ready type=%d name=%s", signal_event_data->event_type,
-            get_event_type_name(signal_event_data->event_type));
+    g_debug("chg signal_event ready type=%d name=%s", event_ptr->event_type,
+            get_event_type_name(event_ptr->event_type));
     *timeout_millis = 0; // Not sure if we want to do this
     return TRUE;
 }
@@ -2417,14 +2418,8 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
         g_warning("chg_signal_dispatch: null D-Bus connection");
         return TRUE;
     }
-    Event_Data_Type* event_ptr = g_atomic_pointer_get(&signal_event_data);
+    Event_Data_Type* event_ptr = g_atomic_pointer_exchange(&signal_event_data, NULL);
     g_info("chg_signal_dispatch: processing event, obtained %s", event_ptr == NULL ? "NULL event data" : "event data");
-    if (g_atomic_pointer_compare_and_exchange(&signal_event_data, signal_event_data, NULL)) {
-        g_debug("chg_signal_dispatch: cleared event data, ready for next event.");
-    }
-    else {
-        g_warning("chg_signal_dispatch: failed to clear event data, maybe new event data was delivered?");
-    }
     gchar* edid_encoded;
     int int_event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
     if (event_ptr != NULL) {
@@ -2501,7 +2496,11 @@ static void display_status_event_callback(DDCA_Display_Status_Event event) {
     g_debug("DDCA event triggered display_status_event_callback");
     Event_Data_Type* event_copy = g_malloc(sizeof(Event_Data_Type));
     *event_copy = event;
-    g_atomic_pointer_set(&signal_event_data, event_copy);  // Save for processing by our GMainLoop custom source
+    // Save for processing by our GMainLoop custom source
+    Event_Data_Type* old_event = g_atomic_pointer_exchange(&signal_event_data, event_copy);
+    if (old_event != NULL) {  // Only handling single most recent events for now
+        free(old_event);
+    }
 }
 #endif
 
