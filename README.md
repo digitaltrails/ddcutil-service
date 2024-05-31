@@ -5,7 +5,7 @@ The aim of this service is to make it easier to create widgets and apps for
 **ddcutil**.  The service's client interface is now quite stable, but there 
 may be some additions or tweaks if new requirements are discovered.
 
-The service is written in C.  It has very few dependencies (glib and libddcutil) and is
+The service is written in C.  It has very few dependencies (glib-2 and libddcutil) and is
 consequently quite easy to build.  Once built, running the executable should make 
 a ddcutil service available on the D-Bus Session-Bus.
 
@@ -58,9 +58,18 @@ The same page also provides links to unoffical builds I've done for Leap.
 
 ###### AUR (Arch Linux User Repository):
 
+Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) has kindly provided AUR packaging:
+
  - https://aur.archlinux.org/packages/ddcutil-service
 
 #### Installation via Makefile
+
+Check/modify the dependencies specified in the `Makefile`:
+ - `libddcutil-devel` >= 1.4.0
+ - `glib2-devel` >= 2.40 (`gio-2` is normally part of `glib2`)
+
+The names of required development packages may vary depending on which distribution 
+you are targeting.
 
 Check the install PREFIX in the `Makefile` and make any changes required 
 for your circumstances, and issue `make install` or `sudo make install`
@@ -103,9 +112,9 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 
 ### Version History
 - 1.0.8
-  - Fixed a couple of hot-plug/DPMS polling memory leaks.
+  - Fixed a couple of hot-plug/DPMS polling memory leaks and simplified event locking.
   - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
-  - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.
+  - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings. 
   - Added an example C client.
 - 1.0.7
   - Slightly improved setvcp diagnostics.
