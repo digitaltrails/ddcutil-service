@@ -2286,7 +2286,7 @@ static bool poll_for_changes() {
                                 event->event_type =
                                     vdu_poll_data->dpms_awake ? DDCA_EVENT_DPMS_AWAKE : DDCA_EVENT_DPMS_ASLEEP;
                                 event->dref = vdu_info->dref;
-                                g_atomic_pointer_set(&signal_event_data, event);
+                                g_free(g_atomic_pointer_exchange(&signal_event_data, event));  // keep latest only
                                 event_is_ready = TRUE; // Only one event on each poll - terminate loop
                             }
                         }
@@ -2305,7 +2305,7 @@ static bool poll_for_changes() {
                             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
                             Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                             event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
-                            g_atomic_pointer_set(&signal_event_data, event);
+                            g_free(g_atomic_pointer_exchange(&signal_event_data, event));  // keep latest only
                             event_is_ready = TRUE; // Only one event on each poll - terminate loop
                         }
                     }
@@ -2318,7 +2318,7 @@ static bool poll_for_changes() {
                         g_message("Poll signal event - disconnected %.30s...\n", vdu_poll_data->edid_encoded);
                         Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                         event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
-                        g_atomic_pointer_set(&signal_event_data, event);
+                        g_free(g_atomic_pointer_exchange(&signal_event_data, event));  // keep latest only
                         g_free(vdu_poll_data->edid_encoded);
                         g_free(vdu_poll_data);
                         poll_list = g_list_delete_link(poll_list, ptr);
@@ -2497,10 +2497,8 @@ static void display_status_event_callback(DDCA_Display_Status_Event event) {
     Event_Data_Type* event_copy = g_malloc(sizeof(Event_Data_Type));
     *event_copy = event;
     // Save for processing by our GMainLoop custom source
-    Event_Data_Type* old_event = g_atomic_pointer_exchange(&signal_event_data, event_copy);
-    if (old_event != NULL) {  // Only handling single most recent events for now
-        free(old_event);
-    }
+    // Only handling single most recent events for now - discard old event
+    g_free(g_atomic_pointer_exchange(&signal_event_data, event_copy));
 }
 #endif
 
