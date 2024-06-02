@@ -36,6 +36,15 @@ and the python `dasbus` and `QtDBus` libraries.
 The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
 to eventually package it with ddcutil/libddcutil.
 
+### Usage warning/guidelines
+
+When using this service, care should be taken to avoid excessively writing VCP values
+because there is likely some write-cycle limit/lifespan.  Take care to avoid coding
+that might rapidly or infinitely loop (including in error situations or due to bugs).
+
+Unsupported manufacturer specific features should only be experimented with caution,
+some may have irreversible consequences, including bricking the hardware.
+
 ### Command-line and API Documentation
 
 Detailed documentation can be found in the two manual pages:
