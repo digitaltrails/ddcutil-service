@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon May 20 16:53:01 2024 -->
+<!-- CreationDate: Mon Jun  3 07:58:26 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -213,10 +213,10 @@ service&rsquo;s <b>ServiceInfoLogging</b> property (see
 <i>N</i></p>
 
 <p style="margin-left:18%; margin-top: 1em">The DDCA syslog
-level numerical value is passed to <b>libddutil&rsquo;s
+level numerical value is passed to <b>libddcutil
 ddca_init()</b> function at startup to enable logging from
 within the library. It&rsquo;s only available for
-<b>libddutil version 2.1.0</b> and up. Values for <i>N</i>
+<b>libddcutil version 2.1.0</b> and up. Values for <i>N</i>
 are 0:never, 2:error:, 6:warning, 9:notice, 12:info,
 15:verbose, and 18:debug.</p>
 
@@ -224,10 +224,10 @@ are 0:never, 2:error:, 6:warning, 9:notice, 12:info,
 <i>N</i></p>
 
 <p style="margin-left:18%; margin-top: 1em">The DDCA init
-option is a numerical value is passed to <b>libddutil
+option is a numerical value is passed to <b>libddcutil
 ddca_init()</b> function at startup to enable/disable
 various options with the library. It&rsquo;s only available
-for <b>libddutil 2.1.0+.</b></p>
+for <b>libddcutil 2.1.0+.</b></p>
 
 <p style="margin-left:9%;"><b>--</b> <i>libddcutil ddc_init
 options...</i></p>
@@ -235,7 +235,7 @@ options...</i></p>
 <p style="margin-left:18%; margin-top: 1em">The
 <b>libddcutil</b> library also supports its own extensive
 set of init options, any arguments following <b>--</b> will
-be passed as to <b>libddutil ddca_init()</b> function at
+be passed as to <b>libddcutil ddca_init()</b> function at
 service startup.</p>
 
 <h2>SERVICE METHODS
@@ -272,8 +272,8 @@ properties.</p> </td></tr>
 <td width="82%">
 
 
-<p>Query a displays&rsquo;s settings by VCP code, for
-example, bightness is VCP code 0x10.</p></td></tr>
+<p>Query a display settings by VCP code, for example,
+brightness is VCP code 0x10.</p></td></tr>
 </table>
 
 <p style="margin-left:18%; margin-top: 1em">The
@@ -319,7 +319,7 @@ client-context may be of use to signal recipients for
 interpreting the origin of the change.</p>
 
 
-<p style="margin-left:9%;"><b>GetCapabiltiesMetadata</b></p>
+<p style="margin-left:9%;"><b>GetCapabilitiesMetadata</b></p>
 
 <p style="margin-left:18%;">Query a displays capabilities
 returning a parsed data-structure describing the features
@@ -464,7 +464,7 @@ names.</p>
 <p style="margin-left:18%;">List the event-types sent by
 the <b>ConnectedDisplaysChanged</b> signal along with their
 text names. Events are included for display
-connection/disconnection (hotplug), DPMS-sleep, and
+connection/disconnection (hot-plug), DPMS-sleep, and
 DPMS-wake. If the list is empty, the GPU, GPU-driver, or
 <b>libddcutil</b> version doesn&rsquo;t support display
 event detection.</p>
@@ -496,8 +496,8 @@ version string.</p>
 
 <p style="margin-left:18%;">Set this property to
 <b>true</b> or <b>false</b> to enable or disable the
-services&rsquo;s <b>ConnectedDisplaysChanged</b> signal and
-associated monitoring.</p>
+<b>ConnectedDisplaysChanged</b> dbus-signal and associated
+monitoring.</p>
 
 <p style="margin-left:9%;"><b>ServiceInfoLogging</b></p>
 
@@ -891,7 +891,8 @@ development of this service.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Thanks also go
 out to all those who assisted with development and
-packaging. An upto date list of contributors can be found at
+packaging. An up-to-date list of contributors can be found
+at
 <b>https://github.com/digitaltrails/vdu_controls#acknowledgements</b>.</p>
 
 <h2>COPYRIGHT

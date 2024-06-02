@@ -168,10 +168,10 @@ below).
 .B "--ddca-syslog-level" \fIN\fP
 
 The DDCA syslog level numerical value is passed to
-.B libddutil's ddca_init()
+.B libddcutil ddca_init()
 function at startup to enable logging from within the library.
 It's only available for
-.B libddutil version 2.1.0
+.B libddcutil version 2.1.0
 and up.
 Values for
 .I N
@@ -181,10 +181,10 @@ are 0:never, 2:error:, 6:warning, 9:notice, 12:info, 15:verbose, and 18:debug.
 .B "--ddca-init-options" \fIN\fP
 
 The DDCA init option is a numerical value is passed to
-.B libddutil ddca_init()
+.B libddcutil ddca_init()
 function at startup to enable/disable various options with the library.
 It's only available for
-.B libddutil 2.1.0+.
+.B libddcutil 2.1.0+.
 
 .TP
 .B -- \fIlibddcutil ddc_init options...\fP
@@ -194,7 +194,7 @@ The
 library also supports its own extensive set of init options, any arguments following
 .B --
 will be passed as to
-.B libddutil ddca_init()
+.B libddcutil ddca_init()
 function at service startup.
 
 .SH SERVICE METHODS
@@ -208,7 +208,7 @@ Return a list of monitors detected along with their properties.
 
 .TP
 .B GetVcp
-Query a displays's settings by VCP code, for example, bightness is VCP code 0x10.
+Query a display settings by VCP code, for example, brightness is VCP code 0x10.
 
 The method's \fBflags\fP bit-string parameter can be set to \fB2\fP (\fBRETURN_RAW_VALUES\fP),
 see \fBLIMITATIONS\fP for an explanation.
@@ -235,7 +235,7 @@ The client-context may be of use to signal recipients for interpreting the
 origin of the change.
 
 .TP
-.B GetCapabiltiesMetadata
+.B GetCapabilitiesMetadata
 Query a displays capabilities returning a parsed data-structure describing the
 features and permitted values.
 
@@ -375,7 +375,7 @@ along with their text names.
 List the event-types sent by the
 .B ConnectedDisplaysChanged
 signal along with their text names.
-Events are included for display connection/disconnection (hotplug), DPMS-sleep, and DPMS-wake.
+Events are included for display connection/disconnection (hot-plug), DPMS-sleep, and DPMS-wake.
 If the list is empty, the GPU, GPU-driver, or
 .B libddcutil
 version doesn't support display event detection.
@@ -405,9 +405,9 @@ version string.
 
 .TP
 .B ServiceEmitConnectivitySignals
-Set this property to \fBtrue\fP or \fBfalse\fP to enable or disable the services's
+Set this property to \fBtrue\fP or \fBfalse\fP to enable or disable the
 .B ConnectedDisplaysChanged
-signal and associated monitoring.
+dbus-signal and associated monitoring.
 
 .TP
 .B ServiceInfoLogging
