@@ -62,6 +62,14 @@ Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) has kindly prov
 
  - https://aur.archlinux.org/packages/ddcutil-service
 
+###### Unofficial debian/ubuntu packages
+
+Maciej Wójcik ([https://gitlab.com/w8jcik](https://gitlab.com/w8jcik)) has kindly
+provided a collection of unofficial debian/ubuntu packages along with instructions
+for installing the required versions of `libddcutil`:
+
+ - https://gitlab.com/w8jcik/ddcutil-service.deb#latest
+
 #### Installation via Makefile
 
 Check/modify the dependencies specified in the `Makefile`:
@@ -105,7 +113,9 @@ advice provided during the development of this service.
 
 Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; 
 Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches; 
-and Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging.
+Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging; and
+Maciej Wójcik ([https://gitlab.com/w8jcik](https://gitlab.com/w8jcik)) for debian/ubuntu
+packaging.
 
 The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/help/clion/clion-nova-introduction.html)**. Thanks go out to JetBrains for
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
