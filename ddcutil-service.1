@@ -68,6 +68,14 @@ it when it is next accessed.
 Client connections with the service are stateless, each request
 is handled atomically.
 
+\fBWhen using this service, care should be taken to avoid excessively writing VCP values because there is likely some
+write-cycle limit/lifespan.
+Take care to avoid coding that might rapidly or infinitely loop (including in error situations or due to bugs).\fP
+
+
+\fBUnsupported manufacturer specific features should only be experimented with caution, some may have irreversible
+consequences, including bricking the hardware.\fP
+
 .SS OPTIONS
 
 Depending on the version of

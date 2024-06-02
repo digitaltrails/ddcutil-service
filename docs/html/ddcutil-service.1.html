@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jun  3 09:35:34 2024 -->
+<!-- CreationDate: Mon Jun  3 09:56:08 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -90,6 +90,18 @@ If the service terminates for any reason, the daemon will be
 restart it when it is next accessed. Client connections with
 the service are stateless, each request is handled
 atomically.</p>
+
+<p style="margin-left:9%; margin-top: 1em"><b>When using
+this service, care should be taken to avoid excessively
+writing VCP values because there is likely some write-cycle
+limit/lifespan. Take care to avoid coding that might rapidly
+or infinitely loop (including in error situations or due to
+bugs).</b></p>
+
+<p style="margin-left:9%; margin-top: 1em"><b>Unsupported
+manufacturer specific features should only be experimented
+with caution, some may have irreversible consequences,
+including bricking the hardware.</b></p>
 
 <h3>OPTIONS
 <a name="OPTIONS"></a>
