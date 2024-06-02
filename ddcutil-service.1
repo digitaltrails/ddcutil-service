@@ -135,7 +135,7 @@ Default 0.5 seconds,  minimum 0.1 seconds.
 .B "--return-raw-values"
 
 Return high-byte and low-byte for all values, including for
-fBSimple Non-Continuous\fP values.  Normally SMC values are
+\fBSimple Non-Continuous\fP values.  Normally SMC (single-byte) values are
 masked to remove the high-byte value (see \fBLIMITATIONS\fP
 for an explanation).
 
@@ -144,7 +144,7 @@ for an explanation).
 
 Lock the configuration.  Disable the \fBSetSleepMultiplier\fP
 and \fBRestart\fP methods.  Make all properties read-only.
-This options provides a way to
+This option provides a way to
 lockdown the service to the configuration passed on the command line.
 The lock is provided to assist with avoiding conflicts
 when more than one ddcutil-service client is in use at the same time.
@@ -152,10 +152,9 @@ when more than one ddcutil-service client is in use at the same time.
 .TP
 .B "--log-info"
 
-Enabling log-info will produce info and debug level output.  The
-output will go to standard-error or, if running from
-.B dbus-daemon,
-to the journal.
+Enabling log-info will produce info and debug level output.  When the
+service is run from \fBdbus-daemon\fP, the diagnostic output will be
+captured in the journal logs, otherwise it is directed to standard-error.
 This option can also be toggled after startup by using B-Bus
 to alter the
 service's
@@ -464,7 +463,7 @@ The service may also issue the following exceptions when attempting to set prope
 
 .TP
 .B com.ddcutil.DdcutilService.Error.ConfigurationLocked
-The \fB--lock\fP options has prevented a client from altering a configuration
+The \fB--lock\fP option has prevented a client from altering a configuration
 settings.  This includes using the \fBSetSleepMultiplier\fP method, \fBRestart\fP method,
  or setting any property value.
 .TP
@@ -529,7 +528,9 @@ APIs.
 The service relies on \fBlibddcutil\fP which
 requires read/write access to the
 .B /dev/i2c
-devices.  See ⟨http://www.ddcutil.com/i2c_permissions⟩.
+devices.  See
+.I http://www.ddcutil.com/i2c_permissions
+for details.
 
 At startup
 .B ddcutil-service
@@ -628,20 +629,25 @@ can be used to interact with the service.
 
 Some VDUs are not standards compliant.  In some cases, non-compliance
 can vary to the extent that only a service client can deal with it,
-and often only by by requiring additional user supplied metadata
+and often only by by requiring additional user supplied metadata.
 For example, the \fBvdu_controls\fP client allows the user to
 edit/override the service supplied capabilities-metadata.
 
-\fBSimple Non Continuous\fP values, such as the VDU input-source, are supposed
-to be 8 bits only and are masked to remove the high-byte.  SNC masking is performed
-because some VDUs don't clear the SNC high-byte. In such cases, the full 16 bit
-SNC value will fail to match that declared in the capabilities-metadata.  However,
-there are other VDUs that disregard the 8 bit restriction and set the SNC high-byte
-to a significant value.  The service defaults to standard-compliance and clears
-the high-byte.  The \fBGetVcp\fP and \fBGetMultipleVcp\fP methods support the
+In some cases VDUs may not comply with the specified data-type for
+single-byte \fBSimple Non Continuous\fP values, this includes values
+such as the VDU input-source or OSD-language. SNC values are supposed
+to be 8 bits only and are passed in the low-byte of the the 16 bit values returned
+by the VDU.   The 16-bit values are masked to remove the high-byte because
+some VDUs don't zero the unused high-byte, which means unmasked 16 bit
+SNC values will sometimes fail to match 8-bit value declared in VDU capabilities-metadata.
+However, there are other VDUs that disregard the SNC 8 bit restriction and set the high-byte
+to a significant value, which means masking is inappropriate in some cases.
+The service defaults to standard-compliance and masks off the high-byte.
+To allow for the less common second case,
+the \fBGetVcp\fP and \fBGetMultipleVcp\fP methods support the
 \fBRETURN_RAW_VALUES\fP flag which forces the return of the original 16 bit values.
-The client may then be able disambiguate each case by seeing if the 16 bit value
-matches that declared in the capabilities-metadata, or by consulting additional
+This provides the client with an opportunity to take responsibility for
+disambiguating each case by applying heuristics or by consulting additional
 user supplied metadata. Note that the \fBSetVcp\fP counterpart always accepts
 full 16 bit values and passes them unaltered to the VDU.
 
@@ -678,7 +684,7 @@ become familiar with the \fBlibddcutil\fP configuration options normally
 stored in $HOME/.config/ddcutil/ddcutilrc and documented at
 \fIhttps://www.ddcutil.com/config_file/\fP.
 
-The service wraps \fBlibddcutil\fP that in some cases has been found to
+The service wraps \fBlibddcutil\fP.  In some cases \fBlibddcutil\fP has been found to
 perform differently from the \fBddcutil\fP command. If the service has
 problems with a VDU, it's worth trying the ddcutil command to see if
 it differs in result and to include those details in any issue raised.
@@ -690,8 +696,10 @@ ddcutil-service(7), vdu_controls(1), ddcutil(1), dbus-daemon(1), dbus-send(1), b
 
 .SH REPORTING BUGS
 
+Before raising a new issue, please read through \fBLIMITATIONS\fP.
+Issues can be raised at
 .I https://github.com/digitaltrails/ddcutil-service/issues
-
+(requires a github login).
 
 .SH AUTHOR
 Michael Hamilton

@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jun  3 08:09:19 2024 -->
+<!-- CreationDate: Mon Jun  3 09:35:34 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -175,9 +175,9 @@ seconds.</p>
 
 <p style="margin-left:18%; margin-top: 1em">Return
 high-byte and low-byte for all values, including for
-fBSimple Non-Continuous <b>values. Normally SMC values are
-masked to remove the high-byte value (see LIMITATIONS for an
-explanation).</b></p>
+<b>Simple Non-Continuous</b> values. Normally SMC
+(single-byte) values are masked to remove the high-byte
+value (see <b>LIMITATIONS</b> for an explanation).</p>
 
 <table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -194,7 +194,7 @@ explanation).</b></p>
 <p style="margin-left:18%; margin-top: 1em">Lock the
 configuration. Disable the <b>SetSleepMultiplier</b> and
 <b>Restart</b> methods. Make all properties read-only. This
-options provides a way to lockdown the service to the
+option provides a way to lockdown the service to the
 configuration passed on the command line. The lock is
 provided to assist with avoiding conflicts when more than
 one ddcutil-service client is in use at the same time.</p>
@@ -202,12 +202,13 @@ one ddcutil-service client is in use at the same time.</p>
 <p style="margin-left:9%;"><b>--log-info</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Enabling
-log-info will produce info and debug level output. The
-output will go to standard-error or, if running from
-<b>dbus-daemon,</b> to the journal. This option can also be
-toggled after startup by using B-Bus to alter the
-service&rsquo;s <b>ServiceInfoLogging</b> property (see
-<b>EXAMPLES</b> below).</p>
+log-info will produce info and debug level output. When the
+service is run from <b>dbus-daemon</b>, the diagnostic
+output will be captured in the journal logs, otherwise it is
+directed to standard-error. This option can also be toggled
+after startup by using B-Bus to alter the service&rsquo;s
+<b>ServiceInfoLogging</b> property (see <b>EXAMPLES</b>
+below).</p>
 
 <p style="margin-left:9%;"><b>--ddca-syslog-level</b>
 <i>N</i></p>
@@ -571,7 +572,7 @@ properties or call methods: <b><br>
 
 com.ddcutil.DdcutilService.Error.ConfigurationLocked</b></p>
 
-<p style="margin-left:18%;">The <b>--lock</b> options has
+<p style="margin-left:18%;">The <b>--lock</b> option has
 prevented a client from altering a configuration settings.
 This includes using the <b>SetSleepMultiplier</b> method,
 <b>Restart</b> method, <br>
@@ -659,7 +660,8 @@ bash-scripts and <b>python3</b> clients for D-Bus
 <p style="margin-left:9%; margin-top: 1em">The service
 relies on <b>libddcutil</b> which requires read/write access
 to the <b>/dev/i2c</b> devices. See
-&acirc;&uml;http://www.ddcutil.com/i2c_permissions&acirc;&copy;.</p>
+<i>http://www.ddcutil.com/i2c_permissions</i> for
+details.</p>
 
 <p style="margin-left:9%; margin-top: 1em">At startup
 <b>ddcutil-service</b> will attempt to verify that
@@ -793,26 +795,31 @@ string:ServiceInfoLogging variant:boolean:true</p>
 not standards compliant. In some cases, non-compliance can
 vary to the extent that only a service client can deal with
 it, and often only by by requiring additional user supplied
-metadata For example, the <b>vdu_controls</b> client allows
+metadata. For example, the <b>vdu_controls</b> client allows
 the user to edit/override the service supplied
 capabilities-metadata.</p>
 
-<p style="margin-left:9%; margin-top: 1em"><b>Simple Non
-Continuous</b> values, such as the VDU input-source, are
-supposed to be 8 bits only and are masked to remove the
-high-byte. SNC masking is performed because some VDUs
-don&rsquo;t clear the SNC high-byte. In such cases, the full
-16 bit SNC value will fail to match that declared in the
+<p style="margin-left:9%; margin-top: 1em">In some cases
+VDUs may not comply with the specified data-type for
+single-byte <b>Simple Non Continuous</b> values, this
+includes values such as the VDU input-source or
+OSD-language. SNC values are supposed to be 8 bits only and
+are passed in the low-byte of the the 16 bit values returned
+by the VDU. The 16-bit values are masked to remove the
+high-byte because some VDUs don&rsquo;t zero the unused
+high-byte, which means unmasked 16 bit SNC values will
+sometimes fail to match 8-bit value declared in VDU
 capabilities-metadata. However, there are other VDUs that
-disregard the 8 bit restriction and set the SNC high-byte to
-a significant value. The service defaults to
-standard-compliance and clears the high-byte. The
-<b>GetVcp</b> and <b>GetMultipleVcp</b> methods support the
-<b>RETURN_RAW_VALUES</b> flag which forces the return of the
-original 16 bit values. The client may then be able
-disambiguate each case by seeing if the 16 bit value matches
-that declared in the capabilities-metadata, or by consulting
-additional user supplied metadata. Note that the
+disregard the SNC 8 bit restriction and set the high-byte to
+a significant value, which means masking is inappropriate in
+some cases. The service defaults to standard-compliance and
+masks off the high-byte. To allow for the less common second
+case, the <b>GetVcp</b> and <b>GetMultipleVcp</b> methods
+support the <b>RETURN_RAW_VALUES</b> flag which forces the
+return of the original 16 bit values. This provides the
+client with an opportunity to take responsibility for
+disambiguating each case by applying heuristics or by
+consulting additional user supplied metadata. Note that the
 <b>SetVcp</b> counterpart always accepts full 16 bit values
 and passes them unaltered to the VDU.</p>
 
@@ -847,11 +854,11 @@ $HOME/.config/ddcutil/ddcutilrc and documented at
 <i>https://www.ddcutil.com/config_file/</i>.</p>
 
 <p style="margin-left:9%; margin-top: 1em">The service
-wraps <b>libddcutil</b> that in some cases has been found to
-perform differently from the <b>ddcutil</b> command. If the
-service has problems with a VDU, it&rsquo;s worth trying the
-ddcutil command to see if it differs in result and to
-include those details in any issue raised.</p>
+wraps <b>libddcutil</b>. In some cases <b>libddcutil</b> has
+been found to perform differently from the <b>ddcutil</b>
+command. If the service has problems with a VDU, it&rsquo;s
+worth trying the ddcutil command to see if it differs in
+result and to include those details in any issue raised.</p>
 
 <h2>SEE ALSO
 <a name="SEE ALSO"></a>
@@ -868,8 +875,11 @@ dbus-send(1), busctl(1)</p>
 </h2>
 
 
-
-<p style="margin-left:9%; margin-top: 1em"><i>https://github.com/digitaltrails/ddcutil-service/issues</i></p>
+<p style="margin-left:9%; margin-top: 1em">Before raising a
+new issue, please read through <b>LIMITATIONS</b>. Issues
+can be raised at
+<i>https://github.com/digitaltrails/ddcutil-service/issues</i>
+(requires a github login).</p>
 
 <h2>AUTHOR
 <a name="AUTHOR"></a>
