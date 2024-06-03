@@ -72,7 +72,7 @@ Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) has kindly prov
 
  - https://aur.archlinux.org/packages/ddcutil-service
 
-##### Unofficial debian/ubuntu packages
+##### Debian/Ubuntu unofficial packages
 
 Maciej Wójcik ([https://gitlab.com/w8jcik](https://gitlab.com/w8jcik)) has kindly
 provided a collection of unofficial debian/ubuntu packages along with instructions
