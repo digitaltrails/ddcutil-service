@@ -58,7 +58,7 @@ Detailed documentation can be found in the two manual pages:
 
 #### Installation via prebuilt binaries 
 
-###### OpenSUSE Tumbleweed RPM:
+##### OpenSUSE Tumbleweed RPM:
 
 There is an official Tumbleweed RPM:
 
@@ -66,13 +66,13 @@ There is an official Tumbleweed RPM:
 
 The same page also provides links to unoffical builds I've done for Leap.
 
-###### AUR (Arch Linux User Repository):
+##### AUR (Arch Linux User Repository):
 
 Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) has kindly provided AUR packaging:
 
  - https://aur.archlinux.org/packages/ddcutil-service
 
-###### Unofficial debian/ubuntu packages
+##### Unofficial debian/ubuntu packages
 
 Maciej Wójcik ([https://gitlab.com/w8jcik](https://gitlab.com/w8jcik)) has kindly
 provided a collection of unofficial debian/ubuntu packages along with instructions
