@@ -2,7 +2,7 @@
 A D-Bus ddcutil service for control of DDC Monitors/VDUs
 
 The aim of this service is to make it easier to create widgets and apps for 
-**ddcutil**.  The service's client interface is now quite stable, but there 
+[ddcutil](https://www.ddcutil.com/).  The service's client interface is now quite stable, but there 
 may be some additions or tweaks if new requirements are discovered.
 
 The service is written in C.  It has very few dependencies (glib-2 and libddcutil) and is
