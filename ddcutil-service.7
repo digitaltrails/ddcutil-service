@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 06/03/2024
+.\"      Date: 06/04/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/03/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/04/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -169,9 +169,7 @@ ServicePollCascadeInterval      readwrite  d
 .PP
 ddcutil\-service is D\-Bus service wrapper for libddcutil which implements the VESA DDC Monitor Control Command Set\&. Most things that can be controlled using a monitor\*(Aqs on\-screen display can be controlled by this service\&.
 .PP
-When using this service, care should be taken to avoid excessively writing VCP values because there is likely some write\-cycle limit/lifespan\&. Take care to avoid coding that might rapidly or infinitely loop (including in error situations or due to bugs)\&.
-.PP
-Unsupported manufacturer specific features should only be experimented with caution, some may have irreversible consequences, including bricking the hardware\&.
+When using this service, avoid excessively writing VCP values because each VDU\*(Aqs NVRAM likely has a write\-cycle limit/lifespan\&. The suggested guideline is to limit updates to rates comparable to those observed when using the VDU\*(Aqs onboard controls\&. Avoid coding that might rapidly or infinitely loop, including when recovering from errors and bugs\&.
 .PP
 For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or powered\-up VDUs changes, whereas the DDCA display numbers may be reallocated\&.
 .PP

@@ -110,12 +110,10 @@ static const gchar introspection_xml[] = R"(
         DDC Monitor Control Command Set.  Most things that can be controlled using a monitor's
         on-screen display can be controlled by this service.
 
-        When using this service, care should be taken to avoid excessively writing VCP values
-        because there is likely some write-cycle limit/lifespan.  Take care to avoid coding
-        that might rapidly or infinitely loop (including in error situations or due to bugs).
-
-        Unsupported manufacturer specific features should only be experimented with caution,
-        some may have irreversible consequences, including bricking the hardware.
+        When using this service, avoid excessively writing VCP values because each VDU's NVRAM
+        likely has a write-cycle limit/lifespan. The suggested guideline is to limit updates
+        to rates comparable to those observed when using the VDU's onboard controls. Avoid coding
+        that might rapidly or infinitely loop, including when recovering from errors and bugs.
 
         For many of the methods a VDU can be specified by either passing the DDC display_number
         or DDC EDID. The EDID is the more stable identifier, it remains unchanged if the number

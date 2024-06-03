@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jun  3 09:56:08 2024 -->
+<!-- CreationDate: Tue Jun  4 08:37:32 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -92,11 +92,13 @@ the service are stateless, each request is handled
 atomically.</p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>When using
-this service, care should be taken to avoid excessively
-writing VCP values because there is likely some write-cycle
-limit/lifespan. Take care to avoid coding that might rapidly
-or infinitely loop (including in error situations or due to
-bugs).</b></p>
+this service, avoid excessively writing VCP values because
+each VDU&rsquo;s NVRAM likely has a write-cycle
+limit/lifespan. The suggested guideline is to limit updates
+to rates comparable to those observed when using the
+VDU&rsquo;s onboard controls. Avoid coding that might
+rapidly or infinitely loop, including when recovering from
+errors and bugs.</b></p>
 
 <p style="margin-left:9%; margin-top: 1em"><b>Unsupported
 manufacturer specific features should only be experimented

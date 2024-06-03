@@ -33,14 +33,15 @@ the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/exam
 folder.  They cover the use of the `dbus-send` command line utiltity
 and the python `dasbus` and `QtDBus` libraries. 
 
-The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  The current intention is 
-to eventually package it with ddcutil/libddcutil.
+The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
+The current intention is to eventually package it with ddcutil/libddcutil.
 
 ### Usage warning/guidelines
 
-When using this service, care should be taken to avoid excessively writing VCP values
-because there is likely some write-cycle limit/lifespan.  Take care to avoid coding
-that might rapidly or infinitely loop (including in error situations or due to bugs).
+When using this service, avoid excessively writing VCP values because each VDU's NVRAM
+likely has a write-cycle limit/lifespan. The suggested guideline is to limit updates
+to rates comparable to those observed when using the VDU's onboard controls. Avoid coding
+that might rapidly or infinitely loop, including when recovering from errors and bugs.
 
 Unsupported manufacturer specific features should only be experimented with caution,
 some may have irreversible consequences, including bricking the hardware.
