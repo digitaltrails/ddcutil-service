@@ -43,7 +43,7 @@ likely has a write-cycle limit/lifespan. The suggested guideline is to limit upd
 to rates comparable to those observed when using the VDU's onboard controls. Avoid coding
 that might rapidly or infinitely loop, including when recovering from errors and bugs.
 
-Unsupported manufacturer specific features should only be experimented with caution,
+Non-standard manufacturer specific features should only be experimented with caution,
 some may have irreversible consequences, including bricking the hardware.
 
 ### Command-line and API Documentation
@@ -136,6 +136,8 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
   - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
   - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings. 
   - Added an example C client.
+  - Added an NVRAM-lifecycle usage warning to avoid code that might rapidly loop VDU updates.
+  - Added a warning noting the potentially irreversible consequences of experimenting with non-standard VDU features.
 - 1.0.7
   - Slightly improved setvcp diagnostics.
   - Fix methods failing with return code DDCRC_OTHER (-3022) when only some i2c devices are accessible.

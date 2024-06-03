@@ -115,6 +115,9 @@ static const gchar introspection_xml[] = R"(
         to rates comparable to those observed when using the VDU's onboard controls. Avoid coding
         that might rapidly or infinitely loop, including when recovering from errors and bugs.
 
+        Non-standard manufacturer specific features should only be experimented with caution,
+        some may have irreversible consequences, including bricking the hardware.
+
         For many of the methods a VDU can be specified by either passing the DDC display_number
         or DDC EDID. The EDID is the more stable identifier, it remains unchanged if the number
         of connected or powered-up VDUs changes, whereas the DDCA display numbers may be reallocated.
