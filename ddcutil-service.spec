@@ -93,7 +93,6 @@ install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}
 %{_datadir}/%{name}/examples/dbus-set-polling-interval.bash
 %{_datadir}/%{name}/examples/dbus-send-introspect.bash
 %{_datadir}/%{name}/examples/dbus-send-detect.bash
-%{_datadir}/%{name}/examples/ddcutil-client.c
 %dir %{_prefix}/lib/modules-load.d
 %{_prefix}/lib/modules-load.d/%{name}.conf
 

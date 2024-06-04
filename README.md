@@ -134,8 +134,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 - 1.0.8
   - Fixed potential hot-plug/DPMS polling memory leaks and simplified event locking.
   - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
-  - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings. 
-  - Added an example C client.
+  - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.
   - Added an NVRAM-lifecycle usage warning to avoid code that might rapidly loop VDU updates.
   - Added a warning noting the potentially irreversible consequences of experimenting with non-standard VDU features.
 - 1.0.7
