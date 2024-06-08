@@ -135,8 +135,8 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
   - Fixed potential hot-plug/DPMS polling memory leaks and simplified event locking.
   - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
   - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.
-  - Added an NVRAM-lifecycle usage warning to avoid code that might rapidly loop VDU updates.
-  - Added a warning noting the potentially irreversible consequences of experimenting with non-standard VDU features.
+  - Updated documentation to caution against excessive updates when coding loops, as this may impact VDU NVRAM lifespan.
+  - Updated documentation to caution against experimenting with non-standard features, as it may risk damage to the VDU.
 - 1.0.7
   - Slightly improved setvcp diagnostics.
   - Fix methods failing with return code DDCRC_OTHER (-3022) when only some i2c devices are accessible.
