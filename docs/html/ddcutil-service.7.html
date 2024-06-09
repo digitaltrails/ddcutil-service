@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Tue Jun  4 08:54:54 2024 -->
+<!-- CreationDate: Mon Jun 10 11:03:02 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -240,7 +240,9 @@ methods a VDU can be specified by either passing the DDC
 display_number or DDC EDID. The EDID is the more stable
 identifier, it remains unchanged if the number of connected
 or powered&minus;up VDUs changes, whereas the DDCA display
-numbers may be reallocated.</p>
+numbers may be reallocated. If passing an EDID, pass
+&minus;1 for display_number (otherwise both are tied with
+the display_number having precedence).</p>
 
 <p style="margin-left:9%; margin-top: 1em">As a
 convienience for passing EDIDs using the command line,

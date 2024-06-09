@@ -277,7 +277,10 @@ or a
 .I base64-encoded EDID
 can be supplied. Base64-encoded EDIDs are obtained from the
 .B Detect
-method.  If a EDID is supplied, a method's
+method.
+When passing an EDID, pass -1 for display_number, otherwise both are tied with the display_number
+having precedence.
+If a EDID is supplied, a method's
 .B flags
 bit-string parameter can be set to
 .B 1

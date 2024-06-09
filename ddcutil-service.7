@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 06/04/2024
+.\"      Date: 06/10/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/04/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/10/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -173,7 +173,7 @@ When using this service, avoid excessively writing VCP values because each VDU\*
 .PP
 Non\-standard manufacturer specific features should only be experimented with caution, some may have irreversible consequences, including bricking the hardware\&.
 .PP
-For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or powered\-up VDUs changes, whereas the DDCA display numbers may be reallocated\&.
+For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or powered\-up VDUs changes, whereas the DDCA display numbers may be reallocated\&. When passing an EDID, pass \-1 for display_number, otherwise both are tied with the display_number having precedence\&.
 .PP
 As a convienience for passing EDIDs using the command line, methods that accept an EDID identifier also accept a flag value which will cause the EDID passed to be matched as a prefix of a possible EDID (so all 128 bytes need not be entered)\&.
 .SH "METHOD DETAILS"

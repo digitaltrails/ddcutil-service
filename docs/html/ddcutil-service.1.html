@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Tue Jun  4 08:54:54 2024 -->
+<!-- CreationDate: Mon Jun 10 11:03:02 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -370,7 +370,9 @@ specific arguments.</p>
 requires a display-argument, either an integer
 <i>display-number</i> or a <i>base64-encoded EDID</i> can be
 supplied. Base64-encoded EDIDs are obtained from the
-<b>Detect</b> method. If a EDID is supplied, a
+<b>Detect</b> method. When passing an EDID, pass -1 for
+display_number, otherwise both are tied with the
+display_number having precedence. If a EDID is supplied, a
 method&rsquo;s <b>flags</b> bit-string parameter can be set
 to <b>1</b> (EDID_PREFIX), this indicates a unique prefix of
 an EDID has been passed rather than the entire string (this
