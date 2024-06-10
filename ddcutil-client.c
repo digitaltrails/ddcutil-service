@@ -21,33 +21,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-/**
- * Compilation:  cc $(pkg-config --cflags --libs gio-2.0 glib-2.0) -o ddcutil-client  ddcutil-client.c
- * Usage: ./ddcutil-client --display <display_number> getvcp <vcp_code>
- *        ./ddcutil-client --edid <edid> getvcp <vcp_code>
- *        ./ddcutil-client --display <display_number> setvcp <vcp_code> <vcp_new_value>
- *        ./ddcutil-client --edid <edid> setvcp <vcp_code> <vcp_new_value>
- *        ./ddcutil-client detect
- */
 #include <gio/gio.h>
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum op_status_values {
+/**
+ * Status numbers that might actually be returned from main()
+ * (as opposed to status numbers returned by dbus or libddcutil)
+ */
+typedef enum cmd_status_values {
     COMPLETED_WITHOUT_ERROR = 0,
     SERVICE_ERROR = 1,
     DBUS_ERROR = 2,
     SYNTAX_ERROR = 3,
-} op_status_t;
+} cmd_status_t;
 
 static char *const DBUS_BUS_NAME = "com.ddcutil.DdcutilService";
-
 static char *const DBUS_OBJECT_PATH = "/com/ddcutil/DdcutilObject";
-
 static char *const DBUS_INTERFACE_NAME = "com.ddcutil.DdcutilInterface";
 
-static op_status_t handle_dbus_error(const char *operation_name, GError *error) {
+/**
+ * @brief Output the dbus error to stderr and translated the status code to cmd_status_t
+ * @param operation_name operation name for including on the output
+ * @param error dbus error structure
+ * @return cmd_status_t
+ */
+static cmd_status_t handle_dbus_error(const char *operation_name, GError *error) {
     if (error) {
         g_printerr("DBUS Error calling %s: %s\n", operation_name, error->message);
         g_error_free(error);
@@ -56,32 +56,47 @@ static op_status_t handle_dbus_error(const char *operation_name, GError *error) 
     return COMPLETED_WITHOUT_ERROR;
 }
 
-static void print_call_status(const char *operation_name, gint ddcutil_status, const gchar *error_message) {
+/**
+ * @brief Output a ddcutil status to stdout.
+ * @param operation_name operation name for including on the output
+ * @param ddcutil_status return code from ddcutil
+ * @param error_message message from ddcutil (or interpretation there of)
+ */
+static void report_ddcutil_status(const char *operation_name, gint ddcutil_status, const gchar *error_message) {
     g_print("operation: %s\n", operation_name);
     g_print("error_status: %d\n", ddcutil_status);
     g_print("error message: %s\n", error_message);
 }
 
-static op_status_t call_set_vcp(GDBusConnection *connection,
-                                int display_number, const char *edid_txt, guint8 vcp_code, guint16 vcp_new_value) {
+/**
+ * @brief Implement setvcp
+ * @param connection dbus connection to ddcutil-service
+ * @param display_number ddcutil display number
+ * @param edid_base64 base64 encoded EDID or EDID-prefix
+ * @param vcp_code DDC VCP-code
+ * @param vcp_new_value DDC VCP-value
+ * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
+ */
+static cmd_status_t call_set_vcp(GDBusConnection *connection,
+                                 int display_number, const char *edid_base64, guint8 vcp_code, guint16 vcp_new_value) {
     const char * operation_name = "SetVcp";
     GError *error = NULL;
     GVariant *result;
-    const guint flags = strlen(edid_txt) == 0 ? 0 : 1;
+    const guint flags = strlen(edid_base64) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyqu)", display_number, edid_txt, vcp_code, vcp_new_value, flags),
+                                         g_variant_new("(isyqu)", display_number, edid_base64, vcp_code, vcp_new_value, flags),
                                          G_VARIANT_TYPE("(is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
                                          NULL,
                                          &error);
     
-    op_status_t dbus_status = handle_dbus_error(operation_name, error);
+    cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
     if (dbus_status != COMPLETED_WITHOUT_ERROR) {
         return dbus_status;
     }
@@ -89,31 +104,39 @@ static op_status_t call_set_vcp(GDBusConnection *connection,
     gint ddcutil_status;
     const gchar *error_message;
     g_variant_get(result, "(is)", &ddcutil_status, &error_message);
-    print_call_status(operation_name, ddcutil_status, error_message);
+    report_ddcutil_status(operation_name, ddcutil_status, error_message);
     g_variant_unref(result);
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
 
-static op_status_t call_get_vcp(
-        GDBusConnection *connection, int display_number, const char *edid_txt, guint8 vcp_code) {
+/**
+ * @brief Implement getvcp, outputs result to stdout
+ * @param connection dbus connection to ddcutil-service
+ * @param display_number ddcutil display number
+ * @param edid_base64 base64 encoded EDID or EDID-prefix
+ * @param vcp_code DDC VCP-code
+ * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
+ */
+static cmd_status_t call_get_vcp(
+        GDBusConnection *connection, int display_number, const char *edid_base64, guint8 vcp_code) {
     const char * operation_name = "GetVcp";
     GError *error = NULL;
     GVariant *result;
-    const guint flags = strlen(edid_txt) == 0 ? 0 : 1;
+    const guint flags = strlen(edid_base64) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyu)", display_number, edid_txt, vcp_code, flags),
+                                         g_variant_new("(isyu)", display_number, edid_base64, vcp_code, flags),
                                          G_VARIANT_TYPE("(qqsis)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
                                          NULL,
                                          &error);
 
-    op_status_t dbus_status = handle_dbus_error(operation_name, error);
+    cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
     if (dbus_status != COMPLETED_WITHOUT_ERROR) {
         return dbus_status;
     }
@@ -123,7 +146,7 @@ static op_status_t call_get_vcp(
     gint ddcutil_status;
     g_variant_get(result, "(qqsis)",
                   &vcp_current_value, &vcp_max_value, &vcp_formatted_value, &ddcutil_status, &error_message);
-    print_call_status(operation_name, ddcutil_status, error_message);
+    report_ddcutil_status(operation_name, ddcutil_status, error_message);
     g_print("vcp_current_value: %d\n", vcp_current_value);
     g_print("vcp_max_value: %d\n", vcp_max_value);
     g_print("formatted_value: %s\n", vcp_formatted_value);
@@ -131,25 +154,32 @@ static op_status_t call_get_vcp(
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
 
-static op_status_t call_capabilities_metadata(GDBusConnection *connection, int display_number, const char *edid_txt) {
+/**
+ * @brief Implements capabilities, outputs indented capabilities structure with value-text to stdout
+ * @param connection dbus connection to ddcutil-service
+ * @param display_number ddcutil display number
+ * @param edid_base64 base64 encoded EDID or EDID-prefix
+ * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
+ */
+static cmd_status_t call_capabilities_metadata(GDBusConnection *connection, int display_number, const char *edid_base64) {
     const char * operation_name = "GetCapabilitiesMetadata";
     GError *error = NULL;
     GVariant *result;
-    guint flags = strlen(edid_txt) == 0 ? 0 : 1;
+    guint flags = strlen(edid_base64) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isu)", display_number, edid_txt, flags),
+                                         g_variant_new("(isu)", display_number, edid_base64, flags),
                                          G_VARIANT_TYPE("(syya{ys}a{y(ssa{ys})}is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
                                          NULL,
                                          &error);
 
-    op_status_t dbus_status = handle_dbus_error(operation_name, error);
+    cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
     if (dbus_status != COMPLETED_WITHOUT_ERROR) {
         return dbus_status;
     }
@@ -198,7 +228,14 @@ static op_status_t call_capabilities_metadata(GDBusConnection *connection, int d
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
 
-static op_status_t call_capabilities(GDBusConnection *connection, int display_number, const char *edid_txt) {
+/**
+ * @brief Implements terse capabilities, outputs bracket-structured capabilities structure to stdout
+ * @param connection dbus connection to ddcutil-service
+ * @param display_number ddcutil display number
+ * @param edid_base64 base64 encoded EDID or EDID-prefix
+ * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
+ */
+static cmd_status_t call_capabilities(GDBusConnection *connection, int display_number, const char *edid_txt) {
     const char * operation_name = "GetCapabilitiesString";
     GError *error = NULL;
     GVariant *result;
@@ -216,7 +253,7 @@ static op_status_t call_capabilities(GDBusConnection *connection, int display_nu
                                          NULL,
                                          &error);
 
-    op_status_t dbus_status = handle_dbus_error(operation_name, error);
+    cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
     if (dbus_status != COMPLETED_WITHOUT_ERROR) {
         return dbus_status;
     }
@@ -224,13 +261,18 @@ static op_status_t call_capabilities(GDBusConnection *connection, int display_nu
     const gchar *capabilties_text, *error_message;
     gint ddcutil_status;
     g_variant_get(result, "(sis)", &capabilties_text, &ddcutil_status, &error_message);
-    print_call_status(operation_name, ddcutil_status, error_message);
+    report_ddcutil_status(operation_name, ddcutil_status, error_message);
     g_print("%s\n", capabilties_text);
     g_variant_unref(result);
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
 
-static op_status_t call_detect(GDBusConnection *connection) {
+/**
+ * @brief Implements detect, outputs detected VDUs to stdout
+ * @param connection dbus connection to ddcutil-service
+ * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
+ */
+static cmd_status_t call_detect(GDBusConnection *connection) {
     const char * operation_name = "Detect";
     GError *error = NULL;
     GVariant *result;
@@ -247,7 +289,7 @@ static op_status_t call_detect(GDBusConnection *connection) {
                                          NULL,
                                          &error);
 
-    op_status_t dbus_status = handle_dbus_error(operation_name, error);
+    cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
     if (dbus_status != COMPLETED_WITHOUT_ERROR) {
         return dbus_status;
     }
@@ -260,7 +302,7 @@ static op_status_t call_detect(GDBusConnection *connection) {
 
     g_variant_get(result, "(ia(iiisssqsu)is)", &number_of_displays, &array_iter, &ddcutil_status, &error_message);
 
-    print_call_status(operation_name, ddcutil_status, error_message);
+    report_ddcutil_status(operation_name, ddcutil_status, error_message);
 
     g_print("number_of_displays: %d\n", number_of_displays);
 
@@ -296,7 +338,14 @@ static op_status_t call_detect(GDBusConnection *connection) {
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
 
-static int parse_int(char *input_str, int base, op_status_t *status) {
+/**
+ * Parse a command line int argument using strtol
+ * @param input_str the command line argument
+ * @param base base, such as 10 for decimal or 16 for hex
+ * @param status COMPLETED_WITHOUT_ERROR or SYNTAX_ERROR
+ * @return value from wrapped strtol conversion
+ */
+static int parse_int(char *input_str, int base, cmd_status_t *status) {
     char *end_ptr;
     errno = 0;
     int result = (int) strtol(input_str, &end_ptr, base);
@@ -306,9 +355,17 @@ static int parse_int(char *input_str, int base, op_status_t *status) {
     return result;
 }
 
-static op_status_t parse_display_and_edid(char *display_number_str, char *edid_txt, int *display_number) {
-    op_status_t exit_status = COMPLETED_WITHOUT_ERROR;
-    if (display_number_str == NULL && strlen(edid_txt) > 0) {
+/**
+ *
+ * @param display_number_str input display number string
+ * @param edid_base64
+ * @param display_number output integer display number
+ * @return COMPLETED_WITHOUT_ERROR or SYNTAX_ERROR
+ */
+static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_base64, int *display_number) {
+    cmd_status_t exit_status = COMPLETED_WITHOUT_ERROR;
+    // TODO check if EDID is too short
+    if (display_number_str == NULL && strlen(edid_base64) > 0) {
         *display_number = -1;
     }
     else {
@@ -358,7 +415,7 @@ int main(int argc, char *argv[]) {
         return DBUS_ERROR;
     }
 
-    op_status_t exit_status;
+    cmd_status_t exit_status;
 
     if (g_strcmp0(method, "detect") == 0) {
         exit_status = call_detect(connection);
