@@ -73,7 +73,7 @@ static op_status_t call_set_vcp(GDBusConnection *connection,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyqu)", display_number, edid_txt, vcp_code, vcp_new_value),
+                                         g_variant_new("(isyqu)", display_number, edid_txt, vcp_code, vcp_new_value, 1),
                                          G_VARIANT_TYPE("(is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -104,7 +104,7 @@ static op_status_t call_get_vcp(
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyu)", display_number, edid_txt, vcp_code, 0),
+                                         g_variant_new("(isyu)", display_number, edid_txt, vcp_code, 1),
                                          G_VARIANT_TYPE("(qqsis)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -139,7 +139,7 @@ static op_status_t call_capabilities_metadata(GDBusConnection *connection, int d
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isu)", display_number, edid_txt, 0),
+                                         g_variant_new("(isu)", display_number, edid_txt, 1),
                                          G_VARIANT_TYPE("(syya{ys}a{y(ssa{ys})}is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -205,7 +205,7 @@ static op_status_t call_capabilities(GDBusConnection *connection, int display_nu
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isu)", display_number, edid_txt, 0),
+                                         g_variant_new("(isu)", display_number, edid_txt, 1),
                                          G_VARIANT_TYPE("(sis)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
             {NULL}
     };
 
-    context = g_option_context_new("detect | capabilities | getvcp 0xNN | setvcp 0xNN n");
+    context = g_option_context_new("detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
     g_option_context_add_main_entries(context, entries, NULL);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("Error parsing options: %s\n", error->message);
@@ -383,7 +383,7 @@ int main(int argc, char *argv[]) {
     } else if (g_strcmp0(method, "getvcp") == 0) {
         int display_number = -1;
         exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
-        if (exit_status != COMPLETED_WITHOUT_ERROR) {
+        if (exit_status == COMPLETED_WITHOUT_ERROR) {
             if (!remaining_args[1]) {
                 g_printerr("You must provide a VCP code for getvcp.\n");
                 exit_status = SYNTAX_ERROR;
