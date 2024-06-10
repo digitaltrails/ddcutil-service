@@ -124,7 +124,7 @@ static const gchar introspection_xml[] = R"(
         When passing an EDID, pass -1 for display_number, otherwise both are tied with the display_number
         having precedence.
 
-        As a convienience for passing EDIDs using the command line, methods that accept an EDID
+        As a convenience for passing EDIDs using the command line, methods that accept an EDID
         identifier also accept a flag value which will cause the EDID passed to be matched as
         a prefix of a possible EDID (so all 128 bytes need not be entered).
 
@@ -342,7 +342,7 @@ static const gchar introspection_xml[] = R"(
         @error_message: Text message for error_status.
 
         Retrieve the capabilities metadata for a VDU in a format similar to that output by
-        the command ddcutil --terse capabilities (similar enough for parsing by common code).
+        the command ddcutil terse capabilities (similar enough for parsing by common code).
     -->
     <method name='GetCapabilitiesString'>
         <arg name='display_number' type='i' direction='in'/>

@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jun 10 11:03:02 2024 -->
+<!-- CreationDate: Mon Jun 10 16:16:17 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -240,16 +240,15 @@ methods a VDU can be specified by either passing the DDC
 display_number or DDC EDID. The EDID is the more stable
 identifier, it remains unchanged if the number of connected
 or powered&minus;up VDUs changes, whereas the DDCA display
-numbers may be reallocated. If passing an EDID, pass
-&minus;1 for display_number (otherwise both are tied with
-the display_number having precedence).</p>
+numbers may be reallocated. When passing an EDID, pass
+&minus;1 for display_number, otherwise both are tied with
+the display_number having precedence.</p>
 
-<p style="margin-left:9%; margin-top: 1em">As a
-convienience for passing EDIDs using the command line,
-methods that accept an EDID identifier also accept a flag
-value which will cause the EDID passed to be matched as a
-prefix of a possible EDID (so all 128 bytes need not be
-entered).</p>
+<p style="margin-left:9%; margin-top: 1em">As a convenience
+for passing EDIDs using the command line, methods that
+accept an EDID identifier also accept a flag value which
+will cause the EDID passed to be matched as a prefix of a
+possible EDID (so all 128 bytes need not be entered).</p>
 
 <h2>METHOD DETAILS
 <a name="METHOD DETAILS"></a>
@@ -785,7 +784,7 @@ OUT s error_message);</p>
 
 <p style="margin-left:9%; margin-top: 1em">Retrieve the
 capabilities metadata for a VDU in a format similar to that
-output by the ddcutil detect shell&minus;command (similar
+output by the command ddcutil terse capabilities (similar
 enough for parsing by common code).</p>
 
 <p style="margin-left:9%; margin-top: 1em">IN i
