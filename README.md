@@ -132,6 +132,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 
 ### Version History
 - 1.0.8
+  - Fixed a GetCapabilitiesMetadata bug that caused some VCP features to lack metadata values.
   - Fixed potential hot-plug/DPMS polling memory leaks and simplified event locking.
   - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
   - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.

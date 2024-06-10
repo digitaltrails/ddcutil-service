@@ -342,7 +342,7 @@ static const gchar introspection_xml[] = R"(
         @error_message: Text message for error_status.
 
         Retrieve the capabilities metadata for a VDU in a format similar to that output by
-        the ddcutil detect shell-command (similar enough for parsing by common code).
+        the command ddcutil --terse capabilities (similar enough for parsing by common code).
     -->
     <method name='GetCapabilitiesString'>
         <arg name='display_number' type='i' direction='in'/>
@@ -1497,13 +1497,12 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                                 char* value_name = "";
                                 if (metadata_ptr->sl_values != NULL) {
                                     for (const DDCA_Feature_Value_Entry* fve = metadata_ptr->sl_values;
-                                         fve->value_code != 0; fve++) {
+                                         fve->value_name != NULL; fve++) {
                                         if (fve->value_code == value_code) {
                                             g_debug("  ValueDef match feature %x value %d %s",
                                                     feature_def->feature_code, fve->value_code, fve->value_name);
-                                            g_variant_builder_add(value_dict_builder, "{ys}",
-                                                fve->value_code, fve->value_name);
                                             value_name = fve->value_name;
+                                            break;
                                         }
                                     }
                                 }
