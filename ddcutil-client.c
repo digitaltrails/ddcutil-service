@@ -67,13 +67,14 @@ static op_status_t call_set_vcp(GDBusConnection *connection,
     const char * operation_name = "SetVcp";
     GError *error = NULL;
     GVariant *result;
+    const guint flags = strlen(edid_txt) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyqu)", display_number, edid_txt, vcp_code, vcp_new_value, 1),
+                                         g_variant_new("(isyqu)", display_number, edid_txt, vcp_code, vcp_new_value, flags),
                                          G_VARIANT_TYPE("(is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -98,13 +99,14 @@ static op_status_t call_get_vcp(
     const char * operation_name = "GetVcp";
     GError *error = NULL;
     GVariant *result;
+    const guint flags = strlen(edid_txt) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyu)", display_number, edid_txt, vcp_code, 1),
+                                         g_variant_new("(isyu)", display_number, edid_txt, vcp_code, flags),
                                          G_VARIANT_TYPE("(qqsis)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -133,13 +135,14 @@ static op_status_t call_capabilities_metadata(GDBusConnection *connection, int d
     const char * operation_name = "GetCapabilitiesMetadata";
     GError *error = NULL;
     GVariant *result;
+    guint flags = strlen(edid_txt) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isu)", display_number, edid_txt, 1),
+                                         g_variant_new("(isu)", display_number, edid_txt, flags),
                                          G_VARIANT_TYPE("(syya{ys}a{y(ssa{ys})}is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -199,13 +202,14 @@ static op_status_t call_capabilities(GDBusConnection *connection, int display_nu
     const char * operation_name = "GetCapabilitiesString";
     GError *error = NULL;
     GVariant *result;
+    const guint flags = strlen(edid_txt) == 0 ? 0 : 1;
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isu)", display_number, edid_txt, 1),
+                                         g_variant_new("(isu)", display_number, edid_txt, flags),
                                          G_VARIANT_TYPE("(sis)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
