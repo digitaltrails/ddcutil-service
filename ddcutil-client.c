@@ -27,7 +27,7 @@
 #include <string.h>
 
 /**
- * Status numbers that might actually be returned from main()
+ * Status numbers that might be returned from main()
  * (as opposed to status numbers returned by dbus or libddcutil)
  */
 typedef enum cmd_status_values {
@@ -49,7 +49,7 @@ static char *const DBUS_INTERFACE_NAME = "com.ddcutil.DdcutilInterface";
  */
 static cmd_status_t handle_dbus_error(const char *operation_name, GError *error) {
     if (error) {
-        g_printerr("DBUS Error calling %s: %s\n", operation_name, error->message);
+        g_printerr("ERROR: DBUS Error calling %s: %s\n", operation_name, error->message);
         g_error_free(error);
         return DBUS_ERROR;
     }
@@ -363,11 +363,11 @@ static int parse_int(char *input_str, int base, cmd_status_t *status) {
  */
 static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_base64, int *display_number) {
     if (strlen(edid_base64) > 0 && strlen(edid_base64) < 12) {
-        g_printerr("Invalid EDID. It must be at least 12 characters long.\n");
+        g_printerr("ERROR: Invalid EDID. It must be at least 12 characters long.\n");
         return SYNTAX_ERROR;
     }
     if (display_number_str != NULL && strlen(edid_base64) > 0) {
-        g_printerr("Pass only one of Display Number or EDID, not both.\n");
+        g_printerr("ERROR: Pass only one of Display Number or EDID, not both.\n");
         return SYNTAX_ERROR;
     }
     if (strlen(edid_base64) > 0) {
@@ -375,14 +375,19 @@ static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_
         g_print("edid_base64_encoded: %s\n", edid_base64);
     }
     else { // Using Display Number, default to 1 if none passed
-        cmd_status_t parse_status = SYNTAX_ERROR;
-        int parsed_display_number = display_number_str != NULL ? parse_int(display_number_str, 10, &parse_status) : 1;
-        if (parse_status != 0) {
-            g_printerr("Invalid Display Number. It must be in decimal format (e.g., 1).\n");
-            return parse_status;
+        cmd_status_t parse_status = COMPLETED_WITHOUT_ERROR;
+        if (display_number_str != NULL) {
+            int parsed_display_number = parse_int(display_number_str, 10, &parse_status);
+            if (parse_status != 0) {
+                g_printerr("ERROR: Invalid Display Number. It must be in decimal format (e.g., 1).\n");
+                return parse_status;
+            }
+            *display_number = parsed_display_number;
         }
-        *display_number = parsed_display_number;
-        g_print("display_number: %d\n", parsed_display_number);
+        else {
+            *display_number = 1;
+        }
+        g_print("display_number: %d\n", *display_number);
     }
     return COMPLETED_WITHOUT_ERROR;
 }
@@ -404,13 +409,13 @@ int main(int argc, char *argv[]) {
     context = g_option_context_new("detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
     g_option_context_add_main_entries(context, entries, NULL);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
-        g_printerr("Error parsing options: %s\n", error->message);
+        g_printerr("ERROR: Error parsing options: %s\n", error->message);
         g_error_free(error);
         return SYNTAX_ERROR;
     }
 
     if (!remaining_args || !remaining_args[0]) {
-        g_printerr("You must provide a method (detect, getvcp, or setvcp) and appropriate arguments.\n");
+        g_printerr("ERROR: You must provide a method (detect, getvcp, or setvcp) and appropriate arguments.\n");
         return SYNTAX_ERROR;
     }
 
@@ -418,7 +423,7 @@ int main(int argc, char *argv[]) {
 
     GDBusConnection *connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
     if (!connection) {
-        g_printerr("Error connecting to session bus: %s\n", error->message);
+        g_printerr("ERROR: Error connecting to session bus: %s\n", error->message);
         g_error_free(error);
         return DBUS_ERROR;
     }
@@ -432,17 +437,17 @@ int main(int argc, char *argv[]) {
         exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
         if (exit_status == COMPLETED_WITHOUT_ERROR) {
             if (!remaining_args[1] || !remaining_args[2]) {
-                g_printerr("You must provide a VCP code and a new value for setvcp.\n");
+                g_printerr("ERROR: You must provide a VCP code and a new value for setvcp.\n");
                 exit_status = SYNTAX_ERROR;
             }
             else {
                 guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
                 if (exit_status != 0) {
-                    g_printerr("Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+                    g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
                 } else {
                     guint16 vcp_new_value = (guint16) parse_int(remaining_args[2], 10, &exit_status);
                     if (exit_status != 0) {
-                        g_printerr("Invalid new value. It must be in decimal (e.g. 80).\n");
+                        g_printerr("ERROR: Invalid new value. It must be in decimal (e.g. 80).\n");
                     } else {
                         exit_status = call_set_vcp(connection, display_number, edid_txt, vcp_code, vcp_new_value);
                     }
@@ -454,12 +459,12 @@ int main(int argc, char *argv[]) {
         exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
         if (exit_status == COMPLETED_WITHOUT_ERROR) {
             if (!remaining_args[1]) {
-                g_printerr("You must provide a VCP code for getvcp.\n");
+                g_printerr("ERROR: You must provide a VCP code for getvcp.\n");
                 exit_status = SYNTAX_ERROR;
             } else {
                 guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
                 if (exit_status != 0) {
-                    g_printerr("Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+                    g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
                 } else {
                     exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code);
                 }
@@ -478,7 +483,7 @@ int main(int argc, char *argv[]) {
             exit_status = call_capabilities(connection, display_number, edid_txt);
         }
     } else {
-        g_printerr("Unknown command: %s\n", method);
+        g_printerr("ERROR: Unknown command: %s\n", method);
         exit_status = SYNTAX_ERROR;
     }
 
