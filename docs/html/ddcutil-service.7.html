@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Mon Jun 10 16:16:17 2024 -->
+<!-- CreationDate: Tue Jun 11 16:36:56 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -244,11 +244,10 @@ numbers may be reallocated. When passing an EDID, pass
 &minus;1 for display_number, otherwise both are tied with
 the display_number having precedence.</p>
 
-<p style="margin-left:9%; margin-top: 1em">As a convenience
-for passing EDIDs using the command line, methods that
-accept an EDID identifier also accept a flag value which
-will cause the EDID passed to be matched as a prefix of a
-possible EDID (so all 128 bytes need not be entered).</p>
+<p style="margin-left:9%; margin-top: 1em">Methods that
+accept an base&minus;64 encoded EDID will accept a prefix of
+the EDID when passed a flags value of 1. This is intended as
+a convenience for passing EDIDs on the command line.</p>
 
 <h2>METHOD DETAILS
 <a name="METHOD DETAILS"></a>
@@ -1477,6 +1476,18 @@ is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as
 published by the Free Software Foundation; either version 2,
 or (at your option) any later version.</p>
+
+<p style="margin-left:9%; margin-top: 1em">This program is
+distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.</p>
+
+<p style="margin-left:9%; margin-top: 1em">You should have
+received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation,
+Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+02110&minus;1301 USA.</p>
 <hr>
 </body>
 </html>
