@@ -1,0 +1,68 @@
+.TH ddcutil-client 1 "ddcutil-client" "MH" \" -*- nroff -*-
+.SH NAME
+ddcutil-client \- a command-line client for managing VDU settings via ddcutil-service
+.SH SYNOPSIS
+.B ddcutil-client
+[\fIOPTION\fR]... \fICOMMAND\fR
+.SH DESCRIPTION
+\fBddcutil-client\fR is a command-line client of \fBddcutil-service\fP a service that can
+manage various settings of Visual Display Units (VDUs) using the DDC/CI protocol.
+
+.SH COMMANDS
+.TP
+.B detect
+Detect connected displays.
+.TP
+.B capabilities
+Display detailed capabilities of the specified display in a indented format and include value option names.
+.TP
+.B capabilities-terse
+Display concise capabilities of the specified display.
+.TP
+.B getvcp \fI0xNN\fR
+Get the value of the VCP code specified by \fI0xNN\fR.
+.TP
+.B setvcp \fI0xNN n\fR
+Set the value of the VCP code specified by \fI0xNN\fR to \fIn\fR.
+
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Show help options.
+.TP
+.B \-d, \-\-display=\fIDISPLAY_NUMBER\fR
+Specify the display number to control. Only one of \-\-display or \-\-edid should be provided.
+.TP
+.B \-e, \-\-edid=\fIEDID\fR
+Specify the base64 encoded EDID (Extended Display Identification Data) of the display.
+Only one of \-\-display or \-\-edid should be provided.
+A prefix of a valid EDID is also acceptable.
+
+Should a display number or EDID not be provided, the display number will default to 1.
+
+.SH EXAMPLES
+.TP
+.B ddcutil-client detect
+Detect all connected displays.
+.TP
+.B ddcutil-client \-d 1 capabilities
+Display detailed capabilities of display 1.
+.TP
+.B ddcutil-client \-d 1 getvcp 0x10
+Get the value of VCP code 0x10 (brightness) for display 1.
+.TP
+.B ddcutil-client \-d 1 setvcp 0x10 50
+Set the value of VCP code 0x10 (brightness) to 50 for display 1.
+
+.SH SEE ALSO
+.BR ddcutil (1),
+.BR ddcutil-service (1)
+
+.SH AUTHOR
+Michael Hamilton
+.SH LICENSE
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
