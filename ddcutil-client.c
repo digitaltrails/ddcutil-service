@@ -89,7 +89,8 @@ static cmd_status_t call_set_vcp(GDBusConnection *connection,
                                          DBUS_OBJECT_PATH,
                                          DBUS_INTERFACE_NAME,
                                          operation_name,  // Method name
-                                         g_variant_new("(isyqu)", display_number, edid_base64, vcp_code, vcp_new_value, flags),
+                                         g_variant_new("(isyqu)",
+                                                       display_number, edid_base64, vcp_code, vcp_new_value, flags),
                                          G_VARIANT_TYPE("(is)"),
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
@@ -349,34 +350,41 @@ static int parse_int(char *input_str, int base, cmd_status_t *status) {
     char *end_ptr;
     errno = 0;
     int result = (int) strtol(input_str, &end_ptr, base);
-    if (input_str == end_ptr || errno != 0) {
-        *status = SYNTAX_ERROR;
-    }
+    *status = (input_str == end_ptr || errno != 0) ? SYNTAX_ERROR: COMPLETED_WITHOUT_ERROR;
     return result;
 }
 
 /**
- *
- * @param display_number_str input display number string
- * @param edid_base64
+ * Parse an validate the display number string and base64 encoded edid (combo)
+ * @param display_number_str display number string, may be NULL
+ * @param edid_base64 EDID, may be the empty string
  * @param display_number output integer display number
  * @return COMPLETED_WITHOUT_ERROR or SYNTAX_ERROR
  */
 static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_base64, int *display_number) {
-    cmd_status_t exit_status = COMPLETED_WITHOUT_ERROR;
-    // TODO check if EDID is too short
-    if (display_number_str == NULL && strlen(edid_base64) > 0) {
-        *display_number = -1;
+    if (strlen(edid_base64) > 0 && strlen(edid_base64) < 12) {
+        g_printerr("Invalid EDID. It must be at least 12 characters long.\n");
+        return SYNTAX_ERROR;
     }
-    else {
-        errno = 0;
-        int parsed_display_number = display_number_str != NULL ? parse_int(display_number_str, 10, &exit_status) : 1;
-        if (exit_status != 0) {
+    if (display_number_str != NULL && strlen(edid_base64) > 0) {
+        g_printerr("Pass only one of Display Number or EDID, not both.\n");
+        return SYNTAX_ERROR;
+    }
+    if (strlen(edid_base64) > 0) {
+        *display_number = -1;  // Using EDID
+        g_print("edid_base64_encoded: %s\n", edid_base64);
+    }
+    else { // Using Display Number, default to 1 if none passed
+        cmd_status_t parse_status = SYNTAX_ERROR;
+        int parsed_display_number = display_number_str != NULL ? parse_int(display_number_str, 10, &parse_status) : 1;
+        if (parse_status != 0) {
             g_printerr("Invalid Display Number. It must be in decimal format (e.g., 1).\n");
+            return parse_status;
         }
         *display_number = parsed_display_number;
+        g_print("display_number: %d\n", parsed_display_number);
     }
-    return exit_status;
+    return COMPLETED_WITHOUT_ERROR;
 }
 
 int main(int argc, char *argv[]) {
