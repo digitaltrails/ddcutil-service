@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 06/10/2024
+.\"      Date: 06/11/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/10/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/11/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -175,7 +175,7 @@ Non\-standard manufacturer specific features should only be experimented with ca
 .PP
 For many of the methods a VDU can be specified by either passing the DDC display_number or DDC EDID\&. The EDID is the more stable identifier, it remains unchanged if the number of connected or powered\-up VDUs changes, whereas the DDCA display numbers may be reallocated\&. When passing an EDID, pass \-1 for display_number, otherwise both are tied with the display_number having precedence\&.
 .PP
-As a convenience for passing EDIDs using the command line, methods that accept an EDID identifier also accept a flag value which will cause the EDID passed to be matched as a prefix of a possible EDID (so all 128 bytes need not be entered)\&.
+Methods that accept an base\-64 encoded EDID will accept a prefix of the EDID when passed a flags value of 1\&. This is intended as a convenience for passing EDIDs on the command line\&.
 .SH "METHOD DETAILS"
 .SS "The Restart() method"
 .sp
@@ -1250,4 +1250,8 @@ Attempting to set this property when the service is configuration\-locked will r
 Copyright (C) 2023,2024 Michael Hamilton\&.
 .PP
 ddcutil\(hyservice is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2, or (at your option) any later version\&.
+.PP
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE\&. See the GNU General Public License for more details\&.
+.PP
+You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc\&., 51 Franklin Street, Fifth Floor, Boston, MA 02110\-1301 USA\&.
 .sp
