@@ -124,9 +124,8 @@ static const gchar introspection_xml[] = R"(
         When passing an EDID, pass -1 for display_number, otherwise both are tied with the display_number
         having precedence.
 
-        As a convenience for passing EDIDs using the command line, methods that accept an EDID
-        identifier also accept a flag value which will cause the EDID passed to be matched as
-        a prefix of a possible EDID (so all 128 bytes need not be entered).
+        Methods that accept an base-64 encoded EDID will accept a prefix of the EDID when passed
+        a flags value of 1.  This is intended as a convenience for passing EDIDs on the command line.
 
     -->
     <interface name='com.ddcutil.DdcutilInterface'>
