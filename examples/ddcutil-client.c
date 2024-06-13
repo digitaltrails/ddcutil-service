@@ -119,11 +119,11 @@ static cmd_status_t call_set_vcp(GDBusConnection *connection,
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
 static cmd_status_t call_get_vcp(
-        GDBusConnection *connection, int display_number, const char *edid_base64, guint8 vcp_code) {
+        GDBusConnection *connection, int display_number, const char *edid_base64, guint8 vcp_code, int raw) {
     const char * operation_name = "GetVcp";
     GError *error = NULL;
     GVariant *result;
-    const guint flags = strlen(edid_base64) == 0 ? 0 : 1;
+    const guint flags = (strlen(edid_base64) == 0 ? 0 : 1) | (raw ? 2 : 0);
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
@@ -398,10 +398,12 @@ int main(int argc, char *argv[]) {
     gchar *display_number_str = NULL;
     gchar *edid_txt = "";
     gchar **remaining_args = NULL;
+    gint raw = 0;
 
     GOptionEntry entries[] = {
             {"display", 'd', 0, G_OPTION_ARG_STRING, &display_number_str, "Display number", "DISPLAY_NUMBER"},
             {"edid", 'e', 0, G_OPTION_ARG_STRING, &edid_txt, "EDID", "EDID"},
+            {"snc-raw", 'r', 0, G_OPTION_ARG_NONE, &raw, "SNC raw 16-bits", "SNC_RAW"},
             {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_STRING_ARRAY, &remaining_args, NULL, NULL},
             {NULL}
     };
@@ -456,7 +458,7 @@ int main(int argc, char *argv[]) {
         }
     } else if (g_strcmp0(method, "getvcp") == 0) {
         int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number, raw);
         if (exit_status == COMPLETED_WITHOUT_ERROR) {
             if (!remaining_args[1]) {
                 g_printerr("ERROR: You must provide a VCP code for getvcp.\n");
@@ -466,7 +468,7 @@ int main(int argc, char *argv[]) {
                 if (exit_status != 0) {
                     g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
                 } else {
-                    exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code);
+                    exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code, raw);
                 }
             }
         }
