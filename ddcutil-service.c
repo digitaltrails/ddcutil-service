@@ -1577,8 +1577,8 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
     DDCA_Display_Info_List* info_list = NULL;
     DDCA_Display_Info* vdu_info = NULL; // pointer into info_list
     DDCA_Status status = get_display_info(display_number, edid_encoded, &info_list, &vdu_info, flags & EDID_PREFIX);
-    char* feature_name = "";
-    char* feature_description = "";
+    gchar* feature_name = NULL;
+    gchar* feature_description = NULL;
     bool is_read_only = false;
     bool is_write_only = false;
     bool is_rw = false;
@@ -1592,10 +1592,10 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
             status = ddca_get_feature_metadata_by_dh(vcp_code, disp_handle, true, &metadata_ptr);
             if (status == DDCRC_OK) {
                 if (metadata_ptr->feature_name != NULL) {
-                    feature_name = metadata_ptr->feature_name;
+                    feature_name = g_strdup(metadata_ptr->feature_name);
                 }
                 if (metadata_ptr->feature_desc != NULL) {
-                    feature_description = metadata_ptr->feature_desc;
+                    feature_description = g_strdup(metadata_ptr->feature_desc);
                 }
                 // if (metadata_ptr->sl_values != NULL) {  // TODO - not used, do we need it?
                 //   for (DDCA_Feature_Value_Entry *sl_ptr = metadata_ptr->sl_values; sl_ptr->value_code != 0; sl_ptr++)
@@ -1613,13 +1613,16 @@ static void get_vcp_metadata(GVariant* parameters, GDBusMethodInvocation* invoca
     }
     char* message_text = get_status_message(status);
     GVariant* result = g_variant_new("(ssbbbbbis)",
-                                     feature_name, feature_description,
+                                     feature_name != NULL ? feature_name : "<no_name>",
+                                     feature_description != NULL ? feature_description : "",
                                      is_read_only, is_write_only, is_rw, is_complex, is_continuous,
                                      status, status == DDCRC_OK ? "OK" : message_text);
     g_dbus_method_invocation_return_value(invocation, result); // Think this frees the result
     ddca_free_display_info_list(info_list);
     ddca_free_feature_metadata(metadata_ptr);
     g_free(edid_encoded);
+    g_free(feature_name);
+    g_free(feature_description);
     free(message_text);
 }
 
