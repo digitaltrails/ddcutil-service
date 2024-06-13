@@ -12,15 +12,23 @@ CFLAGS_DDCUTIL = $(shell pkg-config --cflags --libs ddcutil)
 CFLAGS += -g -std=gnu11 -Werror -Wall -Wformat-security -Og
 SOURCE = ddcutil-service.c
 EXE = ddcutil-service
+
+# The client is an optional deployable
+CLIENT_EXE = ddcutil-client
+CLIENT_SOURCE = ddcutil-client.c
+
 PREFIX = $(HOME)/.local
 BIN_DIR = $(PREFIX)/bin
 SERVICE_FILE = com.ddcutil.DdcutilService.service
 SERVICES_DIR = $(PREFIX)/share/dbus-1/services
 
-all: $(SOURCE) $(EXE) $(HTML)
+all: $(SOURCE) $(EXE) $(CLIENT_EXE) $(HTML)
 
 $(EXE): $(SOURCE)
 	gcc $< -o $@ $(CFLAGS) $(CFLAGS_GIO) $(CFLAGS_DDCUTIL)
+
+$(CLIENT_EXE): $(CLIENT_SOURCE)
+	gcc $< -o $@ $(CFLAGS) $(CFLAGS_GIO)
 
 install: $(EXE)
 	sed 's?/usr/bin/?$(BIN_DIR)/?' < $(SERVICE_FILE) > $(SERVICE_FILE).tmp

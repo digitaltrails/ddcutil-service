@@ -115,6 +115,13 @@ without the service file being installed.
 The `vdu_controls` GUI has been modified to use the service by default, see:
 https://github.com/digitaltrails/vdu_controls
 
+### Optional ddcutil-client
+
+The source includes an `ddcutil-client` (`ddcutil-client.c` and 
+man page `ddcutil-client.1`).   Deployment of the client is optional,
+if `busctrl` or `dbus-send` is available, they will be about as fast,
+a purpose built client is mostly a convenience.
+
 ### Acknowledgements
 
 Thanks go out to Sanford Rockowitz ([rockowitz](https://github.com/rockowitz)) 
@@ -133,12 +140,13 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 ### Version History
 - 1.0.8
   - Fixed a GetCapabilitiesMetadata bug that caused some VCP features to lack metadata values.
+  - Fixed the return of feature-name and feature-description from GetVcpMetadata.
   - Fixed potential hot-plug/DPMS polling memory leaks and simplified event locking.
   - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
   - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.
   - Updated documentation to caution against excessive updates when coding loops, as this may impact VDU NVRAM lifespan.
   - Updated documentation to caution against experimenting with non-standard features, as it may risk damage to the VDU.
-  - Added examples/ddcutil-client.c
+  - Added ddcutil-client, an option fast counterpart to ddcutil (unnecessary if busctl or dbus-send are sufficient). 
 - 1.0.7
   - Slightly improved setvcp diagnostics.
   - Fix methods failing with return code DDCRC_OTHER (-3022) when only some i2c devices are accessible.

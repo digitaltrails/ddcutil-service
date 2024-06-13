@@ -37,9 +37,24 @@ typedef enum cmd_status_values {
     SYNTAX_ERROR = 3,
 } cmd_status_t;
 
+/* ----------------------------------------------------------------------------------------------------
+ * Bit flags that can be passed in the service method flags argument.
+ */
+typedef enum {
+    EDID_PREFIX = 1,        // Indicates the EDID passed to the service is a unique prefix (substr) of the actual EDID.
+    RETURN_RAW_VALUES = 2,  // GetVcp GetMultipleVcp
+    NO_VERIFY = 4,          // SetVcp
+
+} Service_Flags_Enum_t;
+
+
 static char *const DBUS_BUS_NAME = "com.ddcutil.DdcutilService";
 static char *const DBUS_OBJECT_PATH = "/com/ddcutil/DdcutilObject";
 static char *const DBUS_INTERFACE_NAME = "com.ddcutil.DdcutilInterface";
+
+static char *boolean_value(int bool) {
+    return bool ? "true" : "false";
+}
 
 /**
  * @brief Output the dbus error to stderr and translated the status code to cmd_status_t
@@ -79,7 +94,7 @@ static void report_ddcutil_status(const char *operation_name, gint ddcutil_statu
  */
 static cmd_status_t call_set_vcp(GDBusConnection *connection,
                                  int display_number, const char *edid_base64, guint8 vcp_code, guint16 vcp_new_value) {
-    const char * operation_name = "SetVcp";
+    const char *operation_name = "SetVcp";
     GError *error = NULL;
     GVariant *result;
     const guint flags = strlen(edid_base64) == 0 ? 0 : 1;
@@ -96,7 +111,7 @@ static cmd_status_t call_set_vcp(GDBusConnection *connection,
                                          -1,
                                          NULL,
                                          &error);
-    
+
     cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
     if (dbus_status != COMPLETED_WITHOUT_ERROR) {
         return dbus_status;
@@ -116,15 +131,16 @@ static cmd_status_t call_set_vcp(GDBusConnection *connection,
  * @param display_number ddcutil display number
  * @param edid_base64 base64 encoded EDID or EDID-prefix
  * @param vcp_code DDC VCP-code
- * @param raw whether to return SNC-features as raw 16-bit values
+ * @param flags
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
 static cmd_status_t call_get_vcp(
-        GDBusConnection *connection, int display_number, const char *edid_base64, guint8 vcp_code, int raw) {
-    const char * operation_name = "GetVcp";
+        GDBusConnection *connection, int display_number, const char *edid_base64, guint8 vcp_code,
+        Service_Flags_Enum_t flags) {
+    const char *operation_name = "GetVcp";
     GError *error = NULL;
     GVariant *result;
-    const guint flags = (strlen(edid_base64) == 0 ? 0 : 1) | (raw ? 2 : 0);
+    flags |= (strlen(edid_base64) == 0 ? 0 : EDID_PREFIX);  // Allow EDID prefix matches
 
     result = g_dbus_connection_call_sync(connection,
                                          DBUS_BUS_NAME,
@@ -149,10 +165,70 @@ static cmd_status_t call_get_vcp(
     g_variant_get(result, "(qqsis)",
                   &vcp_current_value, &vcp_max_value, &vcp_formatted_value, &ddcutil_status, &error_message);
     report_ddcutil_status(operation_name, ddcutil_status, error_message);
-    g_print("snc_16bit: %s\n", raw ? "true" : "false");
+    g_print("snc_16bit: %s\n", boolean_value(flags & RETURN_RAW_VALUES));
     g_print("vcp_current_value: %d\n", vcp_current_value);
     g_print("vcp_max_value: %d\n", vcp_max_value);
     g_print("formatted_value: %s\n", vcp_formatted_value);
+    g_variant_unref(result);
+    return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
+}
+
+/**
+ * @brief Implement getvcp, outputs result to stdout
+ * @param connection dbus connection to ddcutil-service
+ * @param display_number ddcutil display number
+ * @param edid_base64 base64 encoded EDID or EDID-prefix
+ * @param vcp_code DDC VCP-code
+ * @param flags
+ * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
+ */
+static cmd_status_t call_get_vcp_metadata(
+        GDBusConnection *connection, int display_number, const char *edid_base64, guint8 vcp_code) {
+    const char *operation_name = "GetVcpMetadata";
+    GError *error = NULL;
+    GVariant *result;
+    const int flags = (strlen(edid_base64) == 0 ? 0 : EDID_PREFIX);  // Allow EDID prefix matches
+
+    result = g_dbus_connection_call_sync(connection,
+                                         DBUS_BUS_NAME,
+                                         DBUS_OBJECT_PATH,
+                                         DBUS_INTERFACE_NAME,
+                                         operation_name,  // Method name
+                                         g_variant_new("(isyu)", display_number, edid_base64, vcp_code, flags),
+                                         G_VARIANT_TYPE("(ssbbbbbis)"),
+                                         G_DBUS_CALL_FLAGS_NONE,
+                                         -1,
+                                         NULL,
+                                         &error);
+
+    cmd_status_t dbus_status = handle_dbus_error(operation_name, error);
+    if (dbus_status != COMPLETED_WITHOUT_ERROR) {
+        return dbus_status;
+    }
+
+    gchar *feature_name;
+    gchar *feature_description;
+    gboolean is_read_only;
+    gboolean is_write_only;
+    gboolean is_rw;
+    gboolean is_complex;
+    gboolean is_continuous;
+
+    const gchar *error_message;
+    gint ddcutil_status;
+    g_variant_get(result, "(ssbbbbbis)",
+                  &feature_name, &feature_description,
+                  &is_read_only, &is_write_only, &is_rw, &is_complex, &is_continuous,
+                  &ddcutil_status, &error_message);
+    report_ddcutil_status(operation_name, ddcutil_status, error_message);
+    g_print("vcp_code: 0x%x\n", vcp_code);
+    g_print("feature_name: %s\n", feature_name);
+    g_print("feature_description: %s\n", feature_description);
+    g_print("is_read_only: %s\n", boolean_value(is_read_only));
+    g_print("is_write_only: %s\n", boolean_value(is_write_only));
+    g_print("is_rw: %s\n", boolean_value(is_rw));
+    g_print("is_complex: %s\n", boolean_value(is_complex));
+    g_print("is_continuous: %s\n", boolean_value(is_continuous));
     g_variant_unref(result);
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
@@ -164,8 +240,9 @@ static cmd_status_t call_get_vcp(
  * @param edid_base64 base64 encoded EDID or EDID-prefix
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
-static cmd_status_t call_capabilities_metadata(GDBusConnection *connection, int display_number, const char *edid_base64) {
-    const char * operation_name = "GetCapabilitiesMetadata";
+static cmd_status_t call_capabilities_metadata(
+        GDBusConnection *connection, int display_number, const char *edid_base64) {
+    const char *operation_name = "GetCapabilitiesMetadata";
     GError *error = NULL;
     GVariant *result;
     guint flags = strlen(edid_base64) == 0 ? 0 : 1;
@@ -194,7 +271,8 @@ static cmd_status_t call_capabilities_metadata(GDBusConnection *connection, int 
     const gchar *error_message;
 
     g_variant_get(result, "(syya{ys}a{y(ssa{ys})}is)",
-                  &model_name, &mccs_major, &mccs_minor, &commands_iter, &capabilities_iter, &ddcutil_status, &error_message);
+                  &model_name, &mccs_major, &mccs_minor, &commands_iter, &capabilities_iter, &ddcutil_status,
+                  &error_message);
 
     g_print("model_name: %s\n", model_name);
     g_print("mccs_major: %d\n", mccs_major);
@@ -212,7 +290,8 @@ static cmd_status_t call_capabilities_metadata(GDBusConnection *connection, int 
     guint8 cap_key;
     const gchar *cap_name, *cap_description;
     GVariantIter *cap_commands_iter = NULL;
-    while (g_variant_iter_loop(capabilities_iter, "{y(ssa{ys})}", &cap_key, &cap_name, &cap_description, &cap_commands_iter)) {
+    while (g_variant_iter_loop(capabilities_iter, "{y(ssa{ys})}", &cap_key, &cap_name, &cap_description,
+                               &cap_commands_iter)) {
         g_print("  capability: 0x%x, Name: %s, Description: %s\n", cap_key, cap_name, cap_description);
 
         guint8 subcmd_key;
@@ -239,7 +318,7 @@ static cmd_status_t call_capabilities_metadata(GDBusConnection *connection, int 
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
 static cmd_status_t call_capabilities(GDBusConnection *connection, int display_number, const char *edid_txt) {
-    const char * operation_name = "GetCapabilitiesString";
+    const char *operation_name = "GetCapabilitiesString";
     GError *error = NULL;
     GVariant *result;
     const guint flags = strlen(edid_txt) == 0 ? 0 : 1;
@@ -276,7 +355,7 @@ static cmd_status_t call_capabilities(GDBusConnection *connection, int display_n
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
 static cmd_status_t call_detect(GDBusConnection *connection) {
-    const char * operation_name = "Detect";
+    const char *operation_name = "Detect";
     GError *error = NULL;
     GVariant *result;
 
@@ -352,7 +431,7 @@ static int parse_int(char *input_str, int base, cmd_status_t *status) {
     char *end_ptr;
     errno = 0;
     int result = (int) strtol(input_str, &end_ptr, base);
-    *status = (input_str == end_ptr || errno != 0) ? SYNTAX_ERROR: COMPLETED_WITHOUT_ERROR;
+    *status = (input_str == end_ptr || errno != 0) ? SYNTAX_ERROR : COMPLETED_WITHOUT_ERROR;
     return result;
 }
 
@@ -375,8 +454,7 @@ static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_
     if (strlen(edid_base64) > 0) {
         *display_number = -1;  // Using EDID
         g_print("edid_base64_encoded: %s\n", edid_base64);
-    }
-    else { // Using Display Number, default to 1 if none passed
+    } else { // Using Display Number, default to 1 if none passed
         cmd_status_t parse_status = COMPLETED_WITHOUT_ERROR;
         if (display_number_str != NULL) {
             int parsed_display_number = parse_int(display_number_str, 10, &parse_status);
@@ -385,8 +463,7 @@ static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_
                 return parse_status;
             }
             *display_number = parsed_display_number;
-        }
-        else {
+        } else {
             *display_number = 1;
         }
         g_print("display_number: %d\n", *display_number);
@@ -403,11 +480,11 @@ int main(int argc, char *argv[]) {
     gint raw = 0;
 
     GOptionEntry entries[] = {
-        {"display", 'd', 0, G_OPTION_ARG_STRING, &display_number_str, "Display number", "DISPLAY_NUMBER"},
-        {"edid", 'e', 0, G_OPTION_ARG_STRING, &edid_txt, "EDID", "EDID"},
-        {"snc-raw", 'r', 0, G_OPTION_ARG_NONE, &raw, "getvcp returns SNC-features as raw 16-bit values", NULL},
-        {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_STRING_ARRAY, &remaining_args, NULL, NULL},
-        {NULL}
+            {"display",          'd', 0, G_OPTION_ARG_STRING,       &display_number_str, "Display number", "DISPLAY_NUMBER"},
+            {"edid",             'e', 0, G_OPTION_ARG_STRING,       &edid_txt,           "EDID",           "EDID"},
+            {"raw",              'r', 0, G_OPTION_ARG_NONE,         &raw,                "getvcp returns SNC-features as raw 16-bit values", NULL},
+            {G_OPTION_REMAINING, 0,   0, G_OPTION_ARG_STRING_ARRAY, &remaining_args,     NULL, NULL},
+            {NULL}
     };
 
     context = g_option_context_new("detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
@@ -443,8 +520,7 @@ int main(int argc, char *argv[]) {
             if (!remaining_args[1] || !remaining_args[2]) {
                 g_printerr("ERROR: You must provide a VCP code and a new value for setvcp.\n");
                 exit_status = SYNTAX_ERROR;
-            }
-            else {
+            } else {
                 guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
                 if (exit_status != 0) {
                     g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
@@ -470,7 +546,24 @@ int main(int argc, char *argv[]) {
                 if (exit_status != 0) {
                     g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
                 } else {
-                    exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code, raw);
+                    exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code,
+                                               raw ? RETURN_RAW_VALUES : 0);
+                }
+            }
+        }
+    } else if (g_strcmp0(method, "getvcp-metadata") == 0) {
+        int display_number = -1;
+        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+        if (exit_status == COMPLETED_WITHOUT_ERROR) {
+            if (!remaining_args[1]) {
+                g_printerr("ERROR: You must provide a VCP code for getvcp-metadata.\n");
+                exit_status = SYNTAX_ERROR;
+            } else {
+                guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
+                if (exit_status != 0) {
+                    g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+                } else {
+                    exit_status = call_get_vcp_metadata(connection, display_number, edid_txt, vcp_code);
                 }
             }
         }

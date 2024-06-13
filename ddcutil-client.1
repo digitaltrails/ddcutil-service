@@ -8,6 +8,18 @@ ddcutil-client \- a command-line client for managing VDU settings via ddcutil-se
 \fBddcutil-client\fR is a command-line client of \fBddcutil-service\fP a service that can
 manage various settings of Visual Display Units (VDUs) using the DDC/CI protocol.
 
+This client uses the service to provide a fast counterpart to the \fBddcutil\fP command.
+If the \fBddcutil-service\fP is already initialised, \fBddcutil-client\fR may perform
+some operations up to 30 times faster than \fBddcutil\fP.
+
+\fBWhen using this service, avoid excessively writing VCP values because each VDU's NVRAM
+likely has a write-cycle limit/lifespan. The suggested guideline is to limit updates
+to rates comparable to those observed when using the VDU's onboard controls. Avoid coding
+that might rapidly or infinitely loop, including when recovering from errors and bugs.\fP
+
+\fBNon-standard manufacturer specific features should only be experimented with caution,
+some may have irreversible consequences, including bricking the hardware.\fP
+
 .SH COMMANDS
 .TP
 .B detect
@@ -24,6 +36,9 @@ Get the value of the VCP code specified by \fI0xNN\fR.
 .TP
 .B setvcp \fI0xNN n\fR
 Set the value of the VCP code specified by \fI0xNN\fR to \fIn\fR.
+.TP
+.B getvcp-metadata \fI0xNN
+Get the metadata for the VCP code specified by \fI0xNN\fR.
 
 .SH OPTIONS
 .TP
@@ -37,22 +52,37 @@ Specify the display number to control. Only one of \-\-display or \-\-edid shoul
 Specify the base64 encoded EDID (Extended Display Identification Data) of the display.
 Only one of \-\-display or \-\-edid should be provided.
 A prefix of a valid EDID is also acceptable.
-
-Should a display number or EDID not be provided, the display number will default to 1.
+.TP
+.B \-r, \-\-raw
+Force getvcp to return SNC-features as raw 16-bit values (SNCs default to 8-bit bits).
+.TP
+If neither display number nor EDID are provided, the display number will default to 1.
 
 .SH EXAMPLES
-.TP
-.B ddcutil-client detect
-Detect all connected displays.
-.TP
-.B ddcutil-client \-d 1 capabilities
-Display detailed capabilities of display 1.
-.TP
-.B ddcutil-client \-d 1 getvcp 0x10
-Get the value of VCP code 0x10 (brightness) for display 1.
-.TP
-.B ddcutil-client \-d 1 setvcp 0x10 50
-Set the value of VCP code 0x10 (brightness) to 50 for display 1.
+
+.B Detect all connected displays.
+.nf
+        ddcutil-client detect
+.fi
+
+.B Display detailed capabilities of display 1.
+.nf
+         ddcutil-client \-d 1 capabilities
+.fi
+
+.B Get the value of VCP code 0x10 (brightness) for display 1.
+.nf
+        ddcutil-client \-d 1 getvcp 0x10
+.fi
+
+.B Set the value of VCP code 0x10 (brightness) to 50 for display 1.
+.nf
+        ddcutil-client \-d 1 setvcp 0x10 50
+.fi
+
+.SH LIMITATIONS
+
+See  \fBddcutil-service (1) LIMITATIONS\fP.
 
 .SH SEE ALSO
 .BR ddcutil (1),
