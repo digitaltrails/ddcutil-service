@@ -146,7 +146,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
   - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.
   - Updated documentation to caution against excessive updates when coding loops, as this may impact VDU NVRAM lifespan.
   - Updated documentation to caution against experimenting with non-standard features, as it may risk damage to the VDU.
-  - Added ddcutil-client, an option fast counterpart to ddcutil (unnecessary if busctl or dbus-send are sufficient). 
+  - Added ddcutil-client, an optional fast counterpart to ddcutil (unnecessary if busctl or dbus-send are sufficient). 
 - 1.0.7
   - Slightly improved setvcp diagnostics.
   - Fix methods failing with return code DDCRC_OTHER (-3022) when only some i2c devices are accessible.
