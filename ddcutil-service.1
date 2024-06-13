@@ -638,47 +638,44 @@ can be used to interact with the service.
 
 .SH LIMITATIONS
 
-Some VDUs are not standards compliant.  In some cases, non-compliance
-can vary to the extent that only a service client can deal with it,
-and often only by by requiring additional user supplied metadata.
+Some VDUs are not fully DDC compliant.  In some cases issues raised
+by non-compliance can only be resolved at the client-level,
+often by requiring the user to provide additional metadata.
 For example, the \fBvdu_controls\fP client allows the user to
 edit/override the service supplied capabilities-metadata.
 
-In some cases VDUs may not comply with the specified data-type for
-single-byte \fBSimple Non Continuous\fP values, this includes values
-such as the VDU input-source or OSD-language. SNC values are supposed
-to be 8 bits only and are passed in the low-byte of the the 16 bit values returned
-by the VDU.   The 16-bit values are masked to remove the high-byte because
-some VDUs don't zero the unused high-byte, which means unmasked 16 bit
-SNC values will sometimes fail to match 8-bit value declared in VDU capabilities-metadata.
-However, there are other VDUs that disregard the SNC 8 bit restriction and set the high-byte
-to a significant value, which means masking is inappropriate in some cases.
-The service defaults to standard-compliance and masks off the high-byte.
-To allow for the less common second case,
-the \fBGetVcp\fP and \fBGetMultipleVcp\fP methods support the
-\fBRETURN_RAW_VALUES\fP flag which forces the return of the original 16 bit values.
-This provides the client with an opportunity to take responsibility for
-disambiguating each case by applying heuristics or by consulting additional
-user supplied metadata. Note that the \fBSetVcp\fP counterpart always accepts
-full 16 bit values and passes them unaltered to the VDU.
+Some VDUs differ in how they treat the data-type for
+\fBSimple-Non-Continuous\fP values.  SNC values are used for
+features such as the \fIInput-Source\fP or \fIOSD-language\fP. According
+to the DDC specification, SNC values
+should be 8-bit values passed in the low-byte of a 16-bit value.
 
-The service may fail to determine working options for the
-.B ConnectedDisplaysChanged
-signal for some mixes of VPUs and GPUs (some hardware/drivers
-misreport their capabilities).
-If signals are not being raised, try manually adding
-.B --prefer-polling
-option, this option is not the most responsive, but it is
-the one most likely to always work.
+Some VDUs don't zero the SNC high-byte.  This may cause a mismatch with
+the values specified in the VDU metadata.
+The service handles this by defaulting to masking off the high-byte of SNC values.
 
-Some GPU drivers and VDUs have buggy implementations of DDC. If you have the choice,
-a
+Some VDUs return SNC values
+where both the low and high byte are significant.
+The \fBGetVcp\fP and \fBGetMultipleVcp\fP methods support the
+\fBRETURN_RAW_VALUES\fP flag to force the return of unmasked 16-bit values.
+This allows clients to apply heuristics or use additional
+metadata to handle such cases. The \fBSetVcp\fP counterpart always accepts
+full 16-bit values and passes them unaltered to the VDU.
+
+Some mixes of VPUs and GPUs don't consistently update
+DRM metadata for hot-plug events.  If \fBConnectedDisplaysChanged\fP
+signals are not being raised, try manually adding \fB--prefer-polling\fP
+option, to force the service to poll for changes.  Polling is less responsive,
+but it doesn't require DRM, and is likely to always work.
+
+Some GPU drivers and VDUs have buggy implementations of DDC.
+If you have the choice, a
 .B DisplayPort to DisplayPort
 connection may work more reliably than
 .B DVI,
 .B HDMI
 or mixed connectors.
-Different GPU driver editions, such as production, beta, and development, may
+In some cases GPU driver editions, such as production, beta, and development, may
 vary in the state of their DDC support.
 
 Some
@@ -695,7 +692,7 @@ become familiar with the \fBlibddcutil\fP configuration options normally
 stored in $HOME/.config/ddcutil/ddcutilrc and documented at
 \fIhttps://www.ddcutil.com/config_file/\fP.
 
-The service wraps \fBlibddcutil\fP.  In some cases \fBlibddcutil\fP has been found to
+In some cases \fBlibddcutil\fP has been found to
 perform differently from the \fBddcutil\fP command. If the service has
 problems with a VDU, it's worth trying the ddcutil command to see if
 it differs in result and to include those details in any issue raised.
