@@ -116,6 +116,7 @@ static cmd_status_t call_set_vcp(GDBusConnection *connection,
  * @param display_number ddcutil display number
  * @param edid_base64 base64 encoded EDID or EDID-prefix
  * @param vcp_code DDC VCP-code
+ * @param raw whether to return SNC-features as raw 16-bit values
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
 static cmd_status_t call_get_vcp(
