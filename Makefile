@@ -37,4 +37,4 @@ install: $(EXE)
 	install $(EXE) $(BIN_DIR)
 
 clean:
-	rm -f $(EXE)
+	rm -f $(EXE) $(CLIENT_EXE)
