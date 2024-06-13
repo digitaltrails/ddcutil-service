@@ -148,6 +148,7 @@ static cmd_status_t call_get_vcp(
     g_variant_get(result, "(qqsis)",
                   &vcp_current_value, &vcp_max_value, &vcp_formatted_value, &ddcutil_status, &error_message);
     report_ddcutil_status(operation_name, ddcutil_status, error_message);
+    g_print("snc_16bit: %s\n", raw ? "true" : "false");
     g_print("vcp_current_value: %d\n", vcp_current_value);
     g_print("vcp_max_value: %d\n", vcp_max_value);
     g_print("formatted_value: %s\n", vcp_formatted_value);
@@ -401,11 +402,11 @@ int main(int argc, char *argv[]) {
     gint raw = 0;
 
     GOptionEntry entries[] = {
-            {"display", 'd', 0, G_OPTION_ARG_STRING, &display_number_str, "Display number", "DISPLAY_NUMBER"},
-            {"edid", 'e', 0, G_OPTION_ARG_STRING, &edid_txt, "EDID", "EDID"},
-            {"snc-raw", 'r', 0, G_OPTION_ARG_NONE, &raw, "SNC raw 16-bits", "SNC_RAW"},
-            {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_STRING_ARRAY, &remaining_args, NULL, NULL},
-            {NULL}
+        {"display", 'd', 0, G_OPTION_ARG_STRING, &display_number_str, "Display number", "DISPLAY_NUMBER"},
+        {"edid", 'e', 0, G_OPTION_ARG_STRING, &edid_txt, "EDID", "EDID"},
+        {"snc-raw", 'r', 0, G_OPTION_ARG_NONE, &raw, "getvcp returns SNC-features as raw 16-bit values", NULL},
+        {G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_STRING_ARRAY, &remaining_args, NULL, NULL},
+        {NULL}
     };
 
     context = g_option_context_new("detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
@@ -458,7 +459,7 @@ int main(int argc, char *argv[]) {
         }
     } else if (g_strcmp0(method, "getvcp") == 0) {
         int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number, raw);
+        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
         if (exit_status == COMPLETED_WITHOUT_ERROR) {
             if (!remaining_args[1]) {
                 g_printerr("ERROR: You must provide a VCP code for getvcp.\n");
