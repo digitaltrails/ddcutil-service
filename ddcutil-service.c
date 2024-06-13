@@ -2217,6 +2217,22 @@ typedef struct {
     gboolean dpms_awake;
 } Poll_List_Item;
 
+/**
+ * @brief wrap atomic exchange to allow support of glib2 prior to 2.74
+ * @param target address of pointer to modify
+ * @param newval pointer to new value
+ * @return old value pointer to old value (original *target)
+ */
+static gpointer atomic_event_exchange(Event_Data_Type **target, gpointer newval) {
+#if GLIB_CHECK_VERSION(2, 74, 0)
+    return g_atomic_pointer_exchange(target, newval);
+#else
+    Event_Data_Type *old = *target;
+    const gboolean swapped_ok = g_atomic_pointer_compare_and_exchange(target, old, newval);
+    return swapped_ok ? old : NULL;
+#endif
+}
+
 static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
     const gchar* target_str = (char *)target;
     const Poll_List_Item* item = (Poll_List_Item *)item_ptr;
@@ -2296,7 +2312,7 @@ static bool poll_for_changes() {
                                 event->event_type =
                                     vdu_poll_data->dpms_awake ? DDCA_EVENT_DPMS_AWAKE : DDCA_EVENT_DPMS_ASLEEP;
                                 event->dref = vdu_info->dref;
-                                g_free(g_atomic_pointer_exchange(&signal_event_data, event));  // keep latest only
+                                g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
                                 event_is_ready = TRUE; // Only one event on each poll - terminate loop
                             }
                         }
@@ -2315,7 +2331,7 @@ static bool poll_for_changes() {
                             g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
                             Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                             event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
-                            g_free(g_atomic_pointer_exchange(&signal_event_data, event));  // keep latest only
+                            g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
                             event_is_ready = TRUE; // Only one event on each poll - terminate loop
                         }
                     }
@@ -2328,7 +2344,7 @@ static bool poll_for_changes() {
                         g_message("Poll signal event - disconnected %.30s...\n", vdu_poll_data->edid_encoded);
                         Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
                         event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
-                        g_free(g_atomic_pointer_exchange(&signal_event_data, event));  // keep latest only
+                        g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
                         g_free(vdu_poll_data->edid_encoded);
                         g_free(vdu_poll_data);
                         poll_list = g_list_delete_link(poll_list, ptr);
@@ -2428,7 +2444,7 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
         g_warning("chg_signal_dispatch: null D-Bus connection");
         return TRUE;
     }
-    Event_Data_Type* event_ptr = g_atomic_pointer_exchange(&signal_event_data, NULL);
+    Event_Data_Type* event_ptr = atomic_event_exchange(&signal_event_data, NULL);
     g_info("chg_signal_dispatch: processing event, obtained %s", event_ptr == NULL ? "NULL event data" : "event data");
     gchar* edid_encoded;
     int int_event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
@@ -2508,7 +2524,7 @@ static void display_status_event_callback(DDCA_Display_Status_Event event) {
     *event_copy = event;
     // Save for processing by our GMainLoop custom source
     // Only handling single most recent events for now - discard old event
-    g_free(g_atomic_pointer_exchange(&signal_event_data, event_copy));
+    g_free(atomic_event_exchange(&signal_event_data, event_copy));
 }
 #endif
 
@@ -2736,6 +2752,7 @@ int main(int argc, char* argv[]) {
         g_warning("libddcutil %s does not support calling ddca_init %d %d '%s'",
                   ddca_ddcutil_extended_version_string(), ddca_syslog_level, ddca_init_options, arg_string);
     }
+    g_free(arg_string);
 #endif
 
     ddcutil_service_status = verify_i2c_dev();
