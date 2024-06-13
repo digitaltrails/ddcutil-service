@@ -118,9 +118,10 @@ https://github.com/digitaltrails/vdu_controls
 ### Optional ddcutil-client
 
 The source includes an `ddcutil-client` (`ddcutil-client.c` and 
-man page `ddcutil-client.1`).   Deployment of the client is optional.
-If `busctl` or `dbus-send` is available, they will be about as fast,
-a purpose built client is mostly a convenience.
+man page `ddcutil-client.1`).  Packaging and deployment of the client is optional.
+If `busctl` or `dbus-send` is available, they will be about as fast.
+A purpose built client is mostly a convenience for those that might
+want a syntatically straight forward command line interface.  
 
 ### Acknowledgements
 
