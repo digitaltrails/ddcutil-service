@@ -139,7 +139,7 @@ The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
-- 1.0.8
+- 1.0.9
   - Fixed a GetCapabilitiesMetadata bug that caused some VCP features to lack metadata values.
   - Fixed the return of feature-name and feature-description from GetVcpMetadata.
   - Fixed potential hot-plug/DPMS polling memory leaks and simplified event locking.
