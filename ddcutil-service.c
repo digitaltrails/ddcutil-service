@@ -153,7 +153,7 @@ static const gchar introspection_xml[] = R"(
 
     <!--
         Detect:
-        @flags: If set to 1, any invalid VDUs will be included in the results.
+        @flags: If set to 8 (DETECT_ALL), any invalid VDUs will be included in the results.
         @number_of_displays: The number of VDUs detected (the length of @detected_displays).
         @detected_displays: An array of structures describing the VDUs.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
@@ -180,7 +180,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @vcp_current_value: The current numeric value as a unified 16 bit integer.
         @vcp_max_value: The maximum possible value, to allow for easy calculation of current/max.
         @vcp_formatted_value: A formatted version of the value including related info such as the max-value.
@@ -215,7 +215,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @vcp_current_value: An array of VCP-codes and values.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
@@ -226,7 +226,7 @@ static const gchar introspection_xml[] = R"(
         Each entry in @vcp_current_value array is a VCP-code along with its
         current, maximum and formatted values (the same as those returned by GetVcp).
 
-        The method's @flags parameter can be set to 2 (RETURN_RAW_VALUE),
+        The method's @flags parameter can be set to 2 (RETURN_RAW_VALUES),
         see ddcutil-service.1 LIMITATIONS for an explanation.
     -->
     <method name='GetMultipleVcp'>
@@ -245,7 +245,7 @@ static const gchar introspection_xml[] = R"(
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
         @vcp_new_value: the numeric value as a 16 bit integer.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
@@ -274,7 +274,7 @@ static const gchar introspection_xml[] = R"(
         @vcp_code: the VPC-code to query.
         @vcp_new_value: the numeric value as a 16 bit integer.
         @client_context: a client-context string that will be returned with the VcpValueChanged signal.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
 
@@ -302,7 +302,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @feature_name: the feature name for the VCP-code
         @feature_description: the feature description, if any, of the VCP-code.
         @is_read_only: True if the feature is read-only.
@@ -335,7 +335,7 @@ static const gchar introspection_xml[] = R"(
         GetCapabilitiesString:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @capabilities_text: the capability string for the VDU.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
@@ -356,7 +356,7 @@ static const gchar introspection_xml[] = R"(
         GetCapabilitiesMetadata:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @model_name: parsed model name string
         @mccs_major: MCCS major version number byte.
         @mccs_minor: MCCS minor version number byte.
@@ -392,7 +392,7 @@ static const gchar introspection_xml[] = R"(
         GetDisplayState:
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @status: A libddcutil display status.
         @message: Text message for display status.
 
@@ -418,7 +418,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: the libddcutil/ddcutil display number to query
         @edid_txt: the base-64 encoded EDID of the display
         @vcp_code: the VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @current_multiplier: the sleep multiplier.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
@@ -441,7 +441,7 @@ static const gchar introspection_xml[] = R"(
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
         @vcp_code: The VPC-code to query, for example, 16 (0x10) is brightness.
-        @flags: If 1, the @edid_txt is matched as a unique prefix of the EDID.
+        @flags: If 1 (EDID_PREFIX), the @edid_txt is matched as a unique prefix of the EDID.
         @new_multiplier: The sleep multiplier.
         @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
         @error_message: Text message for error_status.
@@ -687,16 +687,17 @@ typedef enum {
     EDID_PREFIX = 1,        // Indicates the EDID passed to the service is a unique prefix (substr) of the actual EDID.
     RETURN_RAW_VALUES = 2,  // GetVcp GetMultipleVcp
     NO_VERIFY = 4,          // SetVcp
-
+    DETECT_ALL = 8,         // Detect all VDUs, including those that are not powered up.
 } Flags_Enum_Type;
 
 /**
  * Iterable definitions of Flags_Enum_Type values/names (for return from a service property).
  */
-static const int flag_options[] = {EDID_PREFIX,RETURN_RAW_VALUES, NO_VERIFY,};
+static const int flag_options[] = {EDID_PREFIX,RETURN_RAW_VALUES, NO_VERIFY, DETECT_ALL, };
 static const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),
                                     G_STRINGIFY(RETURN_RAW_VALUES),
-                                    G_STRINGIFY(NO_VERIFY),};
+                                    G_STRINGIFY(NO_VERIFY),
+                                    G_STRINGIFY(DETECT_ALL),};
 
 G_STATIC_ASSERT(G_N_ELEMENTS(flag_options) == G_N_ELEMENTS(flag_options_names));  // Boilerplate
 
@@ -952,14 +953,28 @@ static char* get_status_message(const DDCA_Status status) {
  */
 static DDCA_Status get_display_info_list(bool include_invalid, DDCA_Display_Info_List**  dlist_loc, char *msg_prefix) {
     DDCA_Status detect_status = ddca_get_display_info_list2(include_invalid, dlist_loc);
-    if (detect_status == DDCRC_OTHER) {  // A non-error? Documented as "other error (for use during development)"
-        if (msg_prefix != NULL) {
-            char *detect_message_text = get_status_message(detect_status);
-            g_warning("%s: treating as OK ddca_get_display_info_list2 status=%d message=%s",
-                      msg_prefix, detect_status, detect_message_text);
-            free(detect_message_text);
+
+    // Pre libddcutil 2.1.5 ddca_get_display_info_list2 could return DDCRC_OTHER if some VDUs were invalid,
+    // For libddcutil 2.1.5+ ddca_get_display_info_list2 will return DDCRC_OK, but set error_detail if some VDUs are invalid.
+    DDCA_Error_Detail *error_detail = ddca_get_error_detail();
+    if (error_detail != NULL) { // libddcutil 2.1.5 and abouve
+        if (error_detail->status_code == DDCRC_OTHER) {
+            if (msg_prefix != NULL) {
+                char *detect_message_text = get_status_message(error_detail->status_code);
+                g_warning("%s: treating as OK ddca_get_display_info_list2 status=%d message=%s detail=%s",
+                          msg_prefix, error_detail->status_code, detect_message_text, error_detail->detail);
+                free(detect_message_text);
+            }
+            detect_status = DDCRC_OK;  // change to DDCRC_OK, just in case
         }
-        detect_status = DDCRC_OK;
+        ddca_free_error_detail(error_detail);
+    }
+    if (detect_status == DDCRC_OTHER) { // Pre libddcutil 2.1.5 - probably also safe post 2.1.5
+        char *detect_message_text = get_status_message(detect_status);
+        g_warning("%s: treating as OK ddca_get_display_info_list2 status=%d message=%s",
+                  msg_prefix, detect_status, detect_message_text);
+        free(detect_message_text);
+        detect_status = DDCRC_OK;  // change to DDCRC_OK
     }
     return detect_status;
 }
@@ -1101,7 +1116,8 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
     }
     else {
         DDCA_Display_Info_List *dlist = NULL;
-        detect_status = get_display_info_list(flags != 0, &dlist, "Detect");
+        const int detect_all = (flags & DETECT_ALL) || (flags & EDID_PREFIX);  // Accept either because of old API error
+        detect_status = get_display_info_list(detect_all, &dlist, "Detect");
         detect_message_text = get_status_message(detect_status);
         if (detect_status != DDCRC_OK) {
             g_warning("Detect: ddca_get_display_info_list2 failed status=%d message=%s",
