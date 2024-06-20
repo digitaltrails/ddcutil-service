@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 06/11/2024
+.\"      Date: 06/20/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/11/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "06/20/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -250,7 +250,7 @@ array will contain the fields specified by the AttributesReturnedByDetect proper
 .PP
 IN u \fIflags\fR:
 .RS 4
-If set to 1, any invalid VDUs will be included in the results\&.
+If set to 8 (DETECT_ALL), any invalid VDUs will be included in the results\&.
 .RE
 .PP
 OUT i \fInumber_of_displays\fR:
@@ -324,7 +324,7 @@ The VPC\-code to query, for example, 16 (0x10) is brightness\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -379,7 +379,7 @@ array is a VCP\-code along with its current, maximum and formatted values (the s
 .PP
 The method\*(Aqs
 \fIflags\fR
-parameter can be set to 2 (RETURN_RAW_VALUE), see ddcutil\-service\&.1 LIMITATIONS for an explanation\&.
+parameter can be set to 2 (RETURN_RAW_VALUES), see ddcutil\-service\&.1 LIMITATIONS for an explanation\&.
 .PP
 IN i \fIdisplay_number\fR:
 .RS 4
@@ -398,7 +398,7 @@ the VPC\-code to query\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -467,7 +467,7 @@ the numeric value as a 16 bit integer\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -537,7 +537,7 @@ a client\-context string that will be returned with the VcpValueChanged signal\&
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -594,7 +594,7 @@ the VPC\-code to query\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -674,7 +674,7 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -732,7 +732,7 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -807,7 +807,7 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -854,7 +854,7 @@ the base\-64 encoded EDID of the display
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE
@@ -915,7 +915,7 @@ The sleep multiplier\&.
 .PP
 IN u \fIflags\fR:
 .RS 4
-If 1, the
+If 1 (EDID_PREFIX), the
 \fIedid_txt\fR
 is matched as a unique prefix of the EDID\&.
 .RE

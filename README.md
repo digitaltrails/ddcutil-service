@@ -139,6 +139,9 @@ The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
+- 1.0.10
+  - Minor change to detect for ddcutil 2.5.1 behaviour (more warning info).
+  - FIxes to API documentation.
 - 1.0.9
   - Fixed a GetCapabilitiesMetadata bug that caused some VCP features to lack metadata values.
   - Fixed the return of feature-name and feature-description from GetVcpMetadata.
