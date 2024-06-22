@@ -526,7 +526,7 @@ static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_
  * @param option_name command line option name, may be long or short form.
  * @return the service property name corresponding to option_namw, or NULL if no match was found.
  */
-static char *property_name(const gchar *option_name) {
+static char *get_service_property_name(const gchar *option_name) {
     if (g_str_equal(option_name, "--info-logging") || g_str_equal(option_name, "-i")) {
         return "ServiceInfoLogging";
     }
@@ -542,7 +542,7 @@ static char *property_name(const gchar *option_name) {
  * @return TRUE if handled without error, otherwise FAlSE
  */
 static gboolean handle_boolean_prop(const gchar *option_name, const gchar *value, gpointer data, GError **error) {
-    char *service_property_name = property_name(option_name);
+    char *service_property_name = get_service_property_name(option_name);
     if (service_property_name == NULL) {
         g_printerr("ERROR: unrecognised option name %s\n", option_name);
         return FALSE;
