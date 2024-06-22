@@ -52,6 +52,8 @@ static char *const DBUS_BUS_NAME = "com.ddcutil.DdcutilService";
 static char *const DBUS_OBJECT_PATH = "/com/ddcutil/DdcutilObject";
 static char *const DBUS_INTERFACE_NAME = "com.ddcutil.DdcutilInterface";
 
+static GDBusConnection *connection = NULL;
+
 static char *boolean_value(int bool) {
     return bool ? "true" : "false";
 }
@@ -415,9 +417,57 @@ static cmd_status_t call_detect(GDBusConnection *connection) {
     }
 
     g_variant_iter_free(array_iter);
-
     g_variant_unref(result);
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
+}
+
+static cmd_status_t print_property(GDBusConnection *connection, char *property_name) {
+    GVariant *result;
+    GVariant *property_value;
+    GError *error = NULL;
+    result = g_dbus_connection_call_sync(connection,
+                                         DBUS_BUS_NAME,
+                                         DBUS_OBJECT_PATH,
+                                         "org.freedesktop.DBus.Properties",
+                                         "Get",
+                                         g_variant_new("(ss)", DBUS_INTERFACE_NAME, property_name),
+                                         G_VARIANT_TYPE("(v)"),
+                                         G_DBUS_CALL_FLAGS_NONE,
+                                         -1,
+                                         NULL,
+                                         &error);
+    if (error == NULL) {
+        g_variant_get(result, "(v)", &property_value);
+        gchar *property_str = g_variant_print(property_value, TRUE);
+        g_print("%s: %s\n", property_name, property_str);
+        g_free(property_str);
+        g_variant_unref(property_value);
+        g_variant_unref(result);
+    }
+    return handle_dbus_error("print_property", error);
+}
+
+static cmd_status_t set_property(GDBusConnection *connection, char *property_name, GVariant *property_value) {
+    GError *error = NULL;
+    //GVariant *value = g_variant_new_int32(property_value);
+    GVariant *result = g_dbus_connection_call_sync(
+            connection,
+            DBUS_BUS_NAME,
+            DBUS_OBJECT_PATH,
+            "org.freedesktop.DBus.Properties",
+            "Set",
+            g_variant_new("(ssv)", DBUS_INTERFACE_NAME, property_name, property_value),
+            G_VARIANT_TYPE("()"),
+            G_DBUS_CALL_FLAGS_NONE,
+            -1,
+            NULL,
+            &error
+    );
+    if (error == NULL) {
+        g_variant_unref(property_value);
+        g_variant_unref(result);
+    }
+    return handle_dbus_error("set_property", error);
 }
 
 /**
@@ -471,6 +521,46 @@ static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_
     return COMPLETED_WITHOUT_ERROR;
 }
 
+/**
+ * @brief Return the service property name for the command line option that gets/sets the property.
+ * @param option_name command line option name, may be long or short form.
+ * @return the service property name corresponding to option_namw, or NULL if no match was found.
+ */
+static char *property_name(const gchar *option_name) {
+    if (g_str_equal(option_name, "--info-logging") || g_str_equal(option_name, "-i")) {
+        return "ServiceInfoLogging";
+    }
+    return NULL;
+}
+
+/**
+ * @brief GOptionEntry get/set callback for handling get/set boolean options on service properties
+ * @param option_name command line option name, might be the long or short name
+ * @param value new value, if setting, NULL if getting
+ * @param data not used (option group related)
+ * @param error not used
+ * @return TRUE if handled without error, otherwise FAlSE
+ */
+static gboolean handle_boolean_prop(const gchar *option_name, const gchar *value, gpointer data, GError **error) {
+    char *service_property_name = property_name(option_name);
+    if (service_property_name == NULL) {
+        g_printerr("ERROR: unrecognised option name %s\n", option_name);
+        return FALSE;
+    }
+    if (value != NULL) {
+        g_print("Set service property: %s\n", service_property_name);
+        if (g_str_equal(value, "on") || g_str_equal(value, "true")) {
+            set_property(connection, service_property_name, g_variant_new_boolean(TRUE));
+        } else if (g_str_equal(value, "off") || g_str_equal(value, "false")) {
+            set_property(connection, service_property_name, g_variant_new_boolean(FALSE));
+        } else {
+            g_printerr("ERROR: invalid value for %s, should be on/off or true/false.\n", option_name);
+        }
+    }
+    print_property(connection, service_property_name);
+    return TRUE;
+}
+
 int main(int argc, char *argv[]) {
     GError *error = NULL;
     GOptionContext *context;
@@ -478,16 +568,29 @@ int main(int argc, char *argv[]) {
     gchar *edid_txt = "";
     gchar **remaining_args = NULL;
     gint raw = 0;
+    gint version = 0;
+    gint ddversion = 0;
+
+    connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+    if (!connection) {
+        g_printerr("ERROR: Error connecting to session bus: %s\n", error->message);
+        g_error_free(error);
+        return DBUS_ERROR;
+    }
 
     GOptionEntry entries[] = {
-            {"display",          'd', 0, G_OPTION_ARG_STRING,       &display_number_str, "Display number", "DISPLAY_NUMBER"},
-            {"edid",             'e', 0, G_OPTION_ARG_STRING,       &edid_txt,           "EDID",           "EDID"},
-            {"raw",              'r', 0, G_OPTION_ARG_NONE,         &raw,                "getvcp returns SNC-features as raw 16-bit values", NULL},
-            {G_OPTION_REMAINING, 0,   0, G_OPTION_ARG_STRING_ARRAY, &remaining_args,     NULL, NULL},
+            {"display",          'd', 0,                          G_OPTION_ARG_STRING,       &display_number_str, "Display number"},
+            {"edid",             'e', 0,                          G_OPTION_ARG_STRING,       &edid_txt,           "EDID"},
+            {"raw",              'r', 0,                          G_OPTION_ARG_NONE,         &raw,                "getvcp returns SNC-features as raw 16-bit values"},
+            {"version",          'v', 0,                          G_OPTION_ARG_NONE,         &version,            "print the service interface version"},
+            {"ddcutil-version",  'V', 0,                          G_OPTION_ARG_NONE,         &ddversion,          "print the ddcutil/libddcutil version"},
+            {"info-logging",     'i', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,"get/set info logging true/false", "ServiceInfoLogging"},
+            {G_OPTION_REMAINING, 0,   0,                          G_OPTION_ARG_STRING_ARRAY, &remaining_args},
             {NULL}
     };
 
-    context = g_option_context_new("detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
+    context = g_option_context_new(
+            "detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
     g_option_context_add_main_entries(context, entries, NULL);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("ERROR: Error parsing options: %s\n", error->message);
@@ -495,95 +598,91 @@ int main(int argc, char *argv[]) {
         return SYNTAX_ERROR;
     }
 
-    if (!remaining_args || !remaining_args[0]) {
-        g_printerr("ERROR: You must provide a method (detect, getvcp, or setvcp) and appropriate arguments.\n");
-        return SYNTAX_ERROR;
-    }
-
-    gchar *method = remaining_args[0];
-
-    GDBusConnection *connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-    if (!connection) {
-        g_printerr("ERROR: Error connecting to session bus: %s\n", error->message);
-        g_error_free(error);
-        return DBUS_ERROR;
-    }
 
     cmd_status_t exit_status;
+    if (version != 0) {
+        exit_status = print_property(connection, "ServiceInterfaceVersion");
+    } else if (ddversion != 0) {
+        exit_status = print_property(connection, "DdcutilVersion");
+    } else if (remaining_args != NULL) {
+        gchar *method = remaining_args[0];
 
-    if (g_strcmp0(method, "detect") == 0) {
-        exit_status = call_detect(connection);
-    } else if (g_strcmp0(method, "setvcp") == 0) {
-        int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
-        if (exit_status == COMPLETED_WITHOUT_ERROR) {
-            if (!remaining_args[1] || !remaining_args[2]) {
-                g_printerr("ERROR: You must provide a VCP code and a new value for setvcp.\n");
-                exit_status = SYNTAX_ERROR;
-            } else {
-                guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
-                if (exit_status != 0) {
-                    g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+        if (!remaining_args || !remaining_args[0]) {
+            g_printerr("ERROR: You must provide a method (detect, getvcp, or setvcp) and appropriate arguments.\n");
+            exit_status = SYNTAX_ERROR;
+        } else if (g_strcmp0(method, "detect") == 0) {
+            exit_status = call_detect(connection);
+        } else if (g_strcmp0(method, "setvcp") == 0) {
+            int display_number = -1;
+            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            if (exit_status == COMPLETED_WITHOUT_ERROR) {
+                if (!remaining_args[1] || !remaining_args[2]) {
+                    g_printerr("ERROR: You must provide a VCP code and a new value for setvcp.\n");
+                    exit_status = SYNTAX_ERROR;
                 } else {
-                    guint16 vcp_new_value = (guint16) parse_int(remaining_args[2], 10, &exit_status);
+                    guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
                     if (exit_status != 0) {
-                        g_printerr("ERROR: Invalid new value. It must be in decimal (e.g. 80).\n");
+                        g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
                     } else {
-                        exit_status = call_set_vcp(connection, display_number, edid_txt, vcp_code, vcp_new_value);
+                        guint16 vcp_new_value = (guint16) parse_int(remaining_args[2], 10, &exit_status);
+                        if (exit_status != 0) {
+                            g_printerr("ERROR: Invalid new value. It must be in decimal (e.g. 80).\n");
+                        } else {
+                            exit_status = call_set_vcp(connection, display_number, edid_txt, vcp_code, vcp_new_value);
+                        }
                     }
                 }
             }
-        }
-    } else if (g_strcmp0(method, "getvcp") == 0) {
-        int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
-        if (exit_status == COMPLETED_WITHOUT_ERROR) {
-            if (!remaining_args[1]) {
-                g_printerr("ERROR: You must provide a VCP code for getvcp.\n");
-                exit_status = SYNTAX_ERROR;
-            } else {
-                guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
-                if (exit_status != 0) {
-                    g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+        } else if (g_strcmp0(method, "getvcp") == 0) {
+            int display_number = -1;
+            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            if (exit_status == COMPLETED_WITHOUT_ERROR) {
+                if (!remaining_args[1]) {
+                    g_printerr("ERROR: You must provide a VCP code for getvcp.\n");
+                    exit_status = SYNTAX_ERROR;
                 } else {
-                    exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code,
-                                               raw ? RETURN_RAW_VALUES : 0);
+                    guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
+                    if (exit_status != 0) {
+                        g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+                    } else {
+                        exit_status = call_get_vcp(connection, display_number, edid_txt, vcp_code,
+                                                   raw ? RETURN_RAW_VALUES : 0);
+                    }
                 }
             }
-        }
-    } else if (g_strcmp0(method, "getvcp-metadata") == 0) {
-        int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
-        if (exit_status == COMPLETED_WITHOUT_ERROR) {
-            if (!remaining_args[1]) {
-                g_printerr("ERROR: You must provide a VCP code for getvcp-metadata.\n");
-                exit_status = SYNTAX_ERROR;
-            } else {
-                guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
-                if (exit_status != 0) {
-                    g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+        } else if (g_strcmp0(method, "getvcp-metadata") == 0) {
+            int display_number = -1;
+            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            if (exit_status == COMPLETED_WITHOUT_ERROR) {
+                if (!remaining_args[1]) {
+                    g_printerr("ERROR: You must provide a VCP code for getvcp-metadata.\n");
+                    exit_status = SYNTAX_ERROR;
                 } else {
-                    exit_status = call_get_vcp_metadata(connection, display_number, edid_txt, vcp_code);
+                    guint8 vcp_code = (guint8) parse_int(remaining_args[1], 16, &exit_status);
+                    if (exit_status != 0) {
+                        g_printerr("ERROR: Invalid VCP code. It must be in hex format (e.g. 0x10).\n");
+                    } else {
+                        exit_status = call_get_vcp_metadata(connection, display_number, edid_txt, vcp_code);
+                    }
                 }
             }
+        } else if (g_strcmp0(method, "capabilities") == 0) {
+            int display_number = -1;
+            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            if (exit_status == COMPLETED_WITHOUT_ERROR) {
+                exit_status = call_capabilities_metadata(connection, display_number, edid_txt);
+            }
+        } else if (g_strcmp0(method, "capabilities-terse") == 0) {
+            int display_number = -1;
+            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            if (exit_status == COMPLETED_WITHOUT_ERROR) {
+                exit_status = call_capabilities(connection, display_number, edid_txt);
+            }
+        } else {
+            g_printerr("ERROR: Unknown command: %s\n", method);
+            exit_status = SYNTAX_ERROR;
         }
-    } else if (g_strcmp0(method, "capabilities") == 0) {
-        int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
-        if (exit_status == COMPLETED_WITHOUT_ERROR) {
-            exit_status = call_capabilities_metadata(connection, display_number, edid_txt);
-        }
-    } else if (g_strcmp0(method, "capabilities-terse") == 0) {
-        int display_number = -1;
-        exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
-        if (exit_status == COMPLETED_WITHOUT_ERROR) {
-            exit_status = call_capabilities(connection, display_number, edid_txt);
-        }
-    } else {
-        g_printerr("ERROR: Unknown command: %s\n", method);
-        exit_status = SYNTAX_ERROR;
     }
-
     g_object_unref(connection);
     return exit_status;
 }
