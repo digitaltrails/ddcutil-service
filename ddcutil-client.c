@@ -529,6 +529,8 @@ static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_
 static char *get_service_property_name(const gchar *option_name) {
     if (g_str_equal(option_name, "--info-logging") || g_str_equal(option_name, "-i")) {
         return "ServiceInfoLogging";
+    } else if (g_str_equal(option_name, "--signal") || g_str_equal(option_name, "-s")) {
+        return "ServiceEmitConnectivitySignals";
     }
     return NULL;
 }
@@ -549,12 +551,12 @@ static gboolean handle_boolean_prop(const gchar *option_name, const gchar *value
     }
     if (value != NULL) {
         g_print("Set service property: %s\n", service_property_name);
-        if (g_str_equal(value, "on") || g_str_equal(value, "true")) {
+        if (g_str_equal(value, "on") || g_str_equal(value, "true") || g_str_equal(value, "enable")) {
             set_property(connection, service_property_name, g_variant_new_boolean(TRUE));
-        } else if (g_str_equal(value, "off") || g_str_equal(value, "false")) {
+        } else if (g_str_equal(value, "off") || g_str_equal(value, "false") || g_str_equal(value, "disable")) {
             set_property(connection, service_property_name, g_variant_new_boolean(FALSE));
         } else {
-            g_printerr("ERROR: invalid value for %s, should be on/off or true/false.\n", option_name);
+            g_printerr("ERROR: invalid value for %s, should be on/off true/false enable/disable.\n", option_name);
         }
     }
     print_property(connection, service_property_name);
@@ -570,6 +572,10 @@ int main(int argc, char *argv[]) {
     gint raw = 0;
     gint version = 0;
     gint ddversion = 0;
+    gint locked = 0;
+    gint status_values = 0;
+    gint display_event_types = 0;
+    gint service_flag_options = 0;
 
     connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
     if (!connection) {
@@ -579,18 +585,23 @@ int main(int argc, char *argv[]) {
     }
 
     GOptionEntry entries[] = {
-            {"display",          'd', 0,                          G_OPTION_ARG_STRING,       &display_number_str, "Display number"},
-            {"edid",             'e', 0,                          G_OPTION_ARG_STRING,       &edid_txt,           "EDID"},
-            {"raw",              'r', 0,                          G_OPTION_ARG_NONE,         &raw,                "getvcp returns SNC-features as raw 16-bit values"},
-            {"version",          'v', 0,                          G_OPTION_ARG_NONE,         &version,            "print the service interface version"},
-            {"ddcutil-version",  'V', 0,                          G_OPTION_ARG_NONE,         &ddversion,          "print the ddcutil/libddcutil version"},
-            {"info-logging",     'i', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,"get/set info logging true/false", "ServiceInfoLogging"},
+            {"display",          'd', 0,                          G_OPTION_ARG_STRING,       &display_number_str,   "Display number"},
+            {"edid",             'e', 0,                          G_OPTION_ARG_STRING,       &edid_txt,             "EDID"},
+            {"raw",              'r', 0,                          G_OPTION_ARG_NONE,         &raw,                  "getvcp returns SNC-features as raw 16-bit values"},
+            {"version",          'v', 0,                          G_OPTION_ARG_NONE,         &version,              "query the service interface version"},
+            {"ddcutil-version",  'V', 0,                          G_OPTION_ARG_NONE,         &ddversion,            "query the ddcutil/libddcutil version"},
+            {"info-logging",     'i', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,  "query or set info logging"},
+            {"signal",           's', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,  "query or set service hotplug signals"},
+            {"locked",           'l', 0,                          G_OPTION_ARG_NONE,         &locked,               "query if service parameters are locked"},
+            {"status-values",    't', 0,                          G_OPTION_ARG_NONE,         &status_values,        "list all ddcutil status values"},
+            {"display-events",   'p', 0,                          G_OPTION_ARG_NONE,         &display_event_types,  "list all display event types"},
+            {"service-flags",    'f', 0,                          G_OPTION_ARG_NONE,         &service_flag_options, "list all service flag options"},
             {G_OPTION_REMAINING, 0,   0,                          G_OPTION_ARG_STRING_ARRAY, &remaining_args},
             {NULL}
     };
 
     context = g_option_context_new(
-            "detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n");
+            "[detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n]");
     g_option_context_add_main_entries(context, entries, NULL);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("ERROR: Error parsing options: %s\n", error->message);
@@ -598,13 +609,26 @@ int main(int argc, char *argv[]) {
         return SYNTAX_ERROR;
     }
 
-
     cmd_status_t exit_status;
     if (version != 0) {
         exit_status = print_property(connection, "ServiceInterfaceVersion");
-    } else if (ddversion != 0) {
+    }
+    if (ddversion != 0) {
         exit_status = print_property(connection, "DdcutilVersion");
-    } else if (remaining_args != NULL) {
+    }
+    if (locked != 0) {
+        exit_status = print_property(connection, "ServiceParametersLocked");
+    }
+    if (status_values != 0) {
+        exit_status = print_property(connection, "StatusValues");
+    }
+    if (display_event_types != 0) {
+        exit_status = print_property(connection, "DisplayEventTypes");
+    }
+    if (service_flag_options != 0) {
+        exit_status = print_property(connection, "ServiceFlagOptions");
+    }
+    if (remaining_args != NULL) {
         gchar *method = remaining_args[0];
 
         if (!remaining_args || !remaining_args[0]) {
