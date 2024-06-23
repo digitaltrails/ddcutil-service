@@ -421,6 +421,12 @@ static cmd_status_t call_detect(GDBusConnection *connection) {
     return ddcutil_status == 0 ? COMPLETED_WITHOUT_ERROR : SERVICE_ERROR;
 }
 
+/**
+ * @brief print a service property value to stdout
+ * @param connection open service connection
+ * @param property_name name of property
+ * @return status returned by the service
+ */
 static cmd_status_t print_property(GDBusConnection *connection, char *property_name) {
     GVariant *result;
     GVariant *property_value;
@@ -447,6 +453,13 @@ static cmd_status_t print_property(GDBusConnection *connection, char *property_n
     return handle_dbus_error("print_property", error);
 }
 
+/**
+ * @brief set a service property value
+ * @param connection an open connection to the service
+ * @param property_name the property name to be set
+ * @param property_value the new value as an appropriate GVariant
+ * @return status returned from the service
+ */
 static cmd_status_t set_property(GDBusConnection *connection, char *property_name, GVariant *property_value) {
     GError *error = NULL;
     //GVariant *value = g_variant_new_int32(property_value);
@@ -521,6 +534,8 @@ static char *get_service_property_name(const gchar *option_name) {
         return "ServiceInfoLogging";
     } else if (g_str_equal(option_name, "--signal") || g_str_equal(option_name, "-s")) {
         return "ServiceEmitConnectivitySignals";
+    } else if (g_str_equal(option_name, "--dynamic-sleep") || g_str_equal(option_name, "-y")) {
+        return "DdcutilDynamicSleep";
     }
     return NULL;
 }
@@ -566,6 +581,10 @@ int main(int argc, char *argv[]) {
     gint status_values = 0;
     gint display_event_types = 0;
     gint service_flag_options = 0;
+    gint poll_interval = -1;
+    double cascade_interval = DBL_MAX;
+    gint output_level = -2;
+    gint attributes_detect = 0;
 
     connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
     if (!connection) {
@@ -580,12 +599,17 @@ int main(int argc, char *argv[]) {
             {"raw",              'r', 0,                          G_OPTION_ARG_NONE,         &raw,                  "getvcp returns SNC-features as raw 16-bit values"},
             {"version",          'v', 0,                          G_OPTION_ARG_NONE,         &version,              "query the service interface version"},
             {"ddcutil-version",  'V', 0,                          G_OPTION_ARG_NONE,         &ddversion,            "query the ddcutil/libddcutil version"},
+            {"dynamic-sleep",    'y', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,  "query or set ddcutil dynamic sleep"},
             {"info-logging",     'i', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,  "query or set info logging"},
             {"signal",           's', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &handle_boolean_prop,  "query or set service hotplug signals"},
             {"locked",           'l', 0,                          G_OPTION_ARG_NONE,         &locked,               "query if service parameters are locked"},
-            {"status-values",    't', 0,                          G_OPTION_ARG_NONE,         &status_values,        "list all ddcutil status values"},
+            {"attributes-detect",'a', 0,                          G_OPTION_ARG_NONE,         &attributes_detect,    "list all attributes returned by detect"},
+            {"status-values",    'u', 0,                          G_OPTION_ARG_NONE,         &status_values,        "list all ddcutil status values"},
             {"display-events",   'p', 0,                          G_OPTION_ARG_NONE,         &display_event_types,  "list all display event types"},
             {"service-flags",    'f', 0,                          G_OPTION_ARG_NONE,         &service_flag_options, "list all service flag options"},
+            {"poll-interval",    't', 0,                          G_OPTION_ARG_INT,          &poll_interval,        "hotplug/connectivity poll seconds >=30, 0 to query"},
+            {"cascade-interval", 'c', 0,                          G_OPTION_ARG_DOUBLE,       &cascade_interval,     "hotplug/connectivity cascade seconds >=0.5, 0 to query"},
+            {"output-level",     'o', 0,                          G_OPTION_ARG_INT,          &output_level,         "ddcutil output level, -1 to query"},
             {G_OPTION_REMAINING, 0,   0,                          G_OPTION_ARG_STRING_ARRAY, &remaining_args},
             {NULL}
     };
@@ -618,6 +642,34 @@ int main(int argc, char *argv[]) {
     if (service_flag_options != 0) {
         exit_status = print_property(connection, "ServiceFlagOptions");
     }
+    if (attributes_detect != 0) {
+        exit_status = print_property(connection, "AttributesReturnedByDetect");
+    }
+    if (poll_interval != -1) {
+        if (poll_interval >= 30) {
+            exit_status = set_property(connection, "ServicePollInterval", g_variant_new_uint32(poll_interval));
+            print_property(connection, "ServicePollInterval");
+        } else {
+            exit_status = print_property(connection, "ServicePollInterval");
+        }
+    }
+    if (cascade_interval != DBL_MAX) {
+        if (cascade_interval >= 0.2) {
+            exit_status = set_property(connection, "ServicePollCascadeInterval", g_variant_new_double(cascade_interval));
+            print_property(connection, "ServicePollCascadeInterval");
+        } else {
+            exit_status = print_property(connection, "ServicePollCascadeInterval");
+        }
+    }
+    if (output_level != -2) {
+        if (output_level >= 0) {
+            exit_status = set_property(connection, "DdcutilOutputLevel", g_variant_new_uint32(output_level));
+            print_property(connection, "DdcutilOutputLevel");
+        } else {
+            exit_status = print_property(connection, "DdcutilOutputLevel");
+        }
+    }
+
     if (remaining_args != NULL) {
         gchar *method = remaining_args[0];
 
