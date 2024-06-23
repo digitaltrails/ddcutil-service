@@ -487,36 +487,26 @@ static int parse_int(char *input_str, int base, cmd_status_t *status) {
 
 /**
  * Parse an validate the display number string and base64 encoded edid (combo)
- * @param display_number_str display number string, may be NULL
+ * @param display_number_ptr display number, may be -1 if not supplied
  * @param edid_base64 EDID, may be the empty string
- * @param display_number output integer display number
  * @return COMPLETED_WITHOUT_ERROR or SYNTAX_ERROR
  */
-static cmd_status_t parse_display_and_edid(char *display_number_str, char *edid_base64, int *display_number) {
+static cmd_status_t parse_display_and_edid(gint *display_number_ptr, char *edid_base64) {
     if (strlen(edid_base64) > 0 && strlen(edid_base64) < 12) {
         g_printerr("ERROR: Invalid EDID. It must be at least 12 characters long.\n");
         return SYNTAX_ERROR;
     }
-    if (display_number_str != NULL && strlen(edid_base64) > 0) {
+    if (*display_number_ptr != -1 && strlen(edid_base64) > 0) {
         g_printerr("ERROR: Pass only one of Display Number or EDID, not both.\n");
         return SYNTAX_ERROR;
     }
-    if (strlen(edid_base64) > 0) {
-        *display_number = -1;  // Using EDID
+    if (strlen(edid_base64) > 0) { // Using EDID
         g_print("edid_base64_encoded: %s\n", edid_base64);
     } else { // Using Display Number, default to 1 if none passed
-        cmd_status_t parse_status = COMPLETED_WITHOUT_ERROR;
-        if (display_number_str != NULL) {
-            int parsed_display_number = parse_int(display_number_str, 10, &parse_status);
-            if (parse_status != 0) {
-                g_printerr("ERROR: Invalid Display Number. It must be in decimal format (e.g., 1).\n");
-                return parse_status;
-            }
-            *display_number = parsed_display_number;
-        } else {
-            *display_number = 1;
+        if (*display_number_ptr == -1) {
+            *display_number_ptr  = 1;
         }
-        g_print("display_number: %d\n", *display_number);
+        g_print("display_number: %d\n", *display_number_ptr);
     }
     return COMPLETED_WITHOUT_ERROR;
 }
@@ -566,7 +556,7 @@ static gboolean handle_boolean_prop(const gchar *option_name, const gchar *value
 int main(int argc, char *argv[]) {
     GError *error = NULL;
     GOptionContext *context;
-    gchar *display_number_str = NULL;
+    gint display_number = -1;
     gchar *edid_txt = "";
     gchar **remaining_args = NULL;
     gint raw = 0;
@@ -585,7 +575,7 @@ int main(int argc, char *argv[]) {
     }
 
     GOptionEntry entries[] = {
-            {"display",          'd', 0,                          G_OPTION_ARG_STRING,       &display_number_str,   "Display number"},
+            {"display",          'd', 0,                          G_OPTION_ARG_INT,          &display_number,       "Display number"},
             {"edid",             'e', 0,                          G_OPTION_ARG_STRING,       &edid_txt,             "EDID"},
             {"raw",              'r', 0,                          G_OPTION_ARG_NONE,         &raw,                  "getvcp returns SNC-features as raw 16-bit values"},
             {"version",          'v', 0,                          G_OPTION_ARG_NONE,         &version,              "query the service interface version"},
@@ -637,8 +627,7 @@ int main(int argc, char *argv[]) {
         } else if (g_strcmp0(method, "detect") == 0) {
             exit_status = call_detect(connection);
         } else if (g_strcmp0(method, "setvcp") == 0) {
-            int display_number = -1;
-            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            exit_status = parse_display_and_edid(&display_number, edid_txt);
             if (exit_status == COMPLETED_WITHOUT_ERROR) {
                 if (!remaining_args[1] || !remaining_args[2]) {
                     g_printerr("ERROR: You must provide a VCP code and a new value for setvcp.\n");
@@ -658,8 +647,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else if (g_strcmp0(method, "getvcp") == 0) {
-            int display_number = -1;
-            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            exit_status = parse_display_and_edid(&display_number, edid_txt);
             if (exit_status == COMPLETED_WITHOUT_ERROR) {
                 if (!remaining_args[1]) {
                     g_printerr("ERROR: You must provide a VCP code for getvcp.\n");
@@ -676,7 +664,7 @@ int main(int argc, char *argv[]) {
             }
         } else if (g_strcmp0(method, "getvcp-metadata") == 0) {
             int display_number = -1;
-            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            exit_status = parse_display_and_edid(&display_number, edid_txt);
             if (exit_status == COMPLETED_WITHOUT_ERROR) {
                 if (!remaining_args[1]) {
                     g_printerr("ERROR: You must provide a VCP code for getvcp-metadata.\n");
@@ -692,13 +680,13 @@ int main(int argc, char *argv[]) {
             }
         } else if (g_strcmp0(method, "capabilities") == 0) {
             int display_number = -1;
-            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            exit_status = parse_display_and_edid(&display_number, edid_txt);
             if (exit_status == COMPLETED_WITHOUT_ERROR) {
                 exit_status = call_capabilities_metadata(connection, display_number, edid_txt);
             }
         } else if (g_strcmp0(method, "capabilities-terse") == 0) {
             int display_number = -1;
-            exit_status = parse_display_and_edid(display_number_str, edid_txt, &display_number);
+            exit_status = parse_display_and_edid(&display_number, edid_txt);
             if (exit_status == COMPLETED_WITHOUT_ERROR) {
                 exit_status = call_capabilities(connection, display_number, edid_txt);
             }
