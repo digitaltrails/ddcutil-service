@@ -56,6 +56,43 @@ A prefix of a valid EDID is also acceptable.
 .B \-r, \-\-raw
 Force getvcp to return SNC-features as raw 16-bit values (SNCs default to 8-bit bits).
 .TP
+.B \-v, --version
+Query the service interface version (property \fBServiceInterfaceVersion\fP).
+.TP
+.B \-V, --ddcutil-version
+Query the ddcutil/libddcutil version (property \fBDdcutilVersion\fP).
+.TP
+.B \-y, --dynamic-sleep
+Query or set ddcutil dynamic sleep setting (property \fBDdcutilDynamicSleep\fP).
+.TP
+.B \-i, --info-logging
+Query or set info logging (property \fBServiceInfoLogging\fP).
+.TP
+.B \-s, --signal
+Query or set service hotplug signals (property \fBServiceEmitSignals\fP).
+.TP
+.B \-l, --locked
+Query if service parameters are locked (property \fBServiceParametersLocked\fP).
+.TP
+.B \-u, --status-values
+List all ddcutil status values (property \fBStatusValues\fP).
+.TP
+.B \-p, --display-events
+List all display event types (property \fBDisplayEventTypes\fP).
+.TP
+.B \-f, --service-flags
+List all service flag options (property \fBServiceFlagOptions\fP).
+.TP
+.B \-t, --poll-interval
+Hotplug/connectivity poll seconds >=30, 0 to query (property \fBServicePollInterval\fP).
+.TP
+.B \-c, --cascade-interval
+Hotplug/connectivity cascade seconds >=0.5, 0 to query (property \fBServicePollCascadeInterval\fP).
+.TP
+.B \-o, --output-level
+Ddcutil output level (property \fBDdcutilOutputLevel\fP).
+
+.TP
 If neither display number nor EDID are provided, the display number will default to 1.
 
 .SH EXAMPLES
