@@ -680,6 +680,11 @@ static gboolean lock_configuration = FALSE;
  */
 static gboolean return_raw_values = FALSE;
 
+/**
+ * True if service info logging is currently enabled.
+ */
+static gboolean service_info_logging = FALSE;
+
 /* ----------------------------------------------------------------------------------------------------
  * Bit flags that can be passed in the service method flags argument.
  */
@@ -903,6 +908,7 @@ static gchar* sanitize_utf8(const char* text) {
  * @return the new enabled state
  */
 static bool enable_service_info_logging(bool enable, bool overwrite) {
+    service_info_logging = enable;
     if (enable) {
         // WARNING g_setenv/g_unsetenv stopped working, using setenv/unsetenv instead.
         // Possible interaction with other logging options, maybe from libddcutil - weird
@@ -2298,7 +2304,17 @@ static bool poll_for_changes() {
     bool event_is_ready = FALSE;
     if (now_in_micros >= next_poll_time) {
         g_debug("Poll for display connection changes");
+        // Masking the logging is a bit hacky - it depends on internal knowledge of how libddcutil is logging.
+        // The author of libddcutil regards the normal messages as quite important, so they should normally be logged.
+        // A compromise: when the service is not logging debug/info, change the syslog mask, and then restore it.
+        int old_mask = 0;
+        if (!service_info_logging) {
+            old_mask = setlogmask(LOG_UPTO(LOG_WARNING));  // Temporarily disable notice msgs from libddcutil
+        }
         const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
+        if (!service_info_logging) {
+            setlogmask(old_mask); // Restore original logging mask
+        }
         if (detect_status == DDCRC_OK) {
             DDCA_Display_Info_List* dlist;
             const DDCA_Status info_status = get_display_info_list(1, &dlist, NULL);
