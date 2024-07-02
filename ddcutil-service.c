@@ -996,7 +996,7 @@ static DDCA_Status get_display_info_list(bool include_invalid, DDCA_Display_Info
  * @param edid_encoded text encoded edid
  * @param dlist ddcutil list of displays (will need to be freed after use)
  * @param dinfo pointer into the list for the matched display
- * @param edid_is_prefix match edidby unique prefix
+ * @param edid_is_prefix match edid by unique prefix
  * @return success status
  */
 static DDCA_Status get_display_info(const int display_number, const char* edid_encoded,
