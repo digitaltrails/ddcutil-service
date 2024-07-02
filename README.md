@@ -140,9 +140,10 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 
 ### Version History
 - 1.0.10
-  - Minor change to detect for ddcutil 2.5.1 behaviour (more warning info).
+  - Alter the detect-function for ddcutil 2.5.1 (generates more logging/warning info).
+  - Add a DETECT_ALL option to control whether disabled/powered-off VDU's are to be included in the results from detect.
   - Reduce the number of messages generated when polling for hotplug events.
-  - FIxes to API documentation.
+  - Fixes to API documentation.
 - 1.0.9
   - Fixed a GetCapabilitiesMetadata bug that caused some VCP features to lack metadata values.
   - Fixed the return of feature-name and feature-description from GetVcpMetadata.
