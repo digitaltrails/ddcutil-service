@@ -17,7 +17,7 @@ Testing using the d-feet D-Bus interactive GUI:
 4. click on `com.ddcutil.DdcutilService`
 5. open the *Object Path* `com/ddcutil/DdcutilService` and 
    navigate down to the `com.ddcutil.DdcutilInterface`
-7. Double-click methods and properties to run or view them.
+6. Double-click methods and properties to run or view them.
 
 Method inputs can be supplied as CSV, for example, Method Input to `GetVcp` could be 
 
@@ -30,7 +30,7 @@ EDID.
 
 Several bash and python scripts that demonstrate using the service are included in 
 the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/examples)
-folder.  They cover the use of the `dbus-send` command line utiltity
+folder.  They cover the use of the `dbus-send` command line utility
 and the python `dasbus` and `QtDBus` libraries. 
 
 The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
@@ -64,7 +64,7 @@ There is an official Tumbleweed RPM:
 
  - https://software.opensuse.org/package/ddcutil-service
 
-The same page also provides links to unoffical builds I've done for Leap.
+The same page also provides links to unofficial builds I've done for Leap.
 
 ##### AUR (Arch Linux User Repository):
 
@@ -121,7 +121,7 @@ The source includes an `ddcutil-client` (`ddcutil-client.c` and
 man page `ddcutil-client.1`).  Packaging and deployment of the client is optional.
 If `busctl` or `dbus-send` is available, they will be about as fast.
 A purpose built client is mostly a convenience for those that might
-want a syntatically straight forward command line interface.  
+want a syntactically straight forward command line interface.  
 
 ### Acknowledgements
 
@@ -170,7 +170,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 - 1.0.3
   - Reduce unnecessary logging.
   - Improve the description of the service's signals in ddcutil-service.1.
-  - Correct the typo in option name --perfer-drm (it was mistakenly called --prefer-dma).
+  - Correct the typo in option name --prefer-drm (it was mistakenly called --prefer-dma).
   - For simple VCP-features, only return the low-byte, for some VDUs the high-byte might contain junk.
 - 1.0.2
   - Added VcpValueChanged D-Bus signal which triggers if the SetVcp method succeeds. This is to allow
