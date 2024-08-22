@@ -25,6 +25,7 @@
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 /**
  * Status numbers that might be returned from main()
