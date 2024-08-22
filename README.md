@@ -139,7 +139,7 @@ The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
-- 1.0.10
+- 1.0.11
   - Alter the detect-function for ddcutil 2.5.1 (generates more logging/warning info).
   - Add a DETECT_ALL option to control whether disabled/powered-off VDU's are to be included in the results from detect.
   - Reduce the number of messages generated when polling for hotplug events.
