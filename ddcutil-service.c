@@ -1910,9 +1910,9 @@ static DDCA_Status enable_ddca_watch_displays(void) {
         if (status == DDCRC_OK) {
             g_message("registering libddcutil display status callback");
             poll_interval_micros = 0;  // Disable internal polling
-            const int reg_status = ddca_register_display_status_callback(display_status_event_callback);
-            if (reg_status == DDCRC_OK) {
-                return reg_status;
+            status = ddca_register_display_status_callback(display_status_event_callback);
+            if (status == DDCRC_OK) {
+                return status;
             }
         }
     }
