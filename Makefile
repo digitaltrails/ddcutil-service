@@ -5,7 +5,7 @@ CFLAGS_GIO = $(shell pkg-config --cflags --libs gio-2.0)
 CFLAGS_DDCUTIL = $(shell pkg-config --cflags --libs ddcutil)
 # Uncomment to compile against a developer local libddcutil
 #CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.1.5-dev/src/public -L $(HOME)/Downloads/ddcutil-2.1.5-dev/src/.libs -lddcutil
-#CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/build/src/public -isystem  $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/src/public -L $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/build/src/.libs -lddcutil
+CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/build/src/public -isystem  $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/src/public -L $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/build/src/.libs -lddcutil
 #CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.1.4-dev/src/public -L $(HOME)/Downloads/ddcutil-2.1.4-dev/src/.libs -lddcutil
 #CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.0.0/src/public -L $(HOME)/Downloads/ddcutil-2.0.0/src/.libs -lddcutil
 
