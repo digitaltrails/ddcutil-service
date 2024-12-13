@@ -16,11 +16,11 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 ]
 |
 [
-.B --prefer-polling
+.B --prefer-internal-polling
 ]
 |
 [
-.B --prefer-drm
+.B --prefer-libddcutil-events
 ]
 |
 [
@@ -111,30 +111,34 @@ property.
 See \fBSERVICE SIGNALS\fP.
 
 .TP
-.B "--prefer-polling"
+.B "--prefer-internal-polling"
 
-Set polling to be the preferred method for detecting display connectivity changes
-for the \fBConnectedDisplaysChanged signal\fP.  This is the default.
+Set service internal polling to be the preferred method for detecting display connectivity changes
+for the \fBConnectedDisplaysChanged signal\fP.  This is the default prior to libddcutil 2.2.
 
 .TP
-.B "--prefer-drm"
+.B "--prefer-libddcutil-events"
 
 Use
-.B libddcutil DRM-lookups
+.B libddcutil event detection
 as the preferred method for detecting display connectivity changes
-for the \fBConnectedDisplaysChanged signal\fP.  This option should detect changes sooner
-with less overheads, but may fail to detect changes for some combinations or drivers and hardware.
+for the \fBConnectedDisplaysChanged signal\fP.
+This is the default when using libddcutil version 2.2 and above.
+Enabling this option should detect changes sooner
+with less overheads, but for libddcutil < 2.2, it may fail to detect changes
+for some combinations of drivers and hardware.
 
 .TP
 .B "--poll-interval" \fIseconds\fP
 
-If polling is enabled, this option defines how often to check for display
+If internal polling is enabled, this option defines how often to check for display
 connectivity changes.  Default 30 seconds,  minimum 10 seconds, zero to disable polling.
+
 
 .TP
 .B "--poll-cascade-interval" \fIseconds\fP
 
-If polling is enabled, this option defines the minimum interval between
+If internal polling is enabled, this option defines the minimum interval between
 events within a cascade of events. For example, a cascade of events will
 occur when a session is locked and all displays are put into DPMS sleep.
 Default 0.5 seconds,  minimum 0.1 seconds.

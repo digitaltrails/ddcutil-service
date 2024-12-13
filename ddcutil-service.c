@@ -58,7 +58,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.12"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.13"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -1226,6 +1226,14 @@ static void get_vcp(GVariant* parameters, GDBusMethodInvocation* invocation) {
             }
             ddca_close_display(disp_handle);
         }
+        else {
+            g_warning("GetVcp open failed for vcp_code=%d display_num=%d edid=%.30s... status=%d",
+                      vcp_code, display_number, edid_encoded, status);
+        }
+    }
+    else {
+        g_warning("GetVcp get_display_info failed for vcp_code=%d display_num=%d edid=%.30s...",
+                  vcp_code, display_number, edid_encoded);
     }
     char* message_text = get_status_message(status);
     GVariant* result = g_variant_new(
@@ -1311,7 +1319,17 @@ static void get_multiple_vcp(GVariant* parameters, GDBusMethodInvocation* invoca
             }
             ddca_close_display(disp_handle);
         }
+        else {
+            g_info("GetMultipleVcp open failed for display_num=%d edid=%.30s...",
+                   display_number, edid_encoded);
+        }
     }
+    else {
+        g_info("GetMultipleVcp get_display_info failed for display_num=%d edid=%.30s...",
+               display_number, edid_encoded);
+    }
+    g_info("GetMultipleVcp open looks ok for display_num=%d edid=%.30s...",
+               display_number, edid_encoded);
     char* message_text = get_status_message(status);
     GVariant* result = g_variant_new("(a(yqqs)is)", value_array_builder, status, message_text);
     g_dbus_method_invocation_return_value(invocation, result); // Think this frees the result
@@ -2644,8 +2662,11 @@ int main(int argc, char* argv[]) {
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
 
-    gboolean prefer_polling = TRUE;
-    gboolean prefer_drm = FALSE;
+    gboolean has_reliable_events = ddca_ddcutil_version().major > 2 ||
+            (ddca_ddcutil_version().major == 2 && ddca_ddcutil_version().minor >= 2);
+
+    gboolean prefer_internal_polling = !has_reliable_events;
+    gboolean prefer_libddcutil_events = has_reliable_events;
 
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
@@ -2668,12 +2689,12 @@ int main(int argc, char* argv[]) {
             "print introspection xml and exit", NULL
         },
         {
-            "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
-            "prefer polling for detecting display connection events", NULL
+            "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_internal_polling,
+            "prefer internal polling for detecting display connection events", NULL
         },
         {
-            "prefer-drm", 'd', 0, G_OPTION_ARG_NONE, &prefer_drm,
-            "prefer libddcutil DRM-lookups for detecting display connection events", NULL
+            "prefer-libddcutil-events", 'd', 0, G_OPTION_ARG_NONE, &prefer_libddcutil_events,
+            "prefer libddcutil for detecting display connection events", NULL
         },
         {
             "poll-interval", 't', 0, G_OPTION_ARG_INT, &poll_seconds,
@@ -2804,8 +2825,8 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    prefer_polling = !prefer_drm;
-    monitoring_preference = prefer_polling ? MONITOR_BY_INTERNAL_POLLING : MONITOR_BY_LIBDDCUTIL_EVENTS;
+    prefer_internal_polling = !prefer_libddcutil_events;
+    monitoring_preference = prefer_internal_polling ? MONITOR_BY_INTERNAL_POLLING : MONITOR_BY_LIBDDCUTIL_EVENTS;
 
     if (enable_connectivity_signals) {
         switch (monitoring_preference) {

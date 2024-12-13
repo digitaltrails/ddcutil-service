@@ -139,6 +139,11 @@ The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
+- 1.0.13
+  - Default to libddcutil event detection for libddcutil >= 2.2 (for faster response to changes).
+  - Change option name --prefer-drm to --prefer-libddcutil-events to better clarify its purpose.
+  - Change option name --prefer-polling to --prefer-internal-polling to better clarify its purpose.
+  - Log more information when get_vcp fails.
 - 1.0.12
   - Return the error status-code if enable_ddca_watch_displays fails - was returning OK even on failure.
 - 1.0.11
