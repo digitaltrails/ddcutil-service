@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Tue Jul  2 16:41:23 2024 -->
+<!-- CreationDate: Sat Dec 14 14:11:35 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -63,8 +63,8 @@ Virtual Control Panel</p>
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>
 <i>--help</i> | <i>--version</i> | <i>--introspect</i>
 <b><br>
-ddcutil-service</b> [ <b>--emit-connectivity-signals</b> ] |
-[ <b>--prefer-polling</b> ] | [ <b>--prefer-drm</b> ] | [
+ddcutil-service</b> [ <b>--prefer-internal-polling</b> ] | [
+<b>--prefer-libddcutil-events</b> ] | [
 <b>--polling-interval</b> <i>seconds</i> ] | [
 <b>--return-raw-values</b> ] | [ <b>--lock</b> ] | [
 <b>--log-info</b> ] [ <b>--ddca-syslog-level</b> <i>N</i> ]
@@ -141,49 +141,43 @@ and exits.</p>
 introspection text for the service and exits.</p>
 
 
-<p style="margin-left:9%;"><b>--emit-connectivity-signals</b></p>
+<p style="margin-left:9%;"><b>--prefer-internal-polling</b></p>
 
-<p style="margin-left:18%; margin-top: 1em">Enable the
-<b>ConnectedDisplaysChanged signal</b> sent to clients and
-also enable any monitoring for changes. Once the service is
-running, this setting can be toggled by altering the
-<b>ServiceEmitConnectivitySignals</b> property. See
-<b>SERVICE SIGNALS</b>.</p>
+<p style="margin-left:18%; margin-top: 1em">Set service
+internal polling to be the preferred method for detecting
+display connectivity changes for the
+<b>ConnectedDisplaysChanged signal</b>. This is the default
+prior to libddcutil 2.2.</p>
 
-<p style="margin-left:9%;"><b>--prefer-polling</b></p>
 
-<p style="margin-left:18%; margin-top: 1em">Set polling to
-be the preferred method for detecting display connectivity
-changes for the <b>ConnectedDisplaysChanged signal</b>. This
-is the default.</p>
-
-<p style="margin-left:9%;"><b>--prefer-drm</b></p>
+<p style="margin-left:9%;"><b>--prefer-libddcutil-events</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Use
-<b>libddcutil DRM-lookups</b> as the preferred method for
-detecting display connectivity changes for the
-<b>ConnectedDisplaysChanged signal</b>. This option should
-detect changes sooner with less overheads, but may fail to
-detect changes for some combinations or drivers and
-hardware.</p>
+<b>libddcutil event detection</b> as the preferred method
+for detecting display connectivity changes for the
+<b>ConnectedDisplaysChanged signal</b>. This is the default
+when using libddcutil version 2.2 and above. Enabling this
+option should detect changes sooner with less overheads, but
+for libddcutil &lt; 2.2, it may fail to detect changes for
+some combinations of drivers and hardware.</p>
 
 <p style="margin-left:9%;"><b>--poll-interval</b>
 <i>seconds</i></p>
 
-<p style="margin-left:18%; margin-top: 1em">If polling is
-enabled, this option defines how often to check for display
-connectivity changes. Default 30 seconds, minimum 10
-seconds, zero to disable polling.</p>
+<p style="margin-left:18%; margin-top: 1em">If internal
+polling is enabled, this option defines how often to check
+for display connectivity changes. Default 30 seconds,
+minimum 10 seconds, zero to disable polling.</p>
 
 <p style="margin-left:9%;"><b>--poll-cascade-interval</b>
 <i>seconds</i></p>
 
-<p style="margin-left:18%; margin-top: 1em">If polling is
-enabled, this option defines the minimum interval between
-events within a cascade of events. For example, a cascade of
-events will occur when a session is locked and all displays
-are put into DPMS sleep. Default 0.5 seconds, minimum 0.1
-seconds.</p>
+<p style="margin-left:18%; margin-top: 1em">If internal
+polling is enabled, this option defines the minimum interval
+between events within a cascade of events. For example, a
+cascade of events will occur when a session is locked and
+all displays are put into DPMS sleep. Default 0.5 seconds,
+minimum 0.1 seconds.</p>
 
 <p style="margin-left:9%;"><b>--return-raw-values</b></p>
 
@@ -403,42 +397,31 @@ reinstate any custom service properties or settings.</p>
 
 <p style="margin-left:9%;"><b>ConnectedDisplaysChanged</b></p>
 
-<p style="margin-left:18%;">The service may optionally emit
-a <b>ConnectedDisplaysChanged</b> D-Bus signal when a
-display undergoes a connectivity status change due to
-hot-plug and DPMS events. This feature is optional because
-the manual experimentation required to configure it is
-unnecessary for display configurations that remain
-static.</p>
+<p style="margin-left:18%;">The service may emit a
+<b>ConnectedDisplaysChanged</b> D-Bus signal when a display
+undergoes a connectivity status change due to hot-plug and
+DPMS events.</p>
 
+<p style="margin-left:18%; margin-top: 1em">When utilizing
+libddcutil 2.2, or above, the service defaults to using
+libddcutil&rsquo;s inbuilt change detection. This is a
+portable change detection mechanism which should detect
+changes without delay for most desktop environments.</p>
 
-<p style="margin-left:18%; margin-top: 1em">Change-detection
-can be enabled by passing <b>--emit-connectivity-signals</b>
-on the command line, or by setting the
-<b>ServiceEmitConnectivitySignals</b> property.</p>
+<p style="margin-left:18%; margin-top: 1em">For versions of
+libddcutil prior to 2.2, libddcutil&rsquo;s change detection
+was somewhat more dependent on driver support. To provide a
+more portable solution, the service defaults to doing
+it&rsquo;s own internal polling for changes. Although
+portable, polling may entail delays in response, the polling
+interval defaults to 30 seconds (minimum 10 seconds).</p>
 
-<p style="margin-left:18%; margin-top: 1em">To permanently
-enable change-detection, the
-<b>--emit-connectivity-signals</b> option can be appended to
-the <b>Exec</b> line of the system or user D-Bus
-<b>com.ddcutil.DdcutilService.service</b> file (see
-<b>FILES</b>).</p>
+<p style="margin-left:18%; margin-top: 1em">In either case,
+the options <b>--prefer-internal-polling</b> and
+<b>--prefer-libddcutil-eventsP can be used to override the
+default for change detection.</b></p>
 
-<p style="margin-left:18%; margin-top: 1em">Changes are
-detected in one of two ways. The service defaults to
-periodic polling by issuing <b>libddcutil DDCA detects</b>.
-Polling is likely to work for a wide variety of drivers and
-hardware. Polling for changes will be subject to delays
-because the polling interval defaults to 30 seconds (with a
-minimum of 10 seconds). Alternatively the service can use
-<b>libddcutil DRM access</b> to provide a more efficient
-method for change detection, this requires
-<b>ddcutil/libddcutil version 2.1.0+</b>, a GPU configured
-for <b>DRM</b>, and the <b>--enable-watch-displays</b> to be
-added to <i>[libddcutil] options</i> in
-<b>$HOME/.config/ddcutil/ddcutilrc</b>.</p>
-
-<p style="margin-left:18%; margin-top: 1em">Not all
+<p style="margin-left:18%; margin-top: 1em"><b>Not all
 displays, GPUs, GPU-drivers, or cabling, provide the
 necessary support for detecting connection status changes.
 Results may vary depending on the mix of desktop components,
@@ -446,7 +429,7 @@ such as KDE, Gnome, X11, and Wayland. DisplayPort behaves
 differently to DVI and HDMI when a display is turned off but
 remains connected. Some drivers that support DRM don&rsquo;t
 properly support the necessary change detection
-features.</p>
+features.</b></p>
 
 <p style="margin-left:9%;"><b>VcpValueChanged</b></p>
 
@@ -640,9 +623,9 @@ Name=com.ddcutil.DdcutilService <br>
 Exec=/usr/bin/ddcutil-service</p>
 
 <p style="margin-left:18%; margin-top: 1em">Service
-options, such as <b>--emit-connectivity-signals</b> or
-<b>--prefer-drm</b>, should be appended to the end of
-<b>Exec=</b> line.</p>
+options, such as <b>--prefer-internal-polling</b> or
+<b>--prefer-libddcutil-events</b>, should be appended to the
+end of <b>Exec=</b> line.</p>
 
 
 <p style="margin-left:9%;"><b>$HOME/.local/share/dbus-1/services/com.ddcutil.DdcutilService.service</b></p>
