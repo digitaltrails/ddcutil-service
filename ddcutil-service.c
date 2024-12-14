@@ -719,7 +719,7 @@ typedef enum {
 } Monitoring_Preference_Type;
 
 static gboolean display_status_detection_enabled = FALSE;
-static gboolean enable_connectivity_signals = FALSE;
+static gboolean enable_connectivity_signals = TRUE;
 
 static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
 
@@ -2662,11 +2662,8 @@ int main(int argc, char* argv[]) {
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
 
-    gboolean has_reliable_events = ddca_ddcutil_version().major > 2 ||
-            (ddca_ddcutil_version().major == 2 && ddca_ddcutil_version().minor >= 2);
-
-    gboolean prefer_internal_polling = !has_reliable_events;
-    gboolean prefer_libddcutil_events = has_reliable_events;
+    gboolean prefer_internal_polling = FALSE;
+    gboolean prefer_libddcutil_events = FALSE;
 
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
@@ -2703,14 +2700,6 @@ int main(int argc, char* argv[]) {
         {
             "poll-cascade-interval", 'c', 0, G_OPTION_ARG_DOUBLE, &poll_cascade_interval_seconds,
             "polling minimum interval between cascading events in seconds, 0.1 minimum", NULL
-        },
-        {
-            "emit-connectivity-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_connectivity_signals,
-            "enable the D-Bus ConnectedDisplaysChanged signal and associated change monitoring", NULL
-        },
-        {
-            "emit-signals", 'e', 0, G_OPTION_ARG_NONE, &enable_connectivity_signals,
-            "deprecated, replaced by --emit-connectivity-signals", NULL
         },
         {
             "return-raw-values", 'r', 0, G_OPTION_ARG_NONE, &return_raw_values,
@@ -2825,8 +2814,20 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    prefer_internal_polling = !prefer_libddcutil_events;
-    monitoring_preference = prefer_internal_polling ? MONITOR_BY_INTERNAL_POLLING : MONITOR_BY_LIBDDCUTIL_EVENTS;
+    if (prefer_internal_polling) {
+        monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
+    }
+    else if (prefer_libddcutil_events) {
+        monitoring_preference = MONITOR_BY_LIBDDCUTIL_EVENTS;
+    }
+    else {
+        const gboolean has_reliable_events = ddca_ddcutil_version().major > 2 ||
+                                             (ddca_ddcutil_version().major == 2 && ddca_ddcutil_version().minor >= 2);
+        if (has_reliable_events) {
+            g_message("libddcutil version >= 2.2 - service will default to libddcutil-events for change detection.");
+        }
+        monitoring_preference = has_reliable_events ? MONITOR_BY_LIBDDCUTIL_EVENTS : MONITOR_BY_INTERNAL_POLLING;
+    }
 
     if (enable_connectivity_signals) {
         switch (monitoring_preference) {
