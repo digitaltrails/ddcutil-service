@@ -1927,7 +1927,6 @@ static DDCA_Status enable_ddca_watch_displays(void) {
         status = ddca_start_watch_displays(DDCA_EVENT_CLASS_ALL);
         if (status == DDCRC_OK) {
             g_message("registering libddcutil display status callback");
-            poll_interval_micros = 0;  // Disable internal polling
             status = ddca_register_display_status_callback(display_status_event_callback);
             if (status == DDCRC_OK) {
                 return status;
@@ -2187,11 +2186,11 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
         switch (monitoring_preference) {
             case MONITOR_BY_LIBDDCUTIL_EVENTS:
                 g_message("Detect changes using libddcutil callbacks.");
-                poll_interval_micros = 0;
                 if (enable_connectivity_signals) {
                     if (enable_ddca_watch_displays() == DDCRC_OK) {
                         break;  // Success, exit the switch
                     }
+                    g_warning("Falling back to service internal polling for all change detection");
                     // Failed, fall through to polling
                 } else {
                     disable_ddca_watch_displays();
@@ -2321,17 +2320,26 @@ static bool poll_for_changes() {
     const long now_in_micros = g_get_monotonic_time();
     bool event_is_ready = FALSE;
     if (now_in_micros >= next_poll_time) {
-        g_debug("Poll for display connection changes");
-        // Masking the logging is a bit hacky - it depends on internal knowledge of how libddcutil is logging.
-        // The author of libddcutil regards the normal messages as quite important, so they should normally be logged.
-        // A compromise: when the service is not logging debug/info, change the syslog mask, and then restore it.
-        int old_mask = 0;
-        if (!service_info_logging) {
-            old_mask = setlogmask(LOG_UPTO(LOG_WARNING));  // Temporarily disable notice msgs from libddcutil
-        }
-        const DDCA_Status detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
-        if (!service_info_logging) {
-            setlogmask(old_mask); // Restore original logging mask
+        // When monitoring_preference == MONITOR_BY_INTERNAL_POLLING, this function handles
+        // both hotplug and DPMS detection.
+        // When monitoring_preference == MONITOR_BY_LIBDDCUTIL_EVENTS libddcutil
+        // handles hotplug detection, but this function still handles DPMS detection.
+        const bool handle_hotplug_detection = monitoring_preference == MONITOR_BY_INTERNAL_POLLING;
+        g_debug("Internal Poll check: %s", handle_hotplug_detection ? "hot-plug and DPMS check" : "DPMS only check");
+
+        DDCA_Status detect_status = DDCRC_OK;
+        if (handle_hotplug_detection) {  // Need to do expensive ddca_redected_displays() for hotplug detection
+            // Masking the logging is a bit hacky - it depends on internal knowledge of how libddcutil is logging.
+            // The author of libddcutil regards the normal messages as quite important, so they should normally be logged.
+            // A compromise: when the service is not logging debug/info, change the syslog mask, and then restore it.
+            int old_mask = 0;
+            if (!service_info_logging) {
+                old_mask = setlogmask(LOG_UPTO(LOG_WARNING));  // Temporarily disable notice msgs from libddcutil
+            }
+            detect_status = ddca_redetect_displays(); // Do not call too frequently, delays the main-loop
+            if (!service_info_logging) {
+                setlogmask(old_mask); // Restore original logging mask
+            }
         }
         if (detect_status == DDCRC_OK) {
             DDCA_Display_Info_List* dlist;
@@ -2352,7 +2360,7 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(ptr->data);
                         const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
                         vdu_poll_data->connected = TRUE;
-                        g_debug("Poll check: existing-connection disp=%d %.30s...", ndx + 1, edid_encoded);
+                        g_debug("Internal Poll check: existing-connection disp=%d %.30s...", ndx + 1, edid_encoded);
                         if (vdu_poll_data->has_dpms) {
                             vdu_poll_data->dpms_awake = poll_dpms_awake(vdu_info);
                             if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
@@ -2377,12 +2385,14 @@ static bool poll_for_changes() {
                         poll_list = g_list_append(poll_list, vdu_poll_data);
                         g_debug("Poll check: new-connection disp=%d %.30s... has_dpms=%d awake=%d ",
                             ndx + 1, edid_encoded, vdu_poll_data->has_dpms, vdu_poll_data->dpms_awake);
-                        if (next_poll_time) {  // Not on first time through
-                            g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
-                            Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
-                            event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
-                            g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
-                            event_is_ready = TRUE; // Only one event on each poll - terminate loop
+                        if (handle_hotplug_detection) {
+                            if (next_poll_time) {  // Not on first time through
+                                g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
+                                Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
+                                event->event_type = DDCA_EVENT_DISPLAY_CONNECTED;
+                                g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
+                                event_is_ready = TRUE; // Only one event on each poll - terminate loop
+                            }
                         }
                     }
                 }
@@ -2391,14 +2401,16 @@ static bool poll_for_changes() {
                     GList* next = ptr->next;
                     Poll_List_Item* vdu_poll_data = ptr->data;
                     if (!vdu_poll_data->connected) {
-                        g_message("Poll signal event - disconnected %.30s...\n", vdu_poll_data->edid_encoded);
-                        Event_Data_Type* event = g_malloc(sizeof(Event_Data_Type));
-                        event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
-                        g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
-                        g_free(vdu_poll_data->edid_encoded);
-                        g_free(vdu_poll_data);
+                        if (handle_hotplug_detection) {
+                            g_message("Poll signal event - disconnected %.30s...\n", vdu_poll_data->edid_encoded);
+                            Event_Data_Type *event = g_malloc(sizeof(Event_Data_Type));
+                            event->event_type = DDCA_EVENT_DISPLAY_DISCONNECTED;
+                            g_free(atomic_event_exchange(&signal_event_data, event));  // keep latest only
+                            g_free(vdu_poll_data->edid_encoded);
+                            g_free(vdu_poll_data);
+                            event_is_ready = TRUE; // Only one event on each poll - terminate loop
+                        }
                         poll_list = g_list_delete_link(poll_list, ptr);
-                        event_is_ready = TRUE; // Only one event on each poll - terminate loop
                     }
                     ptr = next;
                 }
@@ -2662,8 +2674,9 @@ int main(int argc, char* argv[]) {
     gboolean introspect_request = FALSE;  // g_option_context_parse will overrun
     gboolean log_info = FALSE;            // TODO should all bool be changed to gboolean for safety?
 
-    gboolean prefer_internal_polling = FALSE;
+    gboolean prefer_polling = FALSE;
     gboolean prefer_libddcutil_events = FALSE;
+    gboolean disable_connectivity_signals = FALSE;
 
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
@@ -2686,7 +2699,11 @@ int main(int argc, char* argv[]) {
             "print introspection xml and exit", NULL
         },
         {
-            "prefer-internal-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_internal_polling,
+                "disable-connectivity-signals", 'q', 0, G_OPTION_ARG_NONE, &disable_connectivity_signals,
+                "disable signalling of display connection events", NULL
+        },
+        {
+            "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
             "prefer internal polling for detecting display connection events", NULL
         },
         {
@@ -2772,7 +2789,6 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-
     // Handle ddcutil ddc_init() arguments
     char* argv_null_terminated[argc];
     for (int i = 0; i < argc; i++) {
@@ -2814,7 +2830,7 @@ int main(int argc, char* argv[]) {
 
     GMainLoop* main_loop = g_main_loop_new(NULL, FALSE);
 
-    if (prefer_internal_polling) {
+    if (prefer_polling) {
         monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
     }
     else if (prefer_libddcutil_events) {
@@ -2829,37 +2845,39 @@ int main(int argc, char* argv[]) {
         monitoring_preference = has_reliable_events ? MONITOR_BY_LIBDDCUTIL_EVENTS : MONITOR_BY_INTERNAL_POLLING;
     }
 
+    enable_connectivity_signals = !disable_connectivity_signals;
     if (enable_connectivity_signals) {
         switch (monitoring_preference) {
             case MONITOR_BY_LIBDDCUTIL_EVENTS: {
-                const int enable_watch_status = enable_ddca_watch_displays();
-                if (enable_watch_status == DDCRC_OK) {
-                    poll_interval_micros = 0;
+                const int w_status = enable_ddca_watch_displays();
+                if (w_status == DDCRC_OK) {
+                    g_message("ConnectedDisplaysChanged signal - using libddcutil for hotplug detection.");
+                    g_message("ConnectedDisplaysChanged signal - using internal polling for DPMS detection only.");
                     break;
                 }
-                g_warning("Falling back to service internal polling for change detection");
+                // Fall through to internal polling
+                g_warning("Falling back to service internal polling for all change detection");
             }
             case MONITOR_BY_INTERNAL_POLLING:
             default:
-                g_message("ConnectedDisplaysChanged signal - using service internal polling for change detection");
-                if (poll_seconds >= 0 && !update_poll_interval(poll_seconds)) {
-                      g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
-                      exit(1);
-                }
-                if (poll_cascade_interval_seconds > 0.0
-                    && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
-                      g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
-                              MIN_POLL_CASCADE_INTERVAL_SECONDS);
-                      exit(1);
-                }
-                g_message("ConnectedDisplaysChanged signal - poll-interval=%ld poll-cascade-interval=%5.3f",
-                          poll_interval_micros / 1000000, poll_cascade_interval_micros / 100000.0);
+                g_message("ConnectedDisplaysChanged signal - using service internal polling for all change detection");
                 break;
         }
+        if (poll_seconds >= 0 && !update_poll_interval(poll_seconds)) {
+            g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
+            exit(1);
+        }
+        if (poll_cascade_interval_seconds > 0.0
+            && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
+              g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
+                      MIN_POLL_CASCADE_INTERVAL_SECONDS);
+              exit(1);
+        }
+        g_message("ConnectedDisplaysChanged signal - poll-interval=%ld poll-cascade-interval=%5.3f",
+                  poll_interval_micros / 1000000, poll_cascade_interval_micros / 100000.0);
     }
     else {
-        g_message("ConnectedDisplaysChanged signals disabled"
-                  "(add --emit_connectivity_signals to enable them).");
+        g_message("ConnectedDisplaysChanged signals - disabled.");
         poll_interval_micros = 0;  // Disable internal polling
     }
 

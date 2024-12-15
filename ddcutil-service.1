@@ -4,15 +4,19 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 .SH SYNOPSIS
 
 .B ddcutil-service
-.I --help
+.B --help
 |
-.I --version
+.B --version
 |
-.I --introspect
+.B --introspect
 .br
 .B ddcutil-service
 [
-.B --prefer-internal-polling
+.B --disable-connectivity-signals
+]
+|
+[
+.B --prefer-polling
 ]
 |
 [
@@ -96,7 +100,12 @@ version and exits.
 Outputs the XML introspection text for the service and exits.
 
 .TP
-.B "--prefer-internal-polling"
+.B "--disable-connectivity-signals
+
+Disables detection and DBUS-signalling of connectivity changes.
+
+.TP
+.B "--prefer-polling"
 
 Set service internal polling to be the preferred method for detecting display connectivity changes
 for the \fBConnectedDisplaysChanged signal\fP.  This is the default prior to libddcutil 2.2.
@@ -109,21 +118,22 @@ Use
 as the preferred method for detecting display connectivity changes
 for the \fBConnectedDisplaysChanged signal\fP.
 This is the default when using libddcutil version 2.2 and above.
-Enabling this option should detect changes sooner
-with less overheads, but for libddcutil < 2.2, it may fail to detect changes
-for some combinations of drivers and hardware.
+Enabling this option should detect hot-plug events sooner
+with less overheads. Some internal polling will still occur to monitor
+for DPMS events not covered by libddcutil.  For libddcutil prior to
+version 2.2, libddcutil event detection may fail to work for some
+combinations of drivers and hardware.
 
 .TP
 .B "--poll-interval" \fIseconds\fP
 
-If internal polling is enabled, this option defines how often to check for display
+This option defines how often to internally poll for display
 connectivity changes.  Default 30 seconds,  minimum 10 seconds, zero to disable polling.
-
 
 .TP
 .B "--poll-cascade-interval" \fIseconds\fP
 
-If internal polling is enabled, this option defines the minimum interval between
+This option defines the internal polling minimum interval between
 events within a cascade of events. For example, a cascade of events will
 occur when a session is locked and all displays are put into DPMS sleep.
 Default 0.5 seconds,  minimum 0.1 seconds.
@@ -313,11 +323,12 @@ most desktop environments.
 
 For versions of libddcutil prior to 2.2, libddcutil's change detection
 was somewhat more dependent on driver support. To provide a more portable
-solution, the service defaults to doing it's own internal polling for changes.
-Although portable, polling may entail delays in response, the polling
+solution, for libddcutil prior to 2.2 the service defaults to doing it's own
+internal polling for all changes.
+Although portable, polling is slower to detect changes, the polling
 interval defaults to 30 seconds (minimum 10 seconds).
 
-In either case, the options \fB--prefer-internal-polling\fP and
+In either case, the options \fB--prefer-polling\fP and
 \fB--prefer-libddcutil-events\fP can be used to override the default
 for change detection.
 
@@ -477,7 +488,7 @@ service is requested.  Typically the contents would be as follows
     Exec=/usr/bin/ddcutil-service
 .fi
 
-Service options, such as \fB--prefer-internal-polling\fP or \fB--prefer-libddcutil-events\fP,
+Service options, such as \fB--prefer-polling\fP or \fB--prefer-libddcutil-events\fP,
 should be appended to the end of \fBExec=\fP line.
 
 .TP
@@ -640,7 +651,7 @@ Some mixes of VPUs and GPUs don't consistently update
 DRM metadata for hot-plug events.  If \fBConnectedDisplaysChanged\fP
 signals are not being raised, try manually adding \fB--prefer-polling\fP
 option, to force the service to poll for changes.  Polling is less responsive,
-but it doesn't require DRM, and is likely to always work.
+but it is likely to always work.
 
 Some GPU drivers and VDUs have buggy implementations of DDC.
 If you have the choice, a

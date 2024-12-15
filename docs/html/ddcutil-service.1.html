@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sat Dec 14 14:17:07 2024 -->
+<!-- CreationDate: Sun Dec 15 20:49:38 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -63,9 +63,10 @@ Virtual Control Panel</p>
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service</b>
 <i>--help</i> | <i>--version</i> | <i>--introspect</i>
 <b><br>
-ddcutil-service</b> [ <b>--prefer-internal-polling</b> ] | [
-<b>--prefer-libddcutil-events</b> ] | [
-<b>--polling-interval</b> <i>seconds</i> ] | [
+ddcutil-service</b> [ <b>--disable-connectivity-signals</b>
+] | [ <br>
+.B --prefer-polling ] | [ <b>--prefer-libddcutil-events</b>
+] | [ <b>--polling-interval</b> <i>seconds</i> ] | [
 <b>--return-raw-values</b> ] | [ <b>--lock</b> ] | [
 <b>--log-info</b> ] [ <b>--ddca-syslog-level</b> <i>N</i> ]
 | [ <b>--ddca-init-options</b> <i>M</i> ] [ <b>--</b>
@@ -141,7 +142,12 @@ and exits.</p>
 introspection text for the service and exits.</p>
 
 
-<p style="margin-left:9%;"><b>--prefer-internal-polling</b></p>
+<p style="margin-left:9%;"><b>--disable-connectivity-signals</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Disables
+detection and DBUS-signalling of connectivity changes.</p>
+
+<p style="margin-left:9%;"><b>--prefer-polling</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Set service
 internal polling to be the preferred method for detecting
@@ -157,27 +163,29 @@ prior to libddcutil 2.2.</p>
 for detecting display connectivity changes for the
 <b>ConnectedDisplaysChanged signal</b>. This is the default
 when using libddcutil version 2.2 and above. Enabling this
-option should detect changes sooner with less overheads, but
-for libddcutil &lt; 2.2, it may fail to detect changes for
-some combinations of drivers and hardware.</p>
+option should detect hot-plug events sooner with less
+overheads. Some internal polling will still occur to monitor
+for DPMS events not covered by libddcutil. For libddcutil
+prior to version 2.2, libddcutil event detection may fail to
+work for some combinations of drivers and hardware.</p>
 
 <p style="margin-left:9%;"><b>--poll-interval</b>
 <i>seconds</i></p>
 
-<p style="margin-left:18%; margin-top: 1em">If internal
-polling is enabled, this option defines how often to check
-for display connectivity changes. Default 30 seconds,
-minimum 10 seconds, zero to disable polling.</p>
+<p style="margin-left:18%; margin-top: 1em">This option
+defines how often to internally poll for display
+connectivity changes. Default 30 seconds, minimum 10
+seconds, zero to disable polling.</p>
 
 <p style="margin-left:9%;"><b>--poll-cascade-interval</b>
 <i>seconds</i></p>
 
-<p style="margin-left:18%; margin-top: 1em">If internal
-polling is enabled, this option defines the minimum interval
-between events within a cascade of events. For example, a
-cascade of events will occur when a session is locked and
-all displays are put into DPMS sleep. Default 0.5 seconds,
-minimum 0.1 seconds.</p>
+<p style="margin-left:18%; margin-top: 1em">This option
+defines the internal polling minimum interval between events
+within a cascade of events. For example, a cascade of events
+will occur when a session is locked and all displays are put
+into DPMS sleep. Default 0.5 seconds, minimum 0.1
+seconds.</p>
 
 <p style="margin-left:9%;"><b>--return-raw-values</b></p>
 
@@ -411,13 +419,14 @@ changes without delay for most desktop environments.</p>
 <p style="margin-left:18%; margin-top: 1em">For versions of
 libddcutil prior to 2.2, libddcutil&rsquo;s change detection
 was somewhat more dependent on driver support. To provide a
-more portable solution, the service defaults to doing
-it&rsquo;s own internal polling for changes. Although
-portable, polling may entail delays in response, the polling
-interval defaults to 30 seconds (minimum 10 seconds).</p>
+more portable solution, for libddcutil prior to 2.2 the
+service defaults to doing it&rsquo;s own internal polling
+for all changes. Although portable, polling is slower to
+detect changes, the polling interval defaults to 30 seconds
+(minimum 10 seconds).</p>
 
 <p style="margin-left:18%; margin-top: 1em">In either case,
-the options <b>--prefer-internal-polling</b> and
+the options <b>--prefer-polling</b> and
 <b>--prefer-libddcutil-events</b> can be used to override
 the default for change detection.</p>
 
@@ -623,7 +632,7 @@ Name=com.ddcutil.DdcutilService <br>
 Exec=/usr/bin/ddcutil-service</p>
 
 <p style="margin-left:18%; margin-top: 1em">Service
-options, such as <b>--prefer-internal-polling</b> or
+options, such as <b>--prefer-polling</b> or
 <b>--prefer-libddcutil-events</b>, should be appended to the
 end of <b>Exec=</b> line.</p>
 
@@ -826,8 +835,8 @@ VPUs and GPUs don&rsquo;t consistently update DRM metadata
 for hot-plug events. If <b>ConnectedDisplaysChanged</b>
 signals are not being raised, try manually adding
 <b>--prefer-polling</b> option, to force the service to poll
-for changes. Polling is less responsive, but it
-doesn&rsquo;t require DRM, and is likely to always work.</p>
+for changes. Polling is less responsive, but it is likely to
+always work.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some GPU drivers
 and VDUs have buggy implementations of DDC. If you have the
