@@ -2,12 +2,12 @@
 .\"     Title: com.ddcutil.DdcutilInterface
 .\"    Author: Michael Hamilton
 .\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
-.\"      Date: 07/02/2024
+.\"      Date: 12/19/2024
 .\"    Manual: Miscellaneous
 .\"    Source: ddcutil-service
 .\"  Language: English
 .\"
-.TH "COM\&.DDCUTIL\&.DDCU" "7" "07/02/2024" "ddcutil\-service" "Miscellaneous"
+.TH "COM\&.DDCUTIL\&.DDCU" "7" "12/19/2024" "ddcutil\-service" "Miscellaneous"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -38,6 +38,11 @@ Restart                 (IN  s             text_options,
                          OUT i             error_status,
                          OUT s             error_message);
 Detect                  (IN  u             flags,
+                         OUT i             number_of_displays,
+                         OUT a(iiisssqsu)  detected_displays,
+                         OUT i             error_status,
+                         OUT s             error_message);
+ListDetected            (IN  u             flags,
                          OUT i             number_of_displays,
                          OUT a(iiisssqsu)  detected_displays,
                          OUT i             error_status,
@@ -257,6 +262,57 @@ OUT i \fInumber_of_displays\fR:
 .RS 4
 The number of VDUs detected (the length of
 \fIdetected_displays\fR)\&.
+.RE
+.PP
+OUT a(iiisssqsu) \fIdetected_displays\fR:
+.RS 4
+An array of structures describing the VDUs\&.
+.RE
+.PP
+OUT i \fIerror_status\fR:
+.RS 4
+A libddcutil DDCRC error status\&. DDCRC_OK (zero) if no errors have occurred\&.
+.RE
+.PP
+OUT s \fIerror_message\fR:
+.RS 4
+Text message for error_status\&.
+.RE
+.SS "The ListDetected() method"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ListDetected (IN  u            flags,
+              OUT i            number_of_displays,
+              OUT a(iiisssqsu) detected_displays,
+              OUT i            error_status,
+              OUT s            error_message);
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Returns the currently detected VDUs without performing using a new detect\&. This method is particularly useful for libddcutil 2\&.2+ where detection may occur in the background automatically\&.
+.PP
+The array
+\fIdetected_displays\fR
+will be of length
+\fInumber_of_displays\fR\&.
+.PP
+Each element of
+\fIdetected_displays\fR
+array will contain the fields specified by the AttributesReturnedByDetect property\&. The fields will include the libddcutil display\-number and a base64\-encoded EDID\&.
+.PP
+IN u \fIflags\fR:
+.RS 4
+For future use
+.RE
+.PP
+OUT i \fInumber_of_displays\fR:
+.RS 4
+.sp
 .RE
 .PP
 OUT a(iiisssqsu) \fIdetected_displays\fR:

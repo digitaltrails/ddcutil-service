@@ -176,6 +176,31 @@ static const gchar introspection_xml[] = R"(
         </method>
 
     <!--
+        ListDetected:
+        @flags: For future use
+        @detected_displays: An array of structures describing the VDUs.
+        @error_status: A libddcutil DDCRC error status.  DDCRC_OK (zero) if no errors have occurred.
+        @error_message: Text message for error_status.
+
+        Returns the currently detected VDUs without performing using a new detect.
+        This method is particularly useful for libddcutil 2.2+ where detection
+        may occur in the background automatically.
+
+        The array @detected_displays will be of length @number_of_displays.
+
+        Each element of @detected_displays array will contain the fields
+        specified by the AttributesReturnedByDetect property.  The fields
+        will include the libddcutil display-number and a base64-encoded EDID.
+    -->
+    <method name='ListDetected'>
+        <arg name='flags' type='u' direction='in'/>
+        <arg name='number_of_displays' type='i' direction='out'/>
+        <arg name='detected_displays' type='a(iiisssqsu)' direction='out'/>
+        <arg name='error_status' type='i' direction='out'/>
+        <arg name='error_message' type='s' direction='out'/>
+        </method>
+
+    <!--
         GetVcp:
         @display_number: The libddcutil/ddcutil display number to query
         @edid_txt: The base-64 encoded EDID of the display
@@ -1100,7 +1125,7 @@ static void display_status_event_callback(DDCA_Display_Status_Event event);
  * @param parameters inbound parameters
  * @param invocation originating D-Bus method call
  */
-static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
+static void detect(GVariant* parameters, GDBusMethodInvocation* invocation, gboolean list_only) {
     u_int32_t flags;
     g_variant_get(parameters, "(u)", &flags);
 
@@ -1113,8 +1138,12 @@ static void detect(GVariant* parameters, GDBusMethodInvocation* invocation) {
 
     g_info("Detect flags=%x", flags);
 
-    DDCA_Status detect_status = ddca_redetect_displays();
+    DDCA_Status detect_status = DDCRC_OK;
     char* detect_message_text = NULL;
+
+    if (!list_only) {
+        detect_status = ddca_redetect_displays();
+    }
 
     if (detect_status != DDCRC_OK) {
         detect_message_text = get_status_message(detect_status);
@@ -1991,7 +2020,10 @@ static void handle_method_call(GDBusConnection* connection, const gchar* sender,
     }
 
     if (g_strcmp0(method_name, "Detect") == 0) {
-        detect(parameters, invocation);
+        detect(parameters, invocation, FALSE);
+    }
+    else if (g_strcmp0(method_name, "ListDetected") == 0) {
+        detect(parameters, invocation, TRUE);
     }
     else if (g_strcmp0(method_name, "GetVcp") == 0) {
         get_vcp(parameters, invocation);

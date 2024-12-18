@@ -357,8 +357,8 @@ static cmd_status_t call_capabilities(GDBusConnection *connection, int display_n
  * @param connection dbus connection to ddcutil-service
  * @return COMPLETED_WITHOUT_ERROR, SERVICE_ERROR or DBUS_ERROR
  */
-static cmd_status_t call_detect(GDBusConnection *connection) {
-    const char *operation_name = "Detect";
+static cmd_status_t call_detect(GDBusConnection *connection, gboolean list_only) {
+    const char *operation_name = list_only ? "ListDetected" : "Detect" ;
     GError *error = NULL;
     GVariant *result;
 
@@ -616,7 +616,7 @@ int main(int argc, char *argv[]) {
     };
 
     context = g_option_context_new(
-            "[detect | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n]");
+            "[detect | list | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n]");
     g_option_context_add_main_entries(context, entries, NULL);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("ERROR: Error parsing options: %s\n", error->message);
@@ -678,7 +678,9 @@ int main(int argc, char *argv[]) {
             g_printerr("ERROR: You must provide a method (detect, getvcp, or setvcp) and appropriate arguments.\n");
             exit_status = SYNTAX_ERROR;
         } else if (g_strcmp0(method, "detect") == 0) {
-            exit_status = call_detect(connection);
+            exit_status = call_detect(connection, FALSE);
+        } else if (g_strcmp0(method, "list") == 0) {
+            exit_status = call_detect(connection, TRUE);
         } else if (g_strcmp0(method, "setvcp") == 0) {
             exit_status = parse_display_and_edid(&display_number, edid_txt);
             if (exit_status == COMPLETED_WITHOUT_ERROR) {

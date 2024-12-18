@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sun Dec 15 21:08:53 2024 -->
+<!-- CreationDate: Thu Dec 19 08:21:31 2024 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -28,6 +28,7 @@
 <a href="#METHOD DETAILS">METHOD DETAILS</a><br>
 <a href="#The Restart() method">The Restart() method</a><br>
 <a href="#The Detect() method">The Detect() method</a><br>
+<a href="#The ListDetected() method">The ListDetected() method</a><br>
 <a href="#The GetVcp() method">The GetVcp() method</a><br>
 <a href="#The GetMultipleVcp() method">The GetMultipleVcp() method</a><br>
 <a href="#The SetVcp() method">The SetVcp() method</a><br>
@@ -85,6 +86,11 @@ IN u flags, <br>
 OUT i error_status, <br>
 OUT s error_message); <br>
 Detect (IN u flags, <br>
+OUT i number_of_displays, <br>
+OUT a(iiisssqsu) detected_displays, <br>
+OUT i error_status, <br>
+OUT s error_message); <br>
+ListDetected (IN u flags, <br>
 OUT i number_of_displays, <br>
 OUT a(iiisssqsu) detected_displays, <br>
 OUT i error_status, <br>
@@ -339,6 +345,60 @@ invalid VDUs will be included in the results.</p>
 
 <p style="margin-left:14%;">The number of VDUs detected
 (the length of <i>detected_displays</i>).</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT a(iiisssqsu)
+<i>detected_displays</i>:</p>
+
+<p style="margin-left:14%;">An array of structures
+describing the VDUs.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>error_status</i>:</p>
+
+<p style="margin-left:14%;">A libddcutil DDCRC error
+status. DDCRC_OK (zero) if no errors have occurred.</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT s
+<i>error_message</i>:</p>
+
+<p style="margin-left:14%;">Text message for
+error_status.</p>
+
+<h3>The ListDetected() method
+<a name="The ListDetected() method"></a>
+</h3>
+
+
+<p style="margin-left:14%; margin-top: 1em">ListDetected
+(IN u flags, <br>
+OUT i number_of_displays, <br>
+OUT a(iiisssqsu) detected_displays, <br>
+OUT i error_status, <br>
+OUT s error_message);</p>
+
+<p style="margin-left:9%; margin-top: 1em">Returns the
+currently detected VDUs without performing using a new
+detect. This method is particularly useful for libddcutil
+2.2+ where detection may occur in the background
+automatically.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The array
+<i>detected_displays</i> will be of length
+<i>number_of_displays</i>.</p>
+
+<p style="margin-left:9%; margin-top: 1em">Each element of
+<i>detected_displays</i> array will contain the fields
+specified by the AttributesReturnedByDetect property. The
+fields will include the libddcutil display&minus;number and
+a base64&minus;encoded EDID.</p>
+
+<p style="margin-left:9%; margin-top: 1em">IN u
+<i>flags</i>:</p>
+
+<p style="margin-left:14%;">For future use</p>
+
+<p style="margin-left:9%; margin-top: 1em">OUT i
+<i>number_of_displays</i>:</p>
 
 <p style="margin-left:9%; margin-top: 1em">OUT a(iiisssqsu)
 <i>detected_displays</i>:</p>

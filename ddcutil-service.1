@@ -213,6 +213,12 @@ Full API documentation can be found in \fBddcutil_service(7)\fP.
 Return a list of monitors detected along with their properties.
 
 .TP
+.B ListDetected
+Return the list of previously detected monitors along with their properties.
+This method is particularly useful for \fBlibddcutil 2.2+\fP where detection
+may occur in the background automatically.
+
+.TP
 .B GetVcp
 Query a display settings by VCP code, for example, brightness is VCP code 0x10.
 
