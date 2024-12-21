@@ -146,6 +146,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
   - Always use internal polling for detecting DPMS changes (DPMS is not covered by libddcutil events). 
   - Add method ListDetected to take advantage of hotplug detection in libddcutil >= 2.2.
   - Add the list command to ddcutil-client to provide access to the new ListDetected method. 
+  - Add wait, wait-connection-change, and wait-vcp-change commands to ddcutil-client.
   - Log more information when get_vcp fails.
 - 1.0.12
   - Return the error status-code if enable_ddca_watch_displays fails - was returning OK even on failure.

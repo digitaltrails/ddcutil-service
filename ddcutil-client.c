@@ -484,6 +484,42 @@ static cmd_status_t set_property(GDBusConnection *connection, char *property_nam
     return handle_dbus_error("set_property", error);
 }
 
+void waiter(GDBusConnection* connection,
+  const gchar* sender_name,
+  const gchar* object_path,
+  const gchar* interface_name,
+  const gchar* signal_name,
+  GVariant* parameters,
+  gpointer user_data) {
+    g_print("Recieved signal %s %s\n", signal_name, g_variant_print(parameters, FALSE));
+    exit(0);
+}
+
+cmd_status_t wait_for_signal(gchar* signals[]) {
+    for (gchar **ptr = signals; *ptr; ptr++) {
+        const gchar *signal_name = *ptr;
+        guint id = g_dbus_connection_signal_subscribe(connection,
+                                                      DBUS_BUS_NAME,
+                                                      DBUS_INTERFACE_NAME,
+                                                      signal_name,
+                                                      NULL,
+                                                      NULL,
+                                                      G_DBUS_SIGNAL_FLAGS_NONE,
+                                                      waiter,
+                                                      NULL,
+                                                      NULL);
+        if (id != 0) {
+            g_print("waiting for %s signal...\n", signal_name);
+        }
+        else {
+            g_print("failed to wait for %s signal\n", signal_name);
+            return -1;
+        }
+    }
+    g_main_loop_run(g_main_loop_new(NULL, 0));
+    return 0;
+}
+
 /**
  * Parse a command line int argument using strtol
  * @param input_str the command line argument
@@ -616,7 +652,7 @@ int main(int argc, char *argv[]) {
     };
 
     context = g_option_context_new(
-            "[detect | list | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n]");
+            "[detect | list | capabilities | capabilities-terse | getvcp 0xNN | setvcp 0xNN n | wait-for-connection-change | wait-for-vcp-change | wait]");
     g_option_context_add_main_entries(context, entries, NULL);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("ERROR: Error parsing options: %s\n", error->message);
@@ -745,7 +781,16 @@ int main(int argc, char *argv[]) {
             if (exit_status == COMPLETED_WITHOUT_ERROR) {
                 exit_status = call_capabilities(connection, display_number, edid_txt);
             }
-        } else {
+        } else if (g_strcmp0(method, "wait-for-connection-change") == 0) {
+            gchar* signals[] = {"ConnectedDisplaysChanged", NULL};
+            exit_status = wait_for_signal(signals);
+        } else if (g_strcmp0(method, "wait-for-vcp-change") == 0) {
+            gchar* signals[] = {"VcpValueChanged", NULL};
+            exit_status = wait_for_signal(signals);
+        } else if (g_strcmp0(method, "wait") == 0) {
+            gchar* signals[] = {"ConnectedDisplaysChanged", "VcpValueChanged", NULL};
+            exit_status = wait_for_signal(signals);
+        }  else {
             g_printerr("ERROR: Unknown command: %s\n", method);
             exit_status = SYNTAX_ERROR;
         }

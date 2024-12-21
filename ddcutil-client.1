@@ -40,8 +40,17 @@ Get the value of the VCP code specified by \fI0xNN\fR.
 .B setvcp \fI0xNN n\fR
 Set the value of the VCP code specified by \fI0xNN\fR to \fIn\fR.
 .TP
-.B getvcp-metadata \fI0xNN
+.B getvcp-metadata \fI0xNN\fR
 Get the metadata for the VCP code specified by \fI0xNN\fR.
+.TP
+.B wait-for-connection-change
+Wait for a \fBConnectedDisplaysChanged\fR signal, then exit.
+.TP
+.B wait-for-vcp-change
+Wait for a \fBVcpValueChanged\fR signal, then exit.
+.TP
+.B wait
+Wait for a \fBConnectedDisplaysChanged\fR or \fBVcpValueChanged\fR signal, then exit.
 
 .SH OPTIONS
 .TP
