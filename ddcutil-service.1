@@ -128,7 +128,9 @@ Provided just in case (so far no one has reported a need for this option).
 .B "--prefer-polling"
 
 Set service internal polling to be the preferred method for detecting display connectivity changes
-for the \fBConnectedDisplaysChanged signal\fP.  This is the default prior to libddcutil 2.2.
+for the \fBConnectedDisplaysChanged signal\fP.  This is the default prior to libddcutil 2.2
+and may still be a better choice for monitors connected via DVI if they behave inconsistently
+when using libddcutil event detection.
 
 .TP
 .B "--prefer-libddcutil-events"
@@ -141,8 +143,10 @@ This is the default when using libddcutil version 2.2 and above.
 Enabling this option should detect hot-plug events sooner
 with less overheads. Some internal polling will still occur to monitor
 for DPMS events not covered by libddcutil.  Libddcutil event detection
-may fail to work reliably for some combinations of drivers and hardware,
-in which case, try \fB--prefer-polling\fP instead.
+may fail to work reliably for some combinations of drivers, hardware,
+and connectors, in which case, try \fB--prefer-polling\fP instead.
+In particular, eventing from monitors hotplugged via DVI connectors seems
+to be more inconsistent.
 
 .TP
 .B "--poll-interval" \fIseconds\fP
@@ -674,10 +678,11 @@ metadata to handle such cases. The \fBSetVcp\fP counterpart always accepts
 full 16-bit values and passes them unaltered to the VDU.
 
 Some mixes of VPUs and GPUs don't consistently update
-DRM metadata for hot-plug events.  If \fBConnectedDisplaysChanged\fP
+DRM metadata for hot-plug events. In particular, hotplugging DVI connections
+may behave inconsistently.  If \fBConnectedDisplaysChanged\fP
 signals are not being raised, try manually adding \fB--prefer-polling\fP
 option, to force the service to poll for changes.  Polling is less responsive,
-but it is likely to always work.
+but it is more likely to work.
 
 Some GPU drivers and VDUs have buggy implementations of DDC.
 If you have the choice, a
