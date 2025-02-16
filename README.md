@@ -143,6 +143,7 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
   - Default to libddcutil event detection for libddcutil >= 2.2 (for faster response to changes).
   - Change option name --prefer-drm to --prefer-libddcutil-events to better clarify its purpose.
   - Remove obsolete option --emit-connectivity-signals, add --disable-connectivity-signals instead.
+  - Add options --disable-hotplug-polling, --disable-dpms-polling to acommodate quirky monitors.
   - Always use internal polling for detecting DPMS changes (DPMS is not covered by libddcutil events). 
   - Add method ListDetected to take advantage of hotplug detection in libddcutil >= 2.2.
   - Add the list command to ddcutil-client to provide access to the new ListDetected method. 

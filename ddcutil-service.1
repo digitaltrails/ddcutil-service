@@ -16,6 +16,14 @@ ddcutil-service \- D-Bus service for libddcutil VESA DDC Monitor Virtual Control
 ]
 |
 [
+.B --disable-hotplug-polling
+]
+|
+[
+.B --disable-dpms-polling
+]
+|
+[
 .B --prefer-polling
 ]
 |
@@ -100,9 +108,21 @@ version and exits.
 Outputs the XML introspection text for the service and exits.
 
 .TP
-.B "--disable-connectivity-signals
+.B "--disable-connectivity-signals"
 
 Disables detection and DBUS-signalling of connectivity changes.
+
+.TP
+.B "--disable-hotplug-polling"
+
+Disable internal polling for hotplug events (disable polling libddcutil detect).
+Polling using \fBdetect\fP may wake some monitor models from DPMS sleep (seems rare).
+
+.TP
+.B "--disable-dpms-polling"
+
+Disable the internal polling for DPMS events (disable polling getvcp 0xd6).
+Provided just in case (so far no one has reported a need for this option).
 
 .TP
 .B "--prefer-polling"
@@ -120,9 +140,9 @@ for the \fBConnectedDisplaysChanged signal\fP.
 This is the default when using libddcutil version 2.2 and above.
 Enabling this option should detect hot-plug events sooner
 with less overheads. Some internal polling will still occur to monitor
-for DPMS events not covered by libddcutil.  For libddcutil prior to
-version 2.2, libddcutil event detection may fail to work for some
-combinations of drivers and hardware.
+for DPMS events not covered by libddcutil.  Libddcutil event detection
+may fail to work reliably for some combinations of drivers and hardware,
+in which case, try \fB--prefer-polling\fP instead.
 
 .TP
 .B "--poll-interval" \fIseconds\fP

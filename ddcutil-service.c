@@ -743,8 +743,10 @@ typedef enum {
     MONITOR_BY_LIBDDCUTIL_EVENTS,
 } Monitoring_Preference_Type;
 
-static gboolean display_status_detection_enabled = FALSE;
+static gboolean display_status_detection_enabled = FALSE;  // TODO this seems to always be TRUE - get rid of it?
 static gboolean enable_connectivity_signals = TRUE;
+static gboolean disable_hotplug_polling = FALSE;  // Prevent any internal hotplug detect polling.
+static gboolean disable_dpms_polling = FALSE;
 
 static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
 
@@ -2311,6 +2313,9 @@ static gint pollcmp(gconstpointer item_ptr, gconstpointer target) {
 }
 
 static bool is_dpms_capable(const DDCA_Display_Info *vdu_info) {
+    if (disable_dpms_polling) {
+        return FALSE;
+    }
     DDCA_Status status;
     DDCA_Feature_Metadata *meta_0xd6 = NULL;
 #if defined(USE_DREF_CHECK_FOR_DPMS)
@@ -2356,7 +2361,8 @@ static bool poll_for_changes() {
         // both hotplug and DPMS detection.
         // When monitoring_preference == MONITOR_BY_LIBDDCUTIL_EVENTS libddcutil
         // handles hotplug detection, but this function still handles DPMS detection.
-        const bool handle_hotplug_detection = monitoring_preference == MONITOR_BY_INTERNAL_POLLING;
+        const bool handle_hotplug_detection =
+            monitoring_preference == MONITOR_BY_INTERNAL_POLLING && !disable_hotplug_polling;
         g_debug("Internal Poll check: %s", handle_hotplug_detection ? "hot-plug and DPMS check" : "DPMS only check");
 
         DDCA_Status detect_status = DDCRC_OK;
@@ -2736,6 +2742,14 @@ int main(int argc, char* argv[]) {
         {
                 "disable-connectivity-signals", 'q', 0, G_OPTION_ARG_NONE, &disable_connectivity_signals,
                 "disable signalling of display connection events", NULL
+        },
+        {
+            "disable-hotplug-polling", 'q', 0, G_OPTION_ARG_NONE, &disable_hotplug_polling,
+            "disable internal polling for hotplug events (disable polling libddcutil detect)", NULL
+        },
+        {
+            "disable-dpms-polling", 'q', 0, G_OPTION_ARG_NONE, &disable_dpms_polling,
+            "disable internal polling for DPMS events (disable polling getvcp 0xd6)", NULL
         },
         {
             "prefer-polling", 'p', 0, G_OPTION_ARG_NONE, &prefer_polling,
