@@ -365,9 +365,7 @@ for change detection.
 Not all displays, GPUs, GPU-drivers, or cabling, provide the necessary support
 for detecting connection status changes. Results may vary
 depending on the mix of desktop components, such as KDE, Gnome, X11, and Wayland.
-DisplayPort behaves differently to DVI and HDMI when
-a display is turned off but remains connected.  Some drivers that
-support DRM don't properly support the necessary change detection features.
+See \fBLIMITATIONS\fP below for further details.
 
 .TP
 .B VcpValueChanged
@@ -678,11 +676,24 @@ metadata to handle such cases. The \fBSetVcp\fP counterpart always accepts
 full 16-bit values and passes them unaltered to the VDU.
 
 Some mixes of VPUs and GPUs don't consistently update
-DRM metadata for hot-plug events. In particular, hotplugging DVI connections
-may behave inconsistently.  If \fBConnectedDisplaysChanged\fP
-signals are not being raised, try manually adding \fB--prefer-polling\fP
-option, to force the service to poll for changes.  Polling is less responsive,
-but it is more likely to work.
+DRM metadata for hot-plug events. Some drivers that
+support DRM don't properly support the necessary hot-plug detection features.
+Monitors connected by DisplayPort behave differently to those connected by DVI
+and HDMI when a display is turned off but remains connected.
+Hot-plugging DVI connections appear to behave more inconsistently
+than DisplayPort with some drivers (for multple OEMs).
+
+If \fBConnectedDisplaysChanged\fP signals are not being raised, you can
+try manually adding \fB--prefer-polling\fP option, to force the service to
+poll internally for changes.  Polling is less responsive,
+but it is more likely to work.  The internal polling option has been
+known to wake at least one model of monitors from sleep, if this
+occurs try \fB--disable-hotplug-polling\fP, which will drop back
+to solely DPMS polling.
+
+DPMS detection can only be reliably done by polling, and is only
+enabled for monitors that support DPMS.  DPMS polling is not known
+to cause any issues, but can be disabled by \fB--disable-dpms-polling\fP.
 
 Some GPU drivers and VDUs have buggy implementations of DDC.
 If you have the choice, a

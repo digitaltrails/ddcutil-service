@@ -2729,6 +2729,8 @@ int main(int argc, char* argv[]) {
     gint ddca_init_options = 0; // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
 
 
+    gboolean ignore;  // Allows an obsolete option to be set without any errors.
+
     // Use the glib command line parser...
     const GOptionEntry entries[] = {
         {
@@ -2744,11 +2746,11 @@ int main(int argc, char* argv[]) {
                 "disable signalling of display connection events", NULL
         },
         {
-            "disable-hotplug-polling", 'q', 0, G_OPTION_ARG_NONE, &disable_hotplug_polling,
+            "disable-hotplug-polling", 'u', 0, G_OPTION_ARG_NONE, &disable_hotplug_polling,
             "disable internal polling for hotplug events (disable polling libddcutil detect)", NULL
         },
         {
-            "disable-dpms-polling", 'q', 0, G_OPTION_ARG_NONE, &disable_dpms_polling,
+            "disable-dpms-polling", 'm', 0, G_OPTION_ARG_NONE, &disable_dpms_polling,
             "disable internal polling for DPMS events (disable polling getvcp 0xd6)", NULL
         },
         {
@@ -2786,6 +2788,14 @@ int main(int argc, char* argv[]) {
         {
             "ddca-init-options", 'i', 0, G_OPTION_ARG_INT, &ddca_init_options,
             "1=Disable-Config-File", NULL
+        },
+        {
+            "prefer-drm", 'd', 0, G_OPTION_ARG_NONE, &prefer_libddcutil_events,
+            "deprecated nondescript name, same as --prefer-libddcutil-events", NULL
+        },
+        {
+            "emit-connectivity-signals", 'q', 0, G_OPTION_ARG_NONE, &ignore,
+            "obsolete, emit is now the default, see --disable-connectivity-signals", NULL
         },
         {NULL}
     };
