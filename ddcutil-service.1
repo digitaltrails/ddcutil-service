@@ -691,9 +691,11 @@ known to wake at least one model of monitor from sleep, if this
 occurs try \fB--disable-hotplug-polling\fP, which will drop back
 to solely DPMS polling.
 
-DPMS detection can only be reliably done by polling, and is only
-enabled for monitors that support DPMS.  DPMS polling is not known
-to cause any issues, but can be disabled by \fB--disable-dpms-polling\fP.
+DPMS state can only be reliably determined by periodically polling
+monitors that support DPMS.  DPMS-polling is not known to cause any
+issues (it does not appear to wake sleeping monitors).
+In the event that DPMS-polling does cause any issues, it can disabled
+by adding the \fB--disable-dpms-polling\fP option.
 
 Some GPU drivers and VDUs have buggy implementations of DDC.
 If you have the choice, a
