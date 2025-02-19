@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Dec 19 08:21:31 2024 -->
+<!-- CreationDate: Thu Feb 20 09:25:33 2025 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -63,8 +63,9 @@ Virtual Control Panel</p>
 <p style="margin-left:9%; margin-top: 1em"><b>ddcutil-service
 --help</b> | <b>--version</b> | <b>--introspect <br>
 ddcutil-service</b> [ <b>--disable-connectivity-signals</b>
-] | [ <b>--prefer-polling</b> ] | [
-<b>--prefer-libddcutil-events</b> ] | [
+] | [ <b>--disable-hotplug-polling</b> ] | [
+<b>--disable-dpms-polling</b> ] | [ <b>--prefer-polling</b>
+] | [ <b>--prefer-libddcutil-events</b> ] | [
 <b>--polling-interval</b> <i>seconds</i> ] | [
 <b>--return-raw-values</b> ] | [ <b>--lock</b> ] | [
 <b>--log-info</b> ] [ <b>--ddca-syslog-level</b> <i>N</i> ]
@@ -146,13 +147,31 @@ introspection text for the service and exits.</p>
 <p style="margin-left:18%; margin-top: 1em">Disables
 detection and DBUS-signalling of connectivity changes.</p>
 
+
+<p style="margin-left:9%;"><b>--disable-hotplug-polling</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Disable
+internal polling for hotplug events (disable polling
+libddcutil detect). Polling using <b>detect</b> may wake
+some monitor models from DPMS sleep (seems rare).</p>
+
+
+<p style="margin-left:9%;"><b>--disable-dpms-polling</b></p>
+
+<p style="margin-left:18%; margin-top: 1em">Disable the
+internal polling for DPMS events (disable polling getvcp
+0xd6). Provided just in case (so far no one has reported a
+need for this option).</p>
+
 <p style="margin-left:9%;"><b>--prefer-polling</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Set service
 internal polling to be the preferred method for detecting
 display connectivity changes for the
 <b>ConnectedDisplaysChanged signal</b>. This is the default
-prior to libddcutil 2.2.</p>
+prior to libddcutil 2.2 and may still be a better choice for
+monitors connected via DVI if they behave inconsistently
+when using libddcutil event detection.</p>
 
 
 <p style="margin-left:9%;"><b>--prefer-libddcutil-events</b></p>
@@ -164,9 +183,12 @@ for detecting display connectivity changes for the
 when using libddcutil version 2.2 and above. Enabling this
 option should detect hot-plug events sooner with less
 overheads. Some internal polling will still occur to monitor
-for DPMS events not covered by libddcutil. For libddcutil
-prior to version 2.2, libddcutil event detection may fail to
-work for some combinations of drivers and hardware.</p>
+for DPMS events not covered by libddcutil. Libddcutil event
+detection may fail to work reliably for some combinations of
+drivers, hardware, and connectors, in which case, try
+<b>--prefer-polling</b> instead. In particular, eventing
+from monitors hotplugged via DVI connectors seems to be more
+inconsistent.</p>
 
 <p style="margin-left:9%;"><b>--poll-interval</b>
 <i>seconds</i></p>
@@ -446,11 +468,8 @@ the default for change detection.</p>
 displays, GPUs, GPU-drivers, or cabling, provide the
 necessary support for detecting connection status changes.
 Results may vary depending on the mix of desktop components,
-such as KDE, Gnome, X11, and Wayland. DisplayPort behaves
-differently to DVI and HDMI when a display is turned off but
-remains connected. Some drivers that support DRM don&rsquo;t
-properly support the necessary change detection
-features.</p>
+such as KDE, Gnome, X11, and Wayland. See <b>LIMITATIONS</b>
+below for further details.</p>
 
 <p style="margin-left:9%;"><b>VcpValueChanged</b></p>
 
@@ -844,11 +863,29 @@ values and passes them unaltered to the VDU.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some mixes of
 VPUs and GPUs don&rsquo;t consistently update DRM metadata
-for hot-plug events. If <b>ConnectedDisplaysChanged</b>
-signals are not being raised, try manually adding
-<b>--prefer-polling</b> option, to force the service to poll
-for changes. Polling is less responsive, but it is likely to
-always work.</p>
+for hot-plug events. Some drivers that support DRM
+don&rsquo;t properly support the necessary hot-plug
+detection features. Monitors connected by DisplayPort behave
+differently to those connected by DVI and HDMI when a
+display is turned off but remains connected. Hot-plugging
+DVI connections appear to behave more inconsistently than
+DisplayPort with some drivers (for multple OEMs).</p>
+
+<p style="margin-left:9%; margin-top: 1em">If
+<b>ConnectedDisplaysChanged</b> signals are not being
+raised, you can try manually adding <b>--prefer-polling</b>
+option, to force the service to poll internally for changes.
+Polling is less responsive, but it is more likely to work.
+The internal polling option has been known to wake at least
+one model of monitor from sleep, if this occurs try
+<b>--disable-hotplug-polling</b>, which will drop back to
+solely DPMS polling.</p>
+
+<p style="margin-left:9%; margin-top: 1em">DPMS detection
+can only be reliably done by polling, and is only enabled
+for monitors that support DPMS. DPMS polling is not known to
+cause any issues, but can be disabled by
+<b>--disable-dpms-polling</b>.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some GPU drivers
 and VDUs have buggy implementations of DDC. If you have the
