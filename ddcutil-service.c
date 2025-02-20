@@ -58,7 +58,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.13"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.14"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
@@ -732,7 +732,7 @@ static const char* flag_options_names[] = {G_STRINGIFY(EDID_PREFIX),
 G_STATIC_ASSERT(G_N_ELEMENTS(flag_options) == G_N_ELEMENTS(flag_options_names));  // Boilerplate
 
 /* ----------------------------------------------------------------------------------------------------
- * Define the service's connectivity monitoring options for VDU hot-plug/DPMS events
+ * Define the service's connectivity monitoring options for VDU hotplug/DPMS events
  *
  * Detecting events is optional. Events can be detected byinternal event polling or by setting
  * up libddcutil callbacks. However, libddcutil needs fully functioning DRM to trap events, which
@@ -744,7 +744,7 @@ typedef enum {
 } Monitoring_Preference_Type;
 
 static gboolean display_status_detection_enabled = FALSE;  // TODO this seems to always be TRUE - get rid of it?
-static gboolean enable_connectivity_signals = TRUE;
+static gboolean enable_connectivity_signals = FALSE;
 static gboolean disable_hotplug_polling = FALSE;  // Prevent any internal hotplug detect polling.
 static gboolean disable_dpms_polling = FALSE;
 
@@ -2363,7 +2363,7 @@ static bool poll_for_changes() {
         // handles hotplug detection, but this function still handles DPMS detection.
         const bool handle_hotplug_detection =
             monitoring_preference == MONITOR_BY_INTERNAL_POLLING && !disable_hotplug_polling;
-        g_debug("Internal Poll check: %s", handle_hotplug_detection ? "hot-plug and DPMS check" : "DPMS only check");
+        g_debug("Internal Poll check: %s", handle_hotplug_detection ? "hotplug and DPMS check" : "DPMS only check");
 
         DDCA_Status detect_status = DDCRC_OK;
         if (handle_hotplug_detection) {  // Need to do expensive ddca_redected_displays() for hotplug detection
@@ -2717,7 +2717,6 @@ int main(int argc, char* argv[]) {
 
     gboolean prefer_polling = FALSE;
     gboolean prefer_libddcutil_events = FALSE;
-    gboolean disable_connectivity_signals = FALSE;
 
     int poll_seconds = -1;  // -1 flags no argument supplied
     double poll_cascade_interval_seconds = 0.0;
@@ -2727,9 +2726,6 @@ int main(int argc, char* argv[]) {
 #endif
     gint ddca_syslog_level = DDCA_SYSLOG_NOTICE;
     gint ddca_init_options = 0; // DDCA_INIT_OPTIONS_CLIENT_OPENED_SYSLOG
-
-
-    gboolean ignore;  // Allows an obsolete option to be set without any errors.
 
     // Use the glib command line parser...
     const GOptionEntry entries[] = {
@@ -2742,8 +2738,8 @@ int main(int argc, char* argv[]) {
             "print introspection xml and exit", NULL
         },
         {
-                "disable-connectivity-signals", 'q', 0, G_OPTION_ARG_NONE, &disable_connectivity_signals,
-                "disable signalling of display connection events", NULL
+            "enable-connectivity-signals", 'q', 0, G_OPTION_ARG_NONE, &enable_connectivity_signals,
+            "enable DBUS signalling of display connection events", NULL
         },
         {
             "disable-hotplug-polling", 'u', 0, G_OPTION_ARG_NONE, &disable_hotplug_polling,
@@ -2792,10 +2788,6 @@ int main(int argc, char* argv[]) {
         {
             "prefer-drm", 'd', 0, G_OPTION_ARG_NONE, &prefer_libddcutil_events,
             "deprecated nondescript name, same as --prefer-libddcutil-events", NULL
-        },
-        {
-            "emit-connectivity-signals", 'q', 0, G_OPTION_ARG_NONE, &ignore,
-            "obsolete, emit is now the default, see --disable-connectivity-signals", NULL
         },
         {NULL}
     };
@@ -2904,7 +2896,6 @@ int main(int argc, char* argv[]) {
         monitoring_preference = has_reliable_events ? MONITOR_BY_LIBDDCUTIL_EVENTS : MONITOR_BY_INTERNAL_POLLING;
     }
 
-    enable_connectivity_signals = !disable_connectivity_signals;
     if (enable_connectivity_signals) {
         switch (monitoring_preference) {
             case MONITOR_BY_LIBDDCUTIL_EVENTS: {

@@ -139,17 +139,21 @@ The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/
 granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
-- 1.0.13
+- 1.0.14
   - Default to libddcutil event detection for libddcutil >= 2.2 (for faster response to changes).
-  - Deprecate option --prefer-drm in favour of --prefer-libddcutil-events to better clarify its purpose.
-  - Ignore obsolete option --emit-connectivity-signals, it is now the default.
+  - Add option --prefer-libddcutil-events as a better name for deprecated option --prefer-drm.
+  - Deprecate option --prefer-drm as it's name is misleading.
   - Add option --disable-connectivity-signals to allow connectivity signals to be turned off.
   - Add options --disable-hotplug-polling, --disable-dpms-polling to acommodate quirky monitors.
-  - Always use internal polling for detecting DPMS changes (DPMS is not covered by libddcutil events). 
+  - Always internally poll for DPMS changes (DPMS is not covered by libddcutil events). 
   - Add method ListDetected to take advantage of hotplug detection in libddcutil >= 2.2.
   - Add the list command to ddcutil-client to provide access to the new ListDetected method. 
   - Add wait, wait-connection-change, and wait-vcp-change commands to ddcutil-client.
   - Log more information when get_vcp fails.
+- 1.0.13
+  - Version 1.0.13 existed in development for some months, but was not released. 
+  - Connectivity DBUS signalling was going to be on by default, but drivers, GPUs, and 
+    monitors proved too inconsistent.
 - 1.0.12
   - Return the error status-code if enable_ddca_watch_displays fails - was returning OK even on failure.
 - 1.0.11
@@ -160,8 +164,8 @@ granting the [Open Source development license]( https://jb.gg/OpenSourceSupport)
 - 1.0.9
   - Fixed a GetCapabilitiesMetadata bug that caused some VCP features to lack metadata values.
   - Fixed the return of feature-name and feature-description from GetVcpMetadata.
-  - Fixed potential hot-plug/DPMS polling memory leaks and simplified event locking.
-  - Recoded hot-plug/DPMS polling to avoid a potential libddcutil assertion failure.
+  - Fixed potential hotplug/DPMS polling memory leaks and simplified event locking.
+  - Recoded hotplug/DPMS polling to avoid a potential libddcutil assertion failure.
   - Fixed code/doc typos, improved code readability/structure, reduced IDE warnings.
   - Updated documentation to caution against excessive updates when coding loops, as this may impact VDU NVRAM lifespan.
   - Updated documentation to caution against experimenting with non-standard features, as it may risk damage to the VDU.

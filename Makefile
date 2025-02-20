@@ -8,7 +8,7 @@ CFLAGS_DDCUTIL = $(shell pkg-config --cflags --libs ddcutil)
 #CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/build/src/public -isystem  $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/src/public -L $(HOME)/Downloads/ddcutil-2.1.5-dev-clion/build/src/.libs -lddcutil
 #CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.1.4-dev/src/public -L $(HOME)/Downloads/ddcutil-2.1.4-dev/src/.libs -lddcutil
 #CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.0.0/src/public -L $(HOME)/Downloads/ddcutil-2.0.0/src/.libs -lddcutil
-#CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.2.0-dev/src/public -L $(HOME)/Downloads/ddcutil-2.2.0-dev/src/.libs -lddcutil
+#CFLAGS_DDCUTIL = -isystem $(HOME)/Downloads/ddcutil-2.2.0/src/public -L $(HOME)/Downloads/ddcutil-2.2.0/src/.libs -lddcutil
 
 CFLAGS += -g -std=gnu11 -Werror -Wall -Wformat-security -Og
 SOURCE = ddcutil-service.c
