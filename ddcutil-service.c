@@ -745,7 +745,9 @@ typedef enum {
 
 static gboolean display_status_detection_enabled = FALSE;  // TODO this seems to always be TRUE - get rid of it?
 static gboolean enable_connectivity_signals = FALSE;
-static gboolean disable_hotplug_polling = FALSE;  // Prevent any internal hotplug detect polling.
+
+// User overrides for polling:
+static gboolean disable_hotplug_polling = FALSE;
 static gboolean disable_dpms_polling = FALSE;
 
 static Monitoring_Preference_Type monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
@@ -2170,27 +2172,30 @@ static void configure_display_connectivity_detection(void) {
                 // Note - DPMS events aren't supported by libddcutil, so we will still do it by polling
             }
         }
-        if (disable_dpms_polling && disable_hotplug_polling) {
-            g_message("ConnectedDisplaysChanged: ddcutil-service all internal polling configured off");
-        }
-        else {  // Need to poll for at least DPMS, but not hotplug if using libddcutil
-            poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
+        else {
             disable_ddca_watch_displays(); // just in case we are switching preferences.
-            if (!disable_hotplug_polling && monitoring_preference == MONITOR_BY_INTERNAL_POLLING) {
-                g_message("ConnectedDisplaysChanged: ddcutil-service will internally poll for hotplug");
-            }
-            if (!disable_dpms_polling) {
-                g_message("ConnectedDisplaysChanged: ddcutil-service will internally poll for DPMS");
-            }
-            g_message("ConnectedDisplaysChanged: ddcutil-service polling internally every %ld seconds",
-                      poll_interval_micros / 1000000);
+        }
+        // Need to poll for at least DPMS, but not hotplug if using libddcutil
+        if (!disable_hotplug_polling && monitoring_preference == MONITOR_BY_INTERNAL_POLLING) {
+            g_message("ConnectedDisplaysChanged: ddcutil-service will internally poll for hotplug");
+        } else {
+            g_message("ConnectedDisplaysChanged: ddcutil-service internal hotplug polling disabled");
+        }
+        if (!disable_dpms_polling) {
+            g_message("ConnectedDisplaysChanged: ddcutil-service will internally poll for DPMS");
+        } else {
+            g_message("ConnectedDisplaysChanged: ddcutil-service internal polling for DPMS disabled");
+        }
+        if (!disable_dpms_polling || !disable_hotplug_polling) {
+            g_message("ConnectedDisplaysChanged: ddcutil-service internal "
+                      "poll-interval=%ld secs poll-cascade-interval=%5.3f secs",
+                      poll_interval_micros / 1000000, poll_cascade_interval_micros / 100000.0);
         }
     }
     else {
         if (monitoring_preference == MONITOR_BY_LIBDDCUTIL_EVENTS) {
             disable_ddca_watch_displays();
         }
-        poll_interval_micros = 0;
         g_message("ConnectedDisplaysChanged: disabled.");
     }
 }
@@ -2511,7 +2516,7 @@ static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
         return FALSE;
     }
 
-    if (poll_interval_micros > 0) {
+    if (!disable_hotplug_polling || !disable_dpms_polling) {
         poll_for_changes();
     }
 
@@ -2784,7 +2789,7 @@ int main(int argc, char* argv[]) {
             "lock configuration, make properties and sleep-multipliers read only, disable the restart method", NULL
         },
         {
-            "log-info", 'i', 0, G_OPTION_ARG_NONE, &log_info,
+            "log-info", 'I', 0, G_OPTION_ARG_NONE, &log_info,
             "log service info and debug messages", NULL
         },
         {
@@ -2905,6 +2910,18 @@ int main(int argc, char* argv[]) {
         }
         monitoring_preference = has_reliable_events ? MONITOR_BY_LIBDDCUTIL_EVENTS : MONITOR_BY_INTERNAL_POLLING;
     }
+
+    if (poll_seconds >= 0 && !update_poll_interval(poll_seconds)) {
+        g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
+        exit(1);
+    }
+    if (poll_cascade_interval_seconds > 0.0
+        && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
+        g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
+                MIN_POLL_CASCADE_INTERVAL_SECONDS);
+        exit(1);
+    }
+
     configure_display_connectivity_detection();
 
     enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
