@@ -988,7 +988,8 @@ static DDCA_Status get_display_info_list(bool include_invalid, DDCA_Display_Info
     DDCA_Status detect_status = ddca_get_display_info_list2(include_invalid, dlist_loc);
 
     // Pre libddcutil 2.1.5 ddca_get_display_info_list2 could return DDCRC_OTHER if some VDUs were invalid,
-    // For libddcutil 2.1.5+ ddca_get_display_info_list2 will return DDCRC_OK, but set error_detail if some VDUs are invalid.
+    // For libddcutil 2.1.5+ ddca_get_display_info_list2 will return DDCRC_OK, but set error_detail if some VDUs
+    // are invalid.
     DDCA_Error_Detail *error_detail = ddca_get_error_detail();
     if (error_detail != NULL) { // libddcutil 2.1.5 and abouve
         if (error_detail->status_code == DDCRC_OTHER) {
@@ -1945,7 +1946,6 @@ static DDCA_Status disable_ddca_watch_displays() {
  */
 static DDCA_Status enable_ddca_watch_displays(void) {
 #if defined(LIBDDCUTIL_HAS_CHANGES_CALLBACK)
-    g_message("ServiceEmitConnectivitySignals using libddcutil change detection");
     int status = DDCRC_OK;
     DDCA_Display_Event_Class classes_loc;
     const bool running = ddca_get_active_watch_classes(&classes_loc) == DDCRC_OK;
@@ -2160,6 +2160,41 @@ static GVariant* handle_get_property(GDBusConnection* connection, const gchar* s
     return ret;
 }
 
+static void configure_display_connectivity_detection(void) {
+    if (enable_connectivity_signals) {
+        if (monitoring_preference == MONITOR_BY_LIBDDCUTIL_EVENTS) {
+            g_message("ConnectedDisplaysChanged: ddcutil-service will use libddcutil events for hotplug");
+            if (enable_ddca_watch_displays() != DDCRC_OK) {
+                g_warning("ConnectedDisplaysChanged: ddcutil-service falling back to internal polling.");
+                monitoring_preference = MONITOR_BY_INTERNAL_POLLING;
+                // Note - DPMS events aren't supported by libddcutil, so we will still do it by polling
+            }
+        }
+        if (disable_dpms_polling && disable_hotplug_polling) {
+            g_message("ConnectedDisplaysChanged: ddcutil-service all internal polling configured off");
+        }
+        else {  // Need to poll for at least DPMS, but not hotplug if using libddcutil
+            poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
+            disable_ddca_watch_displays(); // just in case we are switching preferences.
+            if (!disable_hotplug_polling && monitoring_preference == MONITOR_BY_INTERNAL_POLLING) {
+                g_message("ConnectedDisplaysChanged: ddcutil-service will internally poll for hotplug");
+            }
+            if (!disable_dpms_polling) {
+                g_message("ConnectedDisplaysChanged: ddcutil-service will internally poll for DPMS");
+            }
+            g_message("ConnectedDisplaysChanged: ddcutil-service polling internally every %ld seconds",
+                      poll_interval_micros / 1000000);
+        }
+    }
+    else {
+        if (monitoring_preference == MONITOR_BY_LIBDDCUTIL_EVENTS) {
+            disable_ddca_watch_displays();
+        }
+        poll_interval_micros = 0;
+        g_message("ConnectedDisplaysChanged: disabled.");
+    }
+}
+
 /**
  * @brief Handles calls to DdcutilService D-Bus org.freedesktop.DBus.Properties.Set.
  *
@@ -2215,34 +2250,9 @@ static gboolean handle_set_property(GDBusConnection* connection, const gchar* se
             g_warning("Property ServiceEmitSignals is deprecated, please use ServiceEmitConnectivitySignals");
         }
         enable_connectivity_signals = g_variant_get_boolean(value);
-        g_message("ServiceEmitConnectivitySignals set property to %s",
-                  enable_connectivity_signals ? "enabled" : "disabled");
-        switch (monitoring_preference) {
-            case MONITOR_BY_LIBDDCUTIL_EVENTS:
-                g_message("Detect changes using libddcutil callbacks.");
-                if (enable_connectivity_signals) {
-                    if (enable_ddca_watch_displays() == DDCRC_OK) {
-                        break;  // Success, exit the switch
-                    }
-                    g_warning("Falling back to service internal polling for all change detection");
-                    // Failed, fall through to polling
-                } else {
-                    disable_ddca_watch_displays();
-                    break;
-                }
-            case MONITOR_BY_INTERNAL_POLLING:
-            default:
-                if (enable_connectivity_signals) {
-                    if (poll_interval_micros == 0) {  // If not already set
-                        poll_interval_micros = DEFAULT_POLL_SECONDS * 1000000;
-                    }
-                    g_message("ServiceEmitConnectivitySignals ddcutil-service polling every %ld seconds",
-                              poll_interval_micros / 1000000);
-                } else {
-                    poll_interval_micros = 0;
-                }
-                break;
-        }
+        g_message("ServiceEmitConnectivitySignals: setting property to %s",
+            enable_connectivity_signals ? "enabled" : "disabled");
+        configure_display_connectivity_detection();
     }
     else if (g_strcmp0(property_name, "ServicePollInterval") == 0) {
         const uint secs = g_variant_get_uint32(value);
@@ -2368,7 +2378,7 @@ static bool poll_for_changes() {
         DDCA_Status detect_status = DDCRC_OK;
         if (handle_hotplug_detection) {  // Need to do expensive ddca_redected_displays() for hotplug detection
             // Masking the logging is a bit hacky - it depends on internal knowledge of how libddcutil is logging.
-            // The author of libddcutil regards the normal messages as quite important, so they should normally be logged.
+            // The author of libddcutil regards the normal messages as quite important, so they should be logged.
             // A compromise: when the service is not logging debug/info, change the syslog mask, and then restore it.
             int old_mask = 0;
             if (!service_info_logging) {
@@ -2895,41 +2905,7 @@ int main(int argc, char* argv[]) {
         }
         monitoring_preference = has_reliable_events ? MONITOR_BY_LIBDDCUTIL_EVENTS : MONITOR_BY_INTERNAL_POLLING;
     }
-
-    if (enable_connectivity_signals) {
-        switch (monitoring_preference) {
-            case MONITOR_BY_LIBDDCUTIL_EVENTS: {
-                const int w_status = enable_ddca_watch_displays();
-                if (w_status == DDCRC_OK) {
-                    g_message("ConnectedDisplaysChanged signal - using libddcutil for hotplug detection.");
-                    g_message("ConnectedDisplaysChanged signal - using internal polling for DPMS detection only.");
-                    break;
-                }
-                // Fall through to internal polling
-                g_warning("Falling back to service internal polling for all change detection");
-            }
-            case MONITOR_BY_INTERNAL_POLLING:
-            default:
-                g_message("ConnectedDisplaysChanged signal - using service internal polling for all change detection");
-                break;
-        }
-        if (poll_seconds >= 0 && !update_poll_interval(poll_seconds)) {
-            g_print("Polling interval parameter must be at least %d seconds.", MIN_POLL_SECONDS);
-            exit(1);
-        }
-        if (poll_cascade_interval_seconds > 0.0
-            && !update_poll_cascade_interval(poll_cascade_interval_seconds)) {
-              g_print("Polling cascade interval parameter must be at least %5.3f seconds.",
-                      MIN_POLL_CASCADE_INTERVAL_SECONDS);
-              exit(1);
-        }
-        g_message("ConnectedDisplaysChanged signal - poll-interval=%ld poll-cascade-interval=%5.3f",
-                  poll_interval_micros / 1000000, poll_cascade_interval_micros / 100000.0);
-    }
-    else {
-        g_message("ConnectedDisplaysChanged signals - disabled.");
-        poll_interval_micros = 0;  // Disable internal polling
-    }
+    configure_display_connectivity_detection();
 
     enable_custom_source(main_loop);  // May do nothing - but a client may enable events or polling later
 
