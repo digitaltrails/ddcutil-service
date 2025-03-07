@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sat Mar  8 11:48:11 2025 -->
+<!-- CreationDate: Sat Mar  8 12:03:49 2025 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -882,19 +882,20 @@ DisplayPort with some drivers (for multple OEMs).</p>
 <b>ConnectedDisplaysChanged</b> signals are not being
 raised, you can try manually adding <b>--prefer-polling</b>
 option, to force the service to poll internally for changes.
-Polling is less responsive, but it is more likely to work.
-The internal polling option has been known to wake at least
-one model of monitor from sleep, if this occurs try
-<b>--disable-hotplug-polling</b>, which will drop back to
-solely DPMS polling.</p>
+Polling is less responsive, but it is more likely to
+work.</p>
 
 <p style="margin-left:9%; margin-top: 1em">DPMS state can
 only be reliably determined by periodically polling monitors
-that support DPMS. DPMS-polling is not known to cause any
-issues (it does not appear to wake sleeping monitors). In
-the event that DPMS-polling does cause any issues, it can
-disabled by adding the <b>--disable-dpms-polling</b>
-option.</p>
+that support DPMS. In the event that DPMS-polling causes any
+issues, it can disabled by adding the
+<b>--disable-dpms-polling</b> option.</p>
+
+<p style="margin-left:9%; margin-top: 1em">The internal
+polling options have been reported to wake at least one
+model of monitor from sleep, if this occurs try
+<b>--disable-hotplug-polling</b> and/or
+<b>--disable-dpms-polling</b>.</p>
 
 <p style="margin-left:9%; margin-top: 1em">Some GPU drivers
 and VDUs have buggy implementations of DDC. If you have the
