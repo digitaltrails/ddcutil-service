@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Thu Feb 20 14:08:26 2025 -->
+<!-- CreationDate: Sat Mar  8 11:48:11 2025 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -165,9 +165,9 @@ polling <b>libddcutil detect</b>.)</p>
 <p style="margin-left:9%;"><b>--disable-dpms-polling</b></p>
 
 <p style="margin-left:18%; margin-top: 1em">Disable the
-internal polling for DPMS events Provided just in case (so
-far no one has reported a need for this option). (Disables
-polling <b>libddcutil getvcp 0xd6</b>.)</p>
+internal polling for DPMS events. Polling for DPMS state may
+wake some monitor models from DPMS sleep (seems rare).
+(Disables polling <b>libddcutil getvcp 0xd6</b>.)</p>
 
 <p style="margin-left:9%;"><b>--prefer-polling</b></p>
 
