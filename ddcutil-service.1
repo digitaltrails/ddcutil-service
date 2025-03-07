@@ -694,16 +694,16 @@ than DisplayPort with some drivers (for multple OEMs).
 If \fBConnectedDisplaysChanged\fP signals are not being raised, you can
 try manually adding \fB--prefer-polling\fP option, to force the service to
 poll internally for changes.  Polling is less responsive,
-but it is more likely to work.  The internal polling option has been
-known to wake at least one model of monitor from sleep, if this
-occurs try \fB--disable-hotplug-polling\fP, which will drop back
-to solely DPMS polling.
+but it is more likely to work.
 
 DPMS state can only be reliably determined by periodically polling
-monitors that support DPMS.  DPMS-polling is not known to cause any
-issues (it does not appear to wake sleeping monitors).
-In the event that DPMS-polling does cause any issues, it can disabled
+monitors that support DPMS.
+In the event that DPMS-polling causes any issues, it can disabled
 by adding the \fB--disable-dpms-polling\fP option.
+
+The internal polling options have been
+reported to wake at least one model of monitor from sleep, if this
+occurs try \fB--disable-hotplug-polling\fP and/or \fB--disable-dpms-polling\fP.
 
 Some GPU drivers and VDUs have buggy implementations of DDC.
 If you have the choice, a
