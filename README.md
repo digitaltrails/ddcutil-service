@@ -1,40 +1,44 @@
 # ddcutil-service 
 A D-Bus ddcutil service for control of DDC Monitors/VDUs
 
-The aim of this service is to make it easier to create widgets and apps for 
+The aim of this service is to make it easier to create highly-responsive widgets and apps for 
 [ddcutil](https://www.ddcutil.com/).  The service's client interface is now quite stable, but there 
 may be some additions or tweaks if new requirements are discovered.
 
+Compared to the `ddcutil` command, the service has a much lower overhead and
+much faster response time.  The service only fully initializes `libddcutil` 
+and DDC connectivity when first called, whereas `ddcutil` starts from scratch
+each time it is run.
+
 The service is written in C.  It has very few dependencies (glib-2 and libddcutil) and is
-consequently quite easy to build.  Once built, running the executable should make 
-a ddcutil service available on the D-Bus Session-Bus.
+consequently quite easy to build.  
 
-
-Testing using the d-feet D-Bus interactive GUI: 
-1. start d-feet;
-2. press the `session-bus` button in the d-feet header;
-3. search for `ddcutil`.
-4. click on `com.ddcutil.DdcutilService`
-5. open the *Object Path* `com/ddcutil/DdcutilService` and 
-   navigate down to the `com.ddcutil.DdcutilInterface`
-6. Double-click methods and properties to run or view them.
-
-Method inputs can be supplied as CSV, for example, Method Input to `GetVcp` could be 
+Once built, running the executable should make a ddcutil service available 
+on the D-Bus Session-Bus.  Any type D-Bus client can be used to interact with 
+the service. For example, from the command line you could use the 
+systemd `busctl` command:
 
 ```
-1,'',0x10
+% SERVICE='com.ddcutil.DdcutilService'
+% OBJECT='/com/ddcutil/DdcutilObject'
+% INTERFACE='com.ddcutil.DdcutilInterface'
+% busctl --user call $SERVICE $OBJECT $INTERFACE Detect u 0
+% busctl --user call $SERVICE $OBJECT $INTERFACE GetVcp isyu 1 "" 0x10 0
+% busctl --user call $SERVICE $OBJECT $INTERFACE SetVcp isyqu 1 "" 16 50 0
 ```
-This would access display `1`, blank-edid `''`, DDC VCP Feature code `0x10` 
-(brightness). VDU's are identified either by display-number or base-64-encoded
-EDID.
+
 
 Several bash and python scripts that demonstrate using the service are included in 
 the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/examples)
-folder.  They cover the use of the `dbus-send` command line utility
-and the python `dasbus` and `QtDBus` libraries. 
+folder.  They cover several ways to interact with the service including 
+`dbus-send` command line utility and the python `dasbus` and `QtDBus` libraries. 
 
-The service was developed with the assistance of amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
-The current intention is to eventually package it with ddcutil/libddcutil.
+Compared to other implementations of similar services, the code for `ddcutil-service`
+is quite compact and the abstractions are relatively shallow. Providing you know
+C and a little about glib-2, it should be quite easy to follow.
+
+The service was developed with the assistance of 
+amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
 
 ### Usage warning/guidelines
 
