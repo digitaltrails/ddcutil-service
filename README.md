@@ -28,14 +28,14 @@ systemd `busctl` command:
 ```
 
 
-Several bash and python scripts that demonstrate using the service are included in 
+Several bash and python clients are included in 
 the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/examples)
-folder.  They cover several ways to interact with the service including 
-`dbus-send` command line utility and the python `dasbus` and `QtDBus` libraries. 
+folder.  They cover multiple ways to interact with the service, including 
+the `dbus-send` command and the python `dasbus` and `QtDBus` libraries. 
 
 Compared to other implementations of similar services, the code for `ddcutil-service`
 is quite compact and the abstractions are relatively shallow. Providing you know
-C and a little about glib-2, it should be quite easy to follow.
+C and a little about glib-2, the code should be quite easy to follow.
 
 The service was developed with the assistance of 
 amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
@@ -139,8 +139,8 @@ Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packagi
 Maciej Wójcik ([https://gitlab.com/w8jcik](https://gitlab.com/w8jcik)) for debian/ubuntu
 packaging.
 
-The development IDE is **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/help/clion/clion-nova-introduction.html)**. Thanks go out to JetBrains for
-granting the [Open Source development license]( https://jb.gg/OpenSourceSupport).
+The original development IDE was **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/help/clion/clion-nova-introduction.html)**. Thanks go out to JetBrains for
+granting me an [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
 - 1.0.14
