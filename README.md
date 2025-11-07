@@ -14,7 +14,7 @@ The service is written in C.  It has very few dependencies (glib-2 and libddcuti
 consequently quite easy to build.  
 
 Once built, running the executable should make a ddcutil service available 
-on the D-Bus Session-Bus.  Any type D-Bus client can be used to interact with 
+on the D-Bus Session-Bus.  Any type of D-Bus client can be used to interact with 
 the service. For example, from the command line you could use the 
 systemd `busctl` command:
 
