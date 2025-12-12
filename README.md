@@ -10,8 +10,11 @@ much faster response time.  The service only fully initializes `libddcutil`
 and DDC connectivity when first called, whereas `ddcutil` starts from scratch
 each time it is run.
 
-The service is written in C.  It has very few dependencies (glib-2 and libddcutil) and is
-consequently quite easy to build.  
+The service is written in C.  It has very few dependencies (glib-2 and libddcutil) 
+and is consequently quite easy to build.  Compared to other implementations of similar 
+services, the code for `ddcutil-service` is quite compact and the abstractions 
+are relatively shallow. Providing you know C and a little about glib-2, the code 
+should be quite easy to follow.
 
 Once built, running the executable should make a ddcutil service available 
 on the D-Bus Session-Bus.  Any type of D-Bus client can be used to interact with 
@@ -27,15 +30,10 @@ systemd `busctl` command:
 % busctl --user call $SERVICE $OBJECT $INTERFACE SetVcp isyqu 1 "" 16 50 0
 ```
 
-
 Several bash and python clients are included in 
 the [examples](https://github.com/digitaltrails/ddcutil-service/tree/master/examples)
 folder.  They cover multiple ways to interact with the service, including 
 the `dbus-send` command and the python `dasbus` and `QtDBus` libraries. 
-
-Compared to other implementations of similar services, the code for `ddcutil-service`
-is quite compact and the abstractions are relatively shallow. Providing you know
-C and a little about glib-2, the code should be quite easy to follow.
 
 The service was developed with the assistance of 
 amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
