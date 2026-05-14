@@ -55,8 +55,8 @@ static char *const DBUS_INTERFACE_NAME = "com.ddcutil.DdcutilInterface";
 
 static GDBusConnection *connection = NULL;
 
-static char *boolean_value(int bool) {
-    return bool ? "true" : "false";
+static char *boolean_value(int boolean) {
+    return boolean ? "true" : "false";
 }
 
 /**
