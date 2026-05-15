@@ -1055,7 +1055,9 @@ static DDCA_Status get_display_info(const int display_number, const char* edid_e
             g_free(dlist_edid_encoded);
         }
         if (*dinfo == NULL) {
-            g_debug("Display info not found: display=%d edid-encoded=%-30s?", display_number, edid_encoded);
+            if (g_log_get_debug_enabled()) {
+                g_debug("Display info not found: display=%d edid-encoded=%-30s?", display_number, edid_encoded);
+            }
             status = DDCRC_INVALID_DISPLAY;
         }
     }
@@ -1433,8 +1435,10 @@ static void set_vcp(GVariant* parameters, GDBusMethodInvocation* invocation, con
             g_warning("Signal VcpValueChanged: failed %s", local_error != NULL ? local_error->message : "");
             g_free(local_error);}
         else {
-            g_debug("Signal VcpValueChanged: succeeded display=%d edid=%.30ss... vcp_code=%d value=%d client=%s "
-                "client_context='%s'", display_number, edid_encoded, vcp_code, new_value, client_name, client_context);
+            if (g_log_get_debug_enabled()) {
+                g_debug("Signal VcpValueChanged: succeeded display=%d edid=%.30ss... vcp_code=%d value=%d client=%s "
+                    "client_context='%s'", display_number, edid_encoded, vcp_code, new_value, client_name, client_context);
+            }
         }
     }
     else {
@@ -1538,14 +1542,18 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                 if (status == DDCRC_OK) {
                     const DDCA_Cap_Vcp* vcp_feature_array = parsed_capabilities_ptr->vcp_codes;
 
-                    g_debug("vcp_code_ct=%d", parsed_capabilities_ptr->vcp_code_ct);
+                    if (g_log_get_debug_enabled()) {
+                        g_debug("vcp_code_ct=%d", parsed_capabilities_ptr->vcp_code_ct);
+                    }
 
                     mccs_version_major = parsed_capabilities_ptr->version_spec.major;
                     mccs_version_minor = parsed_capabilities_ptr->version_spec.minor;
                     for (int command_idx = 0; command_idx < parsed_capabilities_ptr->cmd_ct; command_idx++) {
                         char* command_desc = g_strdup_printf("desc of %d",
                                                              parsed_capabilities_ptr->cmd_codes[command_idx]);
-                        g_debug("CommandDef %x %s ", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+                        if (g_log_get_debug_enabled()) {
+                            g_debug("CommandDef %x %s ", parsed_capabilities_ptr->cmd_codes[command_idx], command_desc);
+                        }
                         g_variant_builder_add(
                             command_dict_builder, "{ys}", parsed_capabilities_ptr->cmd_codes[command_idx],
                             command_desc);
@@ -1559,8 +1567,10 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                         status = ddca_get_feature_metadata_by_dh(feature_def->feature_code, disp_handle, true,
                                                                  &metadata_ptr);
                         if (status == DDCRC_OK) {
-                            g_debug("FeatureDef: %x %s %s",
-                                    metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
+                            if (g_log_get_debug_enabled()) {
+                                g_debug("FeatureDef: %x %s %s",
+                                        metadata_ptr->feature_code, metadata_ptr->feature_name, metadata_ptr->feature_desc);
+                            }
                             GVariantBuilder value_dict_builder_instance;
                             // Allocate on the stack for easier memory management.
                             GVariantBuilder* value_dict_builder = &value_dict_builder_instance;
@@ -1572,15 +1582,19 @@ static void get_capabilities_metadata(GVariant* parameters, GDBusMethodInvocatio
                                     for (const DDCA_Feature_Value_Entry* fve = metadata_ptr->sl_values;
                                          fve->value_name != NULL; fve++) {
                                         if (fve->value_code == value_code) {
-                                            g_debug("  ValueDef match feature %x value %d %s",
-                                                    feature_def->feature_code, fve->value_code, fve->value_name);
+                                            if (g_log_get_debug_enabled()) {
+                                                g_debug("  ValueDef match feature %x value %d %s",
+                                                        feature_def->feature_code, fve->value_code, fve->value_name);
+                                            }
                                             value_name = fve->value_name;
                                             break;
                                         }
                                     }
                                 }
-                                g_debug("  ValueDef feature %x value %d %s",
-                                        feature_def->feature_code, value_code, value_name);
+                                if (g_log_get_debug_enabled()) {
+                                    g_debug("  ValueDef feature %x value %d %s",
+                                            feature_def->feature_code, value_code, value_name);
+                                }
 
                                 g_variant_builder_add(value_dict_builder, "{ys}", value_code, value_name);
                             }
@@ -1854,11 +1868,15 @@ static DdcutilServiceStatus verify_i2c_dev() {
         const unsigned long dev_count = matches.gl_pathc;
         for (unsigned long i = 0; i < dev_count && rw_count <= 1000; i++) {  // Boilerplate limit of 1000
             if (access(matches.gl_pathv[i], R_OK|W_OK) == F_OK) {
-                g_debug("Device %s is R/W accessible", matches.gl_pathv[i]);
+                if (g_log_get_debug_enabled()) {
+                    g_debug("Device %s is R/W accessible", matches.gl_pathv[i]);
+                }
                 rw_count++;
             }
             else {
-                g_debug("Device %s is not R/W accessible", matches.gl_pathv[i]);
+                if (g_log_get_debug_enabled()) {
+                    g_debug("Device %s is not R/W accessible", matches.gl_pathv[i]);
+                }
             }
         }
         if (rw_count > 0) {
@@ -2364,7 +2382,9 @@ static bool is_dpms_awake(const DDCA_Display_Info* vdu_info) {
             return current_value <= 1;
         }
     }
-    g_debug("Poll check-dpms failed %s - assume asleep", ddca_rc_name(status));
+    if (g_log_get_debug_enabled()) {
+        g_debug("Poll check-dpms failed %s - assume asleep", ddca_rc_name(status));
+    }
     return FALSE;  // Guessing the VDU has gone into DPMS where it cannot respond.
 }
 
@@ -2378,8 +2398,9 @@ static bool poll_for_changes() {
         // handles hotplug detection, but this function still handles DPMS detection.
         const bool handle_hotplug_detection =
             monitoring_preference == MONITOR_BY_INTERNAL_POLLING && !disable_hotplug_polling;
-        g_debug("Internal Poll check: %s", handle_hotplug_detection ? "hotplug and DPMS check" : "DPMS only check");
-
+        if (g_log_get_debug_enabled()) {
+            g_debug("Internal Poll check: %s", handle_hotplug_detection ? "hotplug and DPMS check" : "DPMS only check");
+        }
         DDCA_Status detect_status = DDCRC_OK;
         if (handle_hotplug_detection) {  // Need to do expensive ddca_redected_displays() for hotplug detection
             // Masking the logging is a bit hacky - it depends on internal knowledge of how libddcutil is logging.
@@ -2413,7 +2434,9 @@ static bool poll_for_changes() {
                         Poll_List_Item* vdu_poll_data = (Poll_List_Item *)(list_ptr->data);
                         const gboolean previous_dpms_awake = vdu_poll_data->dpms_awake;
                         vdu_poll_data->connected = TRUE;
-                        g_debug("Internal Poll check: existing-connection disp=%d %.30s...", ndx + 1, edid_encoded);
+                        if (g_log_get_debug_enabled()) {
+                            g_debug("Internal Poll check: existing-connection disp=%d %.30s...", ndx + 1, edid_encoded);
+                        }
                         if (vdu_poll_data->has_dpms) {
                             vdu_poll_data->dpms_awake = is_dpms_awake(ddca_dinfo_ptr);
                             if (previous_dpms_awake != vdu_poll_data->dpms_awake) {
@@ -2436,8 +2459,10 @@ static bool poll_for_changes() {
                         vdu_poll_data->has_dpms = is_dpms_capable(ddca_dinfo_ptr);
                         vdu_poll_data->dpms_awake = vdu_poll_data->has_dpms ? is_dpms_awake(ddca_dinfo_ptr) : TRUE;
                         poll_list = g_list_append(poll_list, vdu_poll_data);
-                        g_debug("Poll check: new-connection disp=%d %.30s... has_dpms=%d awake=%d ",
-                            ndx + 1, edid_encoded, vdu_poll_data->has_dpms, vdu_poll_data->dpms_awake);
+                        if (g_log_get_debug_enabled()) {
+                            g_debug("Poll check: new-connection disp=%d %.30s... has_dpms=%d awake=%d ",
+                                ndx + 1, edid_encoded, vdu_poll_data->has_dpms, vdu_poll_data->dpms_awake);
+                        }
                         if (handle_hotplug_detection) {
                             if (next_poll_time) {  // Not on first time through
                                 g_message("Poll signal event - connected %d %.30s...", ndx + 1, edid_encoded);
@@ -2462,7 +2487,9 @@ static bool poll_for_changes() {
                             event_is_ready = TRUE; // Only one event on each poll - terminate loop
                         }
                         else {
-                            g_debug("Poll check: remove-connection %.30s... ", vdu_poll_data->edid_encoded);
+                            if (g_log_get_debug_enabled()) {
+                                g_debug("Poll check: remove-connection %.30s... ", vdu_poll_data->edid_encoded);
+                            }
                         }
                         g_free(vdu_poll_data->edid_encoded);
                         g_free(vdu_poll_data);
@@ -2524,8 +2551,10 @@ static gboolean chg_signal_prepare(GSource* source, gint* timeout_millis) {
     if (dbus_connection == NULL || event_ptr == NULL) {
         return FALSE;
     }
-    g_debug("chg signal_event ready type=%d name=%s", event_ptr->event_type,
-            get_event_type_name(event_ptr->event_type));
+    if (g_log_get_debug_enabled()) {
+        g_debug("chg signal_event ready type=%d name=%s", event_ptr->event_type,
+                get_event_type_name(event_ptr->event_type));
+    }
     *timeout_millis = 0; // Not sure if we want to do this
     return TRUE;
 }
@@ -2607,7 +2636,9 @@ static gboolean chg_signal_dispatch(GSource* source, GSourceFunc callback, gpoin
         g_free(local_error);
     }
     else {
-        g_debug("Signal ConnectedDisplaysChanged: succeeded");
+        if (g_log_get_debug_enabled()) {
+            g_debug("Signal ConnectedDisplaysChanged: succeeded");
+        }
     }
     g_free(edid_encoded);
     return TRUE;
@@ -2637,7 +2668,9 @@ static void enable_custom_source(GMainLoop* loop) {
  * \param event libddcutil event
  */
 static void display_status_event_callback(DDCA_Display_Status_Event event) {
-    g_debug("DDCA event triggered display_status_event_callback");
+    if (g_log_get_debug_enabled()) {
+        g_debug("DDCA event triggered display_status_event_callback");
+    }
     Event_Data_Type* event_copy = g_malloc(sizeof(Event_Data_Type));
     *event_copy = event;
     // Save for processing by our GMainLoop custom source
