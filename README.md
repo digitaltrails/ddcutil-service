@@ -141,6 +141,8 @@ The original development IDE was **[JetBrains CLion-Nova/CLion](https://www.jetb
 granting me an [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
+- 1.0.15
+  - Prevent unnecessary calls to glib debug logging.
 - 1.0.14
   - Default to libddcutil event detection for libddcutil >= 2.2 (for faster response to changes).
   - Add option --prefer-libddcutil-events as a better name for deprecated option --prefer-drm.
