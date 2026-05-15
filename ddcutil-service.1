@@ -657,6 +657,13 @@ can be used to interact with the service.
         string:ServiceInfoLogging variant:boolean:true
 .fi
 
+.B Monitor for VcpValueChanged signals
+
+.nf
+   busctl --user monitor \\
+   --match="type=signal,interface=com.ddcutil.DdcutilInterface,member=VcpValueChanged"
+.fi
+
 .SH LIMITATIONS
 
 Some VDUs are not fully DDC compliant.  In some cases issues raised
