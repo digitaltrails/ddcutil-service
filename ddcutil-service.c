@@ -58,6 +58,8 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
+#include "ddcutil_service_embed_xml.h"
+
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.14"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
@@ -98,10 +100,9 @@ static GDBusNodeInfo* introspection_data = NULL;
  *
  * Using the c23 #embed feature read the file at compile time.
  */
-static const gchar introspection_xml[] = {
-    #embed "com.ddcutil.DdcutilService.xml"
-}
-; // The newline+semicolon stops any linter warnings due to the above raw-string from propagating to the code below.
+// static const gchar introspection_xml[] = {
+//     #embed "com.ddcutil.DdcutilService.xml"
+// }
 
 
 /* ----------------------------------------------------------------------------------------------------
