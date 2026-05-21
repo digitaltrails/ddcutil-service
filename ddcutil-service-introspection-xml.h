@@ -5,8 +5,6 @@
 #ifndef DDCUTIL_SERVICE_INTROSPECTION_XML_H_INCLUDED
 #define DDCUTIL_SERVICE_INTROSPECTION_XML_H_INCLUDED
 
-
-
 /*
  * ddcutil-introspection-xml.h – uses #embed if available, otherwise __asm__ .incbin
  */
