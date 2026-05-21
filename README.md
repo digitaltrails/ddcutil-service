@@ -133,15 +133,18 @@ advice provided during the development of this service.
 
 Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; 
 Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches; 
-Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging; and
-Maciej Wójcik ([https://gitlab.com/w8jcik](https://gitlab.com/w8jcik)) for debian/ubuntu
-packaging.
+Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging; 
+Maciej Wójcik ([w8jcik](https://gitlab.com/w8jcik)) for debian/ubuntu
+packaging; and Zitrone ([quantenzitrone](https://gitlab.com/quantenzitrone))
+for breaking out the XML introspection data and cleaning up the Makefile.
 
 The original development IDE was **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/help/clion/clion-nova-introduction.html)**. Thanks go out to JetBrains for
 granting me an [Open Source development license]( https://jb.gg/OpenSourceSupport).
 
 ### Version History
 - 1.0.15
+  - C code cleanup, moved the embedded introspection XML to a file included at compile time.
+  - Makefile cleanup, including installing the man pages.
   - Prevent unnecessary calls to glib debug logging.
 - 1.0.14
   - Default to libddcutil event detection for libddcutil >= 2.2 (for faster response to changes).
