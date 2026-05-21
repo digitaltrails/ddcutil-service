@@ -1,8 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2023-2026 Contributors to ddcutil-service <https://github.com/digitaltrails/ddcutil-service>
+SPDX-License-Identifier: GPL-2.0-or-later
+-->
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node>
     <!--
-        SPDX-FileCopyrightText: 2023-2026 Contributors to ddcutil-service <https://github.com/digitaltrails/ddcutil-service>
-        SPDX-License-Identifier: GPL-2.0-or-later
- 
         com.ddcutil.DdcutilInterface:
         @short_description: D-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 
@@ -26,11 +30,11 @@
 
         Methods that accept an base-64 encoded EDID will accept a prefix of the EDID when passed
         a flags value of 1.  This is intended as a convenience for passing EDIDs on the command line.
-        
-        This XML contains GTK-Doc comment blocks, see 
+
+        This XML contains GTK-Doc comment blocks, see
             https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
-        The @my_parameter annotation formats properly.  
-        The #my_property:property and #my_sig::signal annotations don't format at all, so I'm not 
+        The @my_parameter annotation formats properly.
+        The #my_property:property and #my_sig::signal annotations don't format at all, so I'm not
         using them.
 
     -->

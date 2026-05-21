@@ -2294,8 +2294,11 @@ int main(int argc, char* argv[]) {
     g_info("LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN %d", MACRO_EXISTS(LIBDDCUTIL_HAS_DYNAMIC_SLEEP_BOOLEAN));
 
     /* Build introspection data structures from XML.
-     */
-    introspection_data = g_dbus_node_info_new_for_xml(ddcutil_service_xml_text, NULL);
+     */   
+    /* Omit the header text so the text resembles the generated text (which has no header) */
+    const char * node_xml_text = strstr(ddcutil_service_xml_text, "<node>");  
+    g_assert(node_xml_text != NULL);
+    introspection_data = g_dbus_node_info_new_for_xml(node_xml_text, NULL);
     g_assert(introspection_data != NULL);
 
     if (introspect_request) {
@@ -2303,7 +2306,7 @@ int main(int argc, char* argv[]) {
         GString *formatted_xml = g_string_new("");
         g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml); // Create XML from the registered service
 #else
-        GString* formatted_xml = g_string_new(ddcutil_service_xml_text);
+        GString* formatted_xml = g_string_new(node_xml_text);
 #endif
         g_print("%s\n", formatted_xml->str);
         exit(1);
