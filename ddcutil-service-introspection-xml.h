@@ -6,7 +6,12 @@
 #define DDCUTIL_SERVICE_INTROSPECTION_XML_H_INCLUDED
 
 /*
- * ddcutil-introspection-xml.h – uses #embed if available, otherwise __asm__ .incbin
+ * ddcutil-service-introspection-xml.h
+ *
+ * Loads ddcutil-service com.ddcutil.DdcutilService.xml into a text string.  
+ * Pre-canned XML is preferred because it includes documentation comments.
+ * 
+ * The file is loaded by C23 #embed if available, otherwise by __asm__ .incbin
  */
 
 #include <stddef.h>
