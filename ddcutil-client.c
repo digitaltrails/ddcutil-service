@@ -1,10 +1,14 @@
+/*
+ * SPDX-FileCopyrightText: 2024-2026 Contributors to ddcutil-service <https://github.com/digitaltrails/ddcutil-service>
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
 /* ----------------------------------------------------------------------------------------------------
  * ddcutil-client.c
  * -----------------
  * A D-Bus client for ddcutil-service
  *
- *
- * Copyright (C) 2024, Michael Hamilton
+ * Author: Michael Hamilton
+ * Copyright (C) 2024-2026, 2023-2026 Contributors to ddcutil-service
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
