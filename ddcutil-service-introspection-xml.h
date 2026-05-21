@@ -41,7 +41,7 @@
  */
 static const char ddcutil_service_xml_text[] = {
     #embed "com.ddcutil.DdcutilService.xml"
-    , 0   // null terminator
+    , 0   /* null terminator */
 };
 
 #else
