@@ -71,7 +71,7 @@ DEPS = $(SERVICE_OBJ:.o=.d) $(CLIENT_OBJ:.o=.d)
 .PHONY: all
 all: ddcutil-service ddcutil-client
 
-$(SERVICE_OBJ): ddcutil_service_embed_xml.h com.ddcutil.DdcutilService.xml
+$(SERVICE_OBJ): ddcutil-service-introspection-xml.h com.ddcutil.DdcutilService.xml
 
 # Link the service
 ddcutil-service: $(SERVICE_OBJ)

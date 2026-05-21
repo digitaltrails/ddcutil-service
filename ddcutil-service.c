@@ -1,10 +1,14 @@
+/*
+ * SPDX-FileCopyrightText: 2023-2026 Contributors to ddcutil-service <https://github.com/digitaltrails/ddcutil-service>
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
 /* ----------------------------------------------------------------------------------------------------
  * ddcutil-service.c
  * -----------------
  * A D-Bus server for libddcutil/ddcutil
  *
- *
- * Copyright (C) 2023, Michael Hamilton
+ * Author: Michael Hamilton
+ * Copyright (C) 2023-2026, Contributors to ddcutil-service
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -58,7 +62,7 @@
 #include <ddcutil_status_codes.h>
 #include <ddcutil_macros.h>
 
-#include "ddcutil_service_embed_xml.h"
+#include "ddcutil-service-introspection-xml.h"
 
 #define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.14"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
@@ -83,20 +87,22 @@
  */
 #define VERIFY_I2C
 
+/**
+ * If set the introspection XML will be generated rather than imported
+ * from file.  This can be useful for debugging, but normally it's better
+ * to use the imported text because it has documentation comments.
+ */
 #undef XML_FROM_INTROSPECTED_DATA
 
 /* ----------------------------------------------------------------------------------------------------
- * D-Bus interface definition in XML
+ * D-Bus interface definition in XML - 
+ * Normally assigned at runtime to ddcutil_service_xml_text imported above.
+ * But can optionally be generated at runtime if XML_FROM_INTROSPECTED_DATA is set.
  */
+static GDBusNodeInfo* introspection_data = NULL;  
 
-static GDBusNodeInfo* introspection_data = NULL;
 
 /**
- * Introspection data for the service we are exporting
- *
- * Uses GTK-Doc comment blocks, see https://dbus.freedesktop.org/doc/dbus-api-design.html#annotations
- * The @my_parameter annotation formats properly.  The #my_property:property and #my_sig::signal annotations
- * don't format at all, so I'm not using them.
  *
  * Using the c23 #embed feature read the file at compile time.
  */
@@ -2289,7 +2295,7 @@ int main(int argc, char* argv[]) {
 
     /* Build introspection data structures from XML.
      */
-    introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
+    introspection_data = g_dbus_node_info_new_for_xml(ddcutil_service_xml_text, NULL);
     g_assert(introspection_data != NULL);
 
     if (introspect_request) {
@@ -2297,7 +2303,7 @@ int main(int argc, char* argv[]) {
         GString *formatted_xml = g_string_new("");
         g_dbus_node_info_generate_xml(introspection_data, 4, formatted_xml); // Create XML from the registered service
 #else
-        GString* formatted_xml = g_string_new(introspection_xml);
+        GString* formatted_xml = g_string_new(ddcutil_service_xml_text);
 #endif
         g_print("%s\n", formatted_xml->str);
         exit(1);
