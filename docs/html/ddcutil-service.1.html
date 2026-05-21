@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.23.0 -->
-<!-- CreationDate: Sun Mar  9 09:14:36 2025 -->
+<!-- CreationDate: Thu May 21 14:07:05 2026 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -831,6 +831,14 @@ string:ServiceInfoLogging</p>
 org.freedesktop.DBus.Properties.Set \ <br>
 string:com.ddcutil.DdcutilInterface \ <br>
 string:ServiceInfoLogging variant:boolean:true</p>
+
+<p style="margin-left:9%; margin-top: 1em"><b>Monitor for
+VcpValueChanged signals</b></p>
+
+<p style="margin-left:9%; margin-top: 1em">busctl --user
+monitor \ <br>
+
+--match=&quot;type=signal,interface=com.ddcutil.DdcutilInterface,member=VcpValueChanged&quot;</p>
 
 <h2>LIMITATIONS
 <a name="LIMITATIONS"></a>
