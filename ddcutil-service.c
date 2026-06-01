@@ -64,7 +64,7 @@
 
 #include "ddcutil-service-introspection-xml.h"
 
-#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.14"
+#define DDCUTIL_DBUS_INTERFACE_VERSION_STRING "1.0.15"
 #define DDCUTIL_DBUS_DOMAIN "com.ddcutil.DdcutilService"
 
 #if DDCUTIL_VMAJOR == 2 && DDCUTIL_VMINOR == 0 && DDCUTIL_VMICRO < 2
