@@ -46,16 +46,6 @@ the `dbus-send` command and the python `dasbus` and `QtDBus` libraries.
 The service was developed with the assistance of 
 amendments to [libddcutil](https://www.ddcutil.com/) by @rockowitz.  
 
-### Usage warning/guidelines
-
-When using this service, avoid excessively writing VCP values because each VDU's NVRAM
-likely has a write-cycle limit/lifespan. The suggested guideline is to limit updates
-to rates comparable to those observed when using the VDU's onboard controls. Avoid coding
-that might rapidly or infinitely loop, including when recovering from errors and bugs.
-
-Non-standard manufacturer specific features should only be experimented with caution,
-some may have irreversible consequences, including bricking the hardware.
-
 ### Command-line and API Documentation
 
 Detailed documentation can be found in the two manual pages:
