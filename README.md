@@ -1,6 +1,14 @@
 # ddcutil-service 
 A D-Bus ddcutil service for control of DDC Monitors/VDUs
 
+> [!TIP]
+> When using this service, avoid excessively writing VCP values because each VDU's NVRAM likely has a write-cycle limit/lifespan. The suggested guideline is to limit updates to rates comparable to those observed when using the VDU's onboard controls. Avoid coding that might rapidly or infinitely loop, including when recovering from errors and bugs.
+>
+> Non-standard manufacturer specific features should only be experimented with caution, some may have irreversible consequences, including bricking the hardware.
+
+
+
+
 The aim of this service is to make it easier to create highly-responsive widgets and apps for 
 [ddcutil](https://www.ddcutil.com/).  The service's client interface is now quite stable, but there 
 may be some additions or tweaks if new requirements are discovered.
