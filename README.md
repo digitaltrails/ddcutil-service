@@ -10,7 +10,9 @@ A D-Bus ddcutil service for control of DDC Monitors/VDUs
 
 
 The aim of this service is to make it easier to create highly-responsive widgets and apps for 
-[ddcutil](https://www.ddcutil.com/).  The service's client interface is now quite stable, but there 
+[ddcutil](https://www.ddcutil.com/).  While built for general use, its requirements were primarily guided
+by the needs of my own GUI application, [vdu_controls](https://github.com/digitaltrails/vdu_controls).
+The service's client interface is now quite stable, but there 
 may be some additions or tweaks if new requirements are discovered.
 
 Compared to the `ddcutil` command, the service has a much lower overhead and
