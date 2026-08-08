@@ -2325,7 +2325,7 @@ int main(int argc, char* argv[]) {
     const int status = ddca_init(arg_string, ddca_syslog_level, ddca_init_options);
     if (status != DDCRC_OK) {
         char* message_text = get_status_message(status);
-        g_critical("Fail to initialised libddcutil cannot continue: %s", message_text);
+        g_critical("Fail to initialize libddcutil cannot continue: %s", message_text);
         exit(1);
     }
 #else
