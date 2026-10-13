@@ -22,10 +22,10 @@ Version:        1.0.15
 Release:        0
 Summary:        D-Bus service for libddcutil VESA DDC Monitor Virtual Control Panel
 License:        GPL-2.0-or-later
-%if %{defined fedora_version}
+%if 0%{?fedora}
 Group:          Hardware/Other
 %endif
-%if %{defined suse_version}
+%if 0%{?suse_version}
 Group:          System/GUI/Other
 %endif
 URL:            https://github.com/digitaltrails/ddcutil-service
@@ -35,13 +35,18 @@ BuildRequires:  libddcutil-devel >= 1.4.0
 BuildRequires:  make
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(glib-2.0) >= 2.40
-%if %{defined fedora_version}
-Requires:       dbus-1-daemon
+%if 0%{?fedora}
+Requires:       dbus-daemon
 %endif
-%if %{defined suse_version}
+%if 0%{?suse_version}
 Requires:       dbus-1
 %endif
+%if 0%{?fedora}
+Requires:     ddcutil
+%endif
+%if 0%{?suse_version}
 Recommends:     ddcutil-i2c-udev-rules
+%endif
 
 %description
 ddcutil-service is D-Bus service wrapper for libddcutil which
@@ -97,3 +102,5 @@ install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}
 %{_prefix}/lib/modules-load.d/%{name}.conf
 
 %changelog
+* Mon Oct 13 2026 hopsayer 84712356+hopsayer@users.noreply.github.com - 1.0.15-1
+- Initial Fedora build
