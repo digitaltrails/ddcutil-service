@@ -102,3 +102,5 @@ install -m 0644 -D -t %{buildroot}%{_prefix}/lib/modules-load.d/ i2c-dev/%{name}
 %{_prefix}/lib/modules-load.d/%{name}.conf
 
 %changelog
+* Mon Oct 13 2026 hopsayer 84712356+hopsayer@users.noreply.github.com - 1.0.15-1
+- Initial Fedora build
