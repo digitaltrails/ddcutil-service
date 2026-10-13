@@ -41,7 +41,12 @@ Requires:       dbus-daemon
 %if %{defined suse_version}
 Requires:       dbus-1
 %endif
+%if %{defined fedora_version}
+Recommends:     ddcutil
+%endif
+%if %{defined suse_version}
 Recommends:     ddcutil-i2c-udev-rules
+%endif
 
 %description
 ddcutil-service is D-Bus service wrapper for libddcutil which
