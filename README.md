@@ -7,9 +7,9 @@ A D-Bus ddcutil service for control of DDC Monitors/VDUs
 > Non-standard manufacturer specific features should only be experimented with caution, some may have irreversible consequences, including bricking the hardware.
 
 > [!TIP]
-> I'm experimenting with a varlink interface to libddcutil written in Rust.
-> If you might be interested in such a thing, head over to 
-> [github.com/ddcutil-varlink](https://github.com/digitaltrails/ddcutil-varlink) and
+> I'm experimenting with varlink and d-bus interfaces to libddcutil written in Rust.
+> If you might be interested in these Rust implementations, head over to 
+> [github.com/ddc-ci-daemons](https://github.com/digitaltrails/ddc-ci-daemons) and
 > take a look.
 
 
