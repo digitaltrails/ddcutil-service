@@ -135,12 +135,17 @@ Thanks go out to Sanford Rockowitz ([rockowitz](https://github.com/rockowitz))
 for [libddcutil, ddcutil](https://www.ddcutil.com/) and all the assistance and 
 advice provided during the development of this service.
 
-Thanks also to Michal Suchanek for assistance with the OpenSUSE RPM spec; 
-Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches; 
-Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging; 
-Maciej Wójcik ([w8jcik](https://gitlab.com/w8jcik)) for debian/ubuntu
-packaging; and Zitrone ([quantenzitrone](https://gitlab.com/quantenzitrone))
-for breaking out the XML introspection data and cleaning up the Makefile.
+Thanks also to 
+
+- Michal Suchanek for assistance with the OpenSUSE RPM spec; 
+- Johan Grande ([nahoj](https://github.com/nahoj)) for the Ubuntu patches; 
+- Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) for AUR packaging; 
+- Maciej Wójcik ([w8jcik](https://gitlab.com/w8jcik)) for debian/ubuntu
+packaging; 
+- Zitrone ([quantenzitrone](https://gitlab.com/quantenzitrone))
+for breaking out the XML introspection data and cleaning up the Makefile; 
+- hopsayer ([hopsayer](https://github.com/hopsayer)) for 
+the Fedora RPM compatibility fixes includng COPR compliance.
 
 The original development IDE was **[JetBrains CLion-Nova/CLion](https://www.jetbrains.com/help/clion/clion-nova-introduction.html)**. Thanks go out to JetBrains for
 granting me an [Open Source development license]( https://jb.gg/OpenSourceSupport).
