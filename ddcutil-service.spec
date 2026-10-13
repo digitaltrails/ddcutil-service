@@ -36,7 +36,7 @@ BuildRequires:  make
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(glib-2.0) >= 2.40
 %if %{defined fedora_version}
-Requires:       dbus-1-daemon
+Requires:       dbus-daemon
 %endif
 %if %{defined suse_version}
 Requires:       dbus-1
