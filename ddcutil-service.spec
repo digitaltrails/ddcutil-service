@@ -42,7 +42,7 @@ Requires:       dbus-daemon
 Requires:       dbus-1
 %endif
 %if 0%{?fedora}
-Recommends:     ddcutil
+Requires:     ddcutil
 %endif
 %if 0%{?suse_version}
 Recommends:     ddcutil-i2c-udev-rules
