@@ -64,7 +64,7 @@ Detailed documentation can be found in the two manual pages:
 
 #### Installation via prebuilt binaries 
 
-##### OpenSUSE Tumbleweed RPM:
+##### OpenSUSE Tumbleweed RPM
 
 There is an official Tumbleweed RPM:
 
@@ -72,7 +72,7 @@ There is an official Tumbleweed RPM:
 
 The same page also provides links to unofficial builds I've done for Leap.
 
-##### AUR (Arch Linux User Repository):
+##### AUR (Arch Linux User Repository)
 
 Mark Wagie ([yochananmarqos](https://github.com/yochananmarqos)) has kindly provided AUR packaging:
 
@@ -85,6 +85,15 @@ provided a collection of unofficial debian/ubuntu packages along with instructio
 for installing the required versions of `libddcutil`:
 
  - https://gitlab.com/w8jcik/ddcutil-service.deb#latest
+
+##### Fedora (COPR - Community Projects Repository)
+
+A community-maintained [COPR build](https://copr.fedorainfracloud.org/coprs/hopsayer/ddcutil-service/) is available:
+
+```
+sudo dnf copr enable hopsayer/ddcutil-service
+sudo dnf install ddcutil-service
+```
 
 #### Installation via Makefile
 
